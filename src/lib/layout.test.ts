@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NavItem, WidgetConfig } from '../types';
 import { DEFAULT_DASHBOARD, DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem, moveWidget } from './layout';
-import { base64url, codeChallenge, randomString } from './spotify';
+import { base64url, codeChallenge, parseBody, randomString } from './spotify';
 
 describe('Dashboard-Layout', () => {
   it('nutzt ohne Anpassung den Standard', () => {
@@ -60,6 +60,11 @@ describe('Sidebar', () => {
 });
 
 describe('Spotify PKCE', () => {
+  it('akzeptiert Text-Antworten auf Steuerbefehle ohne Fehler', () => {
+    expect(parseBody('akDfO7_-Z1xyz')).toBeNull();
+    expect(parseBody('')).toBeNull();
+    expect(parseBody<{ a: number }>('{"a":1}')).toEqual({ a: 1 });
+  });
   it('berechnet die Code-Challenge nach RFC 7636', async () => {
     expect(await codeChallenge('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk')).toBe('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
   });

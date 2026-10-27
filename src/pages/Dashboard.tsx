@@ -122,7 +122,7 @@ function useWidgets(): Record<WidgetId, { title: string | null; link?: [string, 
         <ul className="list">{notes.map((n) => <li key={n.id}><a href={`#/notizen/${n.id}`}>{n.title || 'Ohne Titel'}</a></li>)}</ul>
       ),
     },
-    music: { title: '🎵 Musik', link: ['#/musik', 'Öffnen →'], body: <SpotifyPlayer compact /> },
+    music: { title: null, body: <SpotifyPlayer compact /> },
     tools: { title: '🧰 Nützliche Tools', link: ['#/tools', 'Verwalten →'], body: <ToolLinks tools={data.tools} /> },
     tasks: {
       title: '✅ Aufgaben diese Woche',

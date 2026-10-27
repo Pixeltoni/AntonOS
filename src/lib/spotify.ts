@@ -187,6 +187,18 @@ export async function api<T>(clientId: string, path: string, init: RequestInit =
     if (res.status === 401) logout();
     throw new SpotifyError(message, res.status);
   }
-  const text = await res.text();
-  return text ? (JSON.parse(text) as T) : null;
+  return parseBody<T>(await res.text());
+}
+
+/**
+ * Spotify beantwortet Steuerbefehle (Play, Pause, Weiter …) teils mit einem
+ * kurzen Text statt mit JSON. Solche Antworten sind kein Fehler.
+ */
+export function parseBody<T>(text: string): T | null {
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
 }

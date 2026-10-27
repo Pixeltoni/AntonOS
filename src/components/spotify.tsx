@@ -2,14 +2,16 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { useStore } from '../store';
 import { api, handleRedirect, loadToken, login, logout, accessToken, redirectUri } from '../lib/spotify';
 import { safeImageSrc, spotifyEmbedUrl } from '../lib/life';
-import { Empty } from './ui';
+import { Empty, Panel } from './ui';
 
 /* ---------- Minimale Typen für Web API und Web Playback SDK ---------- */
 
 interface Image { url: string }
 interface Track { name: string; uri: string; duration_ms: number; artists: { name: string }[]; album: { name: string; images: Image[] } }
+interface PlaybackContext { type: string; uri: string; external_urls?: { spotify?: string } }
 interface PlaybackState {
   is_playing: boolean;
+  context: PlaybackContext | null;
   progress_ms: number | null;
   item: Track | null;
   device: { id: string | null; name: string; volume_percent: number | null };
@@ -302,6 +304,188 @@ export function NowPlaying({ mini = false }: { mini?: boolean }) {
   );
 }
 
+/* ---------- Spotify-Karte im Stil des Spotify-Players ---------- */
+
+const FALLBACK_COLOR = '#8a3b12';
+
+/** Durchschnittsfarbe eines Covers, abgedunkelt für gut lesbare weiße Schrift. */
+function useCoverColor(url: string | null): string {
+  const [color, setColor] = useState(FALLBACK_COLOR);
+  useEffect(() => {
+    if (!url) {
+      setColor(FALLBACK_COLOR);
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 8;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, 8, 8);
+        const px = ctx.getImageData(0, 0, 8, 8).data;
+        let r = 0, g = 0, b = 0;
+        for (let i = 0; i < px.length; i += 4) {
+          r += px[i];
+          g += px[i + 1];
+          b += px[i + 2];
+        }
+        const n = px.length / 4;
+        [r, g, b] = [r / n, g / n, b / n];
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const k = lum > 0.42 ? 0.42 / lum : 1;
+        setColor(`rgb(${Math.round(r * k)}, ${Math.round(g * k)}, ${Math.round(b * k)})`);
+      } catch {
+        setColor(FALLBACK_COLOR);
+      }
+    };
+    img.onerror = () => setColor(FALLBACK_COLOR);
+    img.src = url;
+  }, [url]);
+  return color;
+}
+
+function SpotifyLogo() {
+  return (
+    <svg className="sp-logo" viewBox="0 0 24 24" aria-label="Spotify" role="img">
+      <circle cx="12" cy="12" r="12" fill="#fff" />
+      <path
+        fill="#000"
+        d="M17.5 16.6a.75.75 0 0 1-1 .25c-2.8-1.7-6.3-2.1-10.4-1.1a.75.75 0 1 1-.35-1.45c4.5-1 8.4-.6 11.5 1.3.35.2.46.66.25 1Zm1.45-3.25a.94.94 0 0 1-1.3.3c-3.2-2-8.1-2.55-11.9-1.4a.94.94 0 1 1-.55-1.8c4.35-1.3 9.75-.68 13.4 1.6.45.27.6.86.35 1.3Zm.13-3.4C15.2 7.65 8.85 7.45 5.15 8.57a1.12 1.12 0 1 1-.65-2.15c4.25-1.3 11.3-1.05 15.75 1.6a1.12 1.12 0 0 1-1.17 1.93Z"
+      />
+    </svg>
+  );
+}
+
+interface Queue { currently_playing: Track | null; queue: Track[] }
+
+/** Name und Link der aktuellen Playlist bzw. des Albums. */
+function useContextInfo(context: PlaybackContext | null, track: Track | null | undefined) {
+  const { clientId } = useSpotify();
+  const [info, setInfo] = useState<{ uri: string; name: string; image: string | null } | null>(null);
+  const uri = context?.uri ?? null;
+  useEffect(() => {
+    if (!uri) {
+      setInfo(null);
+      return;
+    }
+    const [, type, id] = uri.split(':');
+    if (type !== 'playlist' && type !== 'album') {
+      setInfo(null);
+      return;
+    }
+    let cancelled = false;
+    api<{ name: string; images: Image[] | null }>(clientId, `/${type}s/${id}?fields=name,images`)
+      .then((r) => !cancelled && r && setInfo({ uri, name: r.name, image: r.images?.[0]?.url ?? null }))
+      .catch(() => !cancelled && setInfo(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [uri, clientId]);
+  if (info && info.uri === uri) return info;
+  return track ? { uri: track.uri, name: track.album.name, image: track.album.images[0]?.url ?? null } : null;
+}
+
+/** Spotify-Fenster: Cover, Titel, Steuerung und die nächsten Titel – wie der Spotify-Player. */
+export function SpotifyCard() {
+  const s = useSpotify();
+  const { state, clientId, busy, deviceId } = s;
+  const track = state?.item ?? null;
+  const ctx = useContextInfo(state?.context ?? null, track);
+  const cover = safeImageSrc(ctx?.image ?? track?.album.images[0]?.url);
+  const bg = useCoverColor(cover);
+  const playing = state?.is_playing ?? false;
+  const [queue, setQueue] = useState<Track[]>([]);
+  const call = (path: string, method = 'POST') => s.command(() => api(clientId, path, { method }));
+
+  // Warteschlange neu laden, sobald ein anderer Titel läuft
+  useEffect(() => {
+    if (!track) {
+      setQueue([]);
+      return;
+    }
+    let cancelled = false;
+    api<Queue>(clientId, '/me/player/queue')
+      .then((q) => !cancelled && setQueue((q?.queue ?? []).slice(0, 8)))
+      .catch(() => !cancelled && setQueue([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [track?.uri, clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const playTrack = (t: Track) =>
+    s.command(() =>
+      api(clientId, '/me/player/play', {
+        method: 'PUT',
+        body: JSON.stringify(state?.context?.uri ? { context_uri: state.context.uri, offset: { uri: t.uri } } : { uris: [t.uri] }),
+      }),
+    );
+
+  const rows = track ? [track, ...queue.filter((t) => t.uri !== track.uri)] : [];
+  const link = state?.context?.external_urls?.spotify ?? 'https://open.spotify.com/';
+
+  return (
+    <div className="sp-card" style={{ ['--sp-bg' as string]: bg }}>
+      <div className="sp-head">
+        {cover ? <img className="sp-cover" src={cover} alt="" /> : <div className="sp-cover placeholder">🎵</div>}
+        <div className="sp-meta">
+          <strong className="sp-title">{ctx?.name ?? 'Spotify'}</strong>
+          <span className="sp-sub">{track ? track.artists.map((a) => a.name).join(', ') : 'Gerade läuft nichts'}</span>
+          <a className="sp-save" href={link} target="_blank" rel="noopener noreferrer">
+            <span aria-hidden>⊕</span> Auf Spotify öffnen
+          </a>
+        </div>
+        <SpotifyLogo />
+      </div>
+
+      <div className="sp-bar">
+        <div className="sp-progress" aria-hidden>
+          <span style={{ width: track ? `${((state?.progress_ms ?? 0) / track.duration_ms) * 100}%` : 0 }} />
+        </div>
+        <div className="sp-controls">
+          <button className="sp-btn" onClick={() => call('/me/player/previous')} disabled={busy || !state} aria-label="Zurück">⏮</button>
+          <button className="sp-btn" onClick={() => call('/me/player/next')} disabled={busy || !state} aria-label="Weiter">⏭</button>
+          <button
+            className="sp-play"
+            onClick={() => (state ? call(playing ? '/me/player/pause' : '/me/player/play', 'PUT') : s.playHere())}
+            disabled={busy || (!state && !deviceId)}
+            aria-label={playing ? 'Pause' : 'Abspielen'}
+          >
+            {playing ? '❚❚' : '▶'}
+          </button>
+        </div>
+      </div>
+
+      {rows.length > 0 ? (
+        <ol className="sp-list">
+          {rows.map((t, i) => (
+            <li key={`${t.uri}-${i}`} className={i === 0 ? 'current' : ''}>
+              <button onClick={() => (i === 0 ? undefined : playTrack(t))} disabled={busy} title={i === 0 ? 'Läuft gerade' : `${t.name} abspielen`}>
+                <span className="sp-num">{i === 0 && playing ? '♫' : i + 1}</span>
+                <span className="sp-track">
+                  <span className="sp-name">{t.name}</span>
+                  <span className="sp-artist">{t.artists.map((a) => a.name).join(', ')}</span>
+                </span>
+                <span className="sp-dur">{fmt(t.duration_ms)}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="sp-empty">Starte unten eine Playlist oder spiele etwas in der Spotify-App ab.</p>
+      )}
+
+      <div className="sp-foot">
+        <span>{state?.device ? `🔊 ${state.device.name}` : 'Kein aktives Gerät'}</span>
+        {deviceId && state?.device?.id !== deviceId && (
+          <button className="link" onClick={() => s.playHere()}>Hier im Browser abspielen</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Playlists() {
   const s = useSpotify();
   const [lists, setLists] = useState<Playlist[] | null>(null);
@@ -330,34 +514,38 @@ function Playlists() {
 /** Das Spotify-Fenster: Einrichtung, Login, Player und Playlists. */
 export function SpotifyPlayer({ compact = false }: { compact?: boolean }) {
   const s = useSpotify();
+  // Auf dem Dashboard steht die Spotify-Karte ohne eigenen Rahmen, alles andere im Panel
+  const frame = (body: ReactNode) => (compact ? <Panel title="🎵 Musik" actions={<a href="#/musik">Öffnen →</a>}>{body}</Panel> : body);
 
   if (!s.clientId) {
-    return compact ? (
-      <div className="col">
-        <Embed />
-        <p className="small">
-          <a href="#/musik">Mit deinem Spotify-Konto verbinden →</a>
-        </p>
-      </div>
-    ) : (
-      <Setup />
+    return frame(
+      compact ? (
+        <div className="col">
+          <Embed />
+          <p className="small">
+            <a href="#/musik">Mit deinem Spotify-Konto verbinden →</a>
+          </p>
+        </div>
+      ) : (
+        <Setup />
+      ),
     );
   }
 
   if (!s.connected) {
-    return (
+    return frame(
       <div className="col">
         <button className="spotify-btn" onClick={s.connect}>Mit Spotify verbinden</button>
         {s.error && <p className="danger small">{s.error}</p>}
         <Embed />
-      </div>
+      </div>,
     );
   }
 
   const premium = s.profile?.product === 'premium';
   return (
     <div className="col">
-      <NowPlaying />
+      <SpotifyCard />
       {s.error && <p className="danger small">{s.error}</p>}
       {s.profile && !premium && (
         <p className="muted small">Ohne Spotify Premium erlaubt Spotify keine Steuerung von außen. Du kannst aber die eingebettete Playlist nutzen.</p>

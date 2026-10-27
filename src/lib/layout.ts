@@ -33,6 +33,9 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   projects: '🚀 Aktive Projekte',
   transactions: '💸 Letzte Buchungen',
   budget: '💳 Budget',
+  stack: '🗂️ Smart Stack',
+  today: '📆 Heute',
+  countdown: '⏳ Countdown',
   watching: '📺 Gerade am Schauen',
   reading: '📖 Gerade am Lesen',
   habits: '✨ Gewohnheiten heute',
@@ -47,8 +50,8 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   vision: '🌄 Vision Board',
 };
 
-const w = (id: WidgetId, size: WidgetSize, variant: WidgetVariant = 'standard'): WidgetConfig => ({
-  id, size, height: 'auto', variant, hidden: false,
+const w = (id: WidgetId, size: WidgetSize, variant: WidgetVariant = 'standard', hidden = false): WidgetConfig => ({
+  id, size, height: 'auto', variant, hidden,
 });
 
 /** Standard-Layout, angelehnt an Life Planner OS: schmale Spalten außen, breite Mitte. */
@@ -56,6 +59,9 @@ export const DEFAULT_DASHBOARD: WidgetConfig[] = [
   w('topnav', 'full'),
   w('stats', 'full'),
   w('clock', 's'),
+  w('stack', 's'),
+  w('today', 's', 'standard', true),
+  w('countdown', 's', 'standard', true),
   w('tasks', 'l'),
   w('rings', 's'),
   w('focus', 's'),
@@ -136,6 +142,25 @@ export function moveItem<T>(list: T[], index: number, dir: -1 | 1): T[] {
   const next = [...list];
   [next[index], next[j]] = [next[j], next[index]];
   return next;
+}
+
+/** Verschiebt einen Eintrag an eine andere Stelle (Ziehen und Ablegen). */
+export function moveTo<T>(list: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return list;
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
+export type StackPage = 'heute' | 'aufgaben' | 'ringe' | 'budget' | 'fokus' | 'pruefung';
+
+/** Reihenfolge im Smart Stack je nach Tageszeit – wie auf dem iPhone. */
+export function stackOrder(hour: number): StackPage[] {
+  if (hour >= 5 && hour < 11) return ['heute', 'aufgaben', 'pruefung', 'fokus', 'ringe', 'budget'];
+  if (hour >= 11 && hour < 17) return ['aufgaben', 'fokus', 'heute', 'pruefung', 'ringe', 'budget'];
+  if (hour >= 17 && hour < 23) return ['ringe', 'budget', 'heute', 'aufgaben', 'pruefung', 'fokus'];
+  return ['heute', 'ringe', 'aufgaben', 'budget', 'pruefung', 'fokus'];
 }
 
 /** Fasst aufeinanderfolgende Einträge mit gleicher Gruppe zu Abschnitten zusammen. */

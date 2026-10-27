@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
-import type { WidgetConfig, WidgetId, WidgetVariant } from '../types';
+import type { WidgetConfig, WidgetId, WidgetSize, WidgetVariant } from '../types';
 import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
 import { courseGrade, formatGrade, summary } from '../lib/grades';
 import { formatMoney, isHabitDone, monthTotals, safeHttpUrl, safeImageSrc } from '../lib/life';
-import { DEFAULT_DASHBOARD, HEIGHTS, mergeWithDefaults, moveItem, normalizeWidgets, SIZES, VARIANT_LABELS, WIDGET_LABELS } from '../lib/layout';
+import { DEFAULT_DASHBOARD, HEIGHTS, mergeWithDefaults, moveItem, moveTo, normalizeWidgets, SIZES, VARIANT_LABELS, WIDGET_LABELS } from '../lib/layout';
 import { isDue } from '../lib/srs';
 import { TaskForm, TaskList } from '../components/TaskList';
 import { Agenda, Clock, Cover, ImageInput, PeriodBars } from '../components/widgets';
@@ -14,6 +14,7 @@ import { AppearanceEditor } from '../components/appearance';
 import { RingsWidget } from '../components/rings';
 import { FocusWidget, useFocus } from '../components/focus';
 import { focusMode } from '../lib/focus';
+import { CountdownWidget, SmartStack, TodayWidget, useDragReorder, WidgetGallery } from '../components/homescreen';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
 import { HabitsToday } from './Habits';
 import { ProjectCard, useProjectProgress } from './Projects';
@@ -255,6 +256,9 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
     watching: { title: '📺 Gerade am Schauen', link: ['#/schauen', 'Alle →'], render: media(watching, 'Nichts am Laufen.') },
     reading: { title: '📖 Gerade am Lesen', link: ['#/lesen', 'Alle →'], render: media(reading, 'Kein Buch offen.') },
     habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], render: (v) => <HabitsToday variant={v} /> },
+    stack: { title: null, variants: ['standard'], render: () => <SmartStack /> },
+    today: { title: null, variants: ['standard'], render: () => <TodayWidget /> },
+    countdown: { title: null, variants: ['standard'], render: () => <CountdownWidget /> },
     budget: { title: '💳 Budget', link: ['#/finanzen', 'Finanzen →'], render: (v) => <BudgetWidget variant={v} /> },
     focus: { title: '⏱️ Fokus', link: ['#/fokus', 'Öffnen →'], render: () => <FocusWidget /> },
     rings: { title: '⭕ Aktivitätsringe', link: ['#/gewohnheiten', 'Details →'], render: (v) => <RingsWidget variant={v} /> },
@@ -375,12 +379,15 @@ function useMasonry(ref: React.RefObject<HTMLDivElement | null>) {
   });
 }
 
-function EditBar({ widget, def, index, layout, onChange }: { widget: WidgetConfig; def: WidgetDef; index: number; layout: WidgetConfig[]; onChange: (l: WidgetConfig[]) => void }) {
+function EditBar({ widget, def, index, layout, onChange, onDragStart }: { widget: WidgetConfig; def: WidgetDef; index: number; layout: WidgetConfig[]; onChange: (l: WidgetConfig[]) => void; onDragStart: (e: React.PointerEvent) => void }) {
   const set = (patch: Partial<WidgetConfig>) => onChange(layout.map((w) => (w.id === widget.id ? { ...w, ...patch } : w)));
   const variants = def.variants ?? (['kompakt', 'standard', 'detail'] as WidgetVariant[]);
   return (
     <div className="edit-bar">
-      <strong className="edit-title small">{WIDGET_LABELS[widget.id]}</strong>
+      <div className="row edit-head">
+        <button type="button" className="drag-handle" onPointerDown={onDragStart} aria-label={`${WIDGET_LABELS[widget.id]} verschieben (ziehen)`} title="Zum Verschieben ziehen">⠿</button>
+        <strong className="edit-title small">{WIDGET_LABELS[widget.id]}</strong>
+      </div>
       <div className="edit-controls">
         <button onClick={() => onChange(moveItem(layout, index, -1))} aria-label="Nach vorn" title="Nach vorn">←</button>
         <button onClick={() => onChange(moveItem(layout, index, 1))} aria-label="Nach hinten" title="Nach hinten">→</button>
@@ -413,6 +420,25 @@ export function Dashboard({ editing }: { editing: boolean }) {
   const focusing = !editing && !showAll && timer.active && timer.phase === 'fokus' && timer.config.filterDashboard;
   const visible = (id: WidgetId) => !focusing || mode.widgets.includes(id);
   const filtered = focusing ? layout.filter((w) => !w.hidden && !visible(w.id)).length : 0;
+  const [gallery, setGallery] = useState(false);
+  const { drag, start } = useDragReorder((from, to) =>
+    save(moveTo(layout, layout.findIndex((w) => w.id === from), layout.findIndex((w) => w.id === to))),
+  );
+  const renderWidget = (id: WidgetId, v: WidgetVariant) => {
+    const def = widgets[id];
+    const variant = def.variants && !def.variants.includes(v) ? 'standard' : v;
+    const body = def.render(variant);
+    return def.title === null ? body : <Panel title={def.title || undefined}>{body}</Panel>;
+  };
+  const addWidget = (id: WidgetId, size: WidgetSize) => {
+    const rest = layout.filter((w) => w.id !== id);
+    // Nach den ganz breiten Leisten oben einfügen, damit es gleich sichtbar ist
+    let at = 0;
+    while (at < rest.length && (rest[at].size === 'full' || rest[at].hidden)) at++;
+    const item = { ...layout.find((w) => w.id === id)!, hidden: false, size };
+    save([...rest.slice(0, at), item, ...rest.slice(at)]);
+    setGallery(false);
+  };
 
   return (
     <>
@@ -428,13 +454,15 @@ export function Dashboard({ editing }: { editing: boolean }) {
           title="🧩 Dashboard bearbeiten"
           actions={
             <div className="row">
+              <button className="primary" onClick={() => setGallery(true)}>+ Widget hinzufügen{hidden.length > 0 && ` (${hidden.length})`}</button>
               <button onClick={() => confirm('Kästen auf den Standard zurücksetzen?') && save([])}>Kästen zurücksetzen</button>
               <a className="button primary" href="#/dashboard">Fertig</a>
             </div>
           }
         >
           <p className="muted small">
-            Mit ← → änderst du die Reihenfolge. Pro Kasten wählst du Breite, Höhe und Ansicht (kompakt, Standard oder mit mehr Details).
+            Zum Anordnen ein Widget am Griff ⠿ ziehen (oder mit ← →). Pro Widget wählst du Breite, Höhe und Ansicht (kompakt, Standard oder mit mehr Details).
+            Über „+ Widget hinzufügen“ holst du ausgeblendete Widgets mit Vorschau zurück.
             Auf kleineren Bildschirmen ordnen sich die Kästen automatisch um.
           </p>
           <div className="form-grid">
@@ -443,18 +471,6 @@ export function Dashboard({ editing }: { editing: boolean }) {
           </div>
           <h3>🎨 Hintergrund & Design</h3>
           <AppearanceEditor />
-          {hidden.length > 0 && (
-            <>
-              <h3>Ausgeblendete Kästen</h3>
-              <div className="row wrap">
-                {hidden.map((w) => (
-                  <button key={w.id} onClick={() => save(layout.map((x) => (x.id === w.id ? { ...x, hidden: false } : x)))}>
-                    + {WIDGET_LABELS[w.id]}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
         </Panel>
       ) : null}
 
@@ -471,15 +487,20 @@ export function Dashboard({ editing }: { editing: boolean }) {
               </Panel>
             );
           return (
-            <div key={w.id} className={`tile w-${w.size}`}>
+            <div
+              key={w.id}
+              data-widget={w.id}
+              className={`tile w-${w.size} ${drag?.id === w.id ? 'dragging' : ''} ${drag && drag.over === w.id && drag.id !== w.id ? 'drop-target' : ''}`}
+            >
               <div className={`tile-inner h-${w.height} ${editing ? 'editable' : ''}`}>
-                {editing && <EditBar widget={w} def={def} index={index} layout={layout} onChange={save} />}
+                {editing && <EditBar widget={w} def={def} index={index} layout={layout} onChange={save} onDragStart={start(w.id)} />}
                 <div className="tile-body">{content}</div>
               </div>
             </div>
           );
         })}
       </div>
+      {gallery && <WidgetGallery layout={layout} render={renderWidget} onAdd={addWidget} onClose={() => setGallery(false)} />}
     </>
   );
 }

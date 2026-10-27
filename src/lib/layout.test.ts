@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NavItem, WidgetConfig } from '../types';
-import { DEFAULT_DASHBOARD, DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem, normalizeWidgets } from './layout';
+import { DEFAULT_DASHBOARD, DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem, moveTo, normalizeWidgets, stackOrder } from './layout';
 import { base64url, codeChallenge, parseBody, randomString } from './spotify';
 
 describe('Dashboard-Layout', () => {
@@ -77,5 +77,20 @@ describe('Spotify PKCE', () => {
     const s = randomString(64);
     expect(s).toMatch(/^[A-Za-z0-9\-._~]{64}$/);
     expect(randomString(64)).not.toBe(s);
+  });
+});
+
+describe('Homescreen', () => {
+  it('verschiebt per Ziehen', () => {
+    expect(moveTo(['a', 'b', 'c', 'd'], 0, 2)).toEqual(['b', 'c', 'a', 'd']);
+    expect(moveTo(['a', 'b', 'c', 'd'], 3, 1)).toEqual(['a', 'd', 'b', 'c']);
+    const same = ['a'];
+    expect(moveTo(same, 0, 5)).toBe(same);
+  });
+  it('ordnet den Smart Stack nach Tageszeit', () => {
+    expect(stackOrder(8)[0]).toBe('heute');
+    expect(stackOrder(14)[0]).toBe('aufgaben');
+    expect(stackOrder(20)[0]).toBe('ringe');
+    expect(stackOrder(2)).toHaveLength(6);
   });
 });

@@ -49,6 +49,16 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); }
+
+/* Hauchdünne Scrollleisten: Chrome/Edge/Safari über ::-webkit-scrollbar, Firefox über scrollbar-width */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text) 22%, transparent); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text) 45%, transparent); }
+::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--text) 25%, transparent) transparent; }
+}
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 h1 { font-size: 1.7rem; margin: 0; }
@@ -86,6 +96,8 @@ kbd { font-size: 0.75em; opacity: 0.7; border: 1px solid currentColor; border-ra
 .layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 100vh; }
 .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 1rem 0.75rem; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
 .brand { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 1.15rem; padding: 0 0.5rem 1rem; }
+.brand-name { display: flex; align-items: center; gap: 0.5rem; }
+.nav-icon { flex: none; width: 1.5rem; text-align: center; }
 .menu-toggle { display: none; }
 .sidebar nav { display: flex; flex-direction: column; gap: 2px; }
 .sidebar nav a { display: flex; gap: 0.6rem; align-items: center; padding: 0.5rem 0.6rem; border-radius: 8px; color: var(--text); }
@@ -554,6 +566,28 @@ html.glass[data-theme='dark'] .modal { --surface-2: #1f2330; --border: #2a2f3d; 
 }
 @container (max-width: 600px) {
   .tile.w-s, .tile.w-m, .tile.w-l, .tile.w-xl { grid-column: span 12; }
+}
+
+/* PC: Sidebar als schmale Symbolleiste, die beim Darüberfahren aufklappt */
+@media (min-width: 801px) and (hover: hover) {
+  .layout, .layout:has(.sidebar-editor) { display: block; padding-left: 64px; }
+  .sidebar {
+    position: fixed; z-index: 40; left: 0; top: 0; bottom: 0; height: 100vh; width: 64px;
+    padding: 1rem 0.5rem; overflow-x: hidden; overflow-y: auto; white-space: nowrap;
+    transition: width 0.2s ease, box-shadow 0.2s ease;
+  }
+  .sidebar:hover, .sidebar:has(:focus-visible), .sidebar.editing { width: 250px; box-shadow: 12px 0 40px rgb(0 0 0 / 0.18); }
+  .sidebar.editing { width: 320px; white-space: normal; }
+  .sidebar .brand { padding: 0 0.25rem 1rem; }
+  .sidebar nav a, .sidebar .nav-button { position: relative; padding: 0.5rem 0.55rem; }
+  .sidebar .nav-text { transition: opacity 0.15s ease; }
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.editing) .nav-text { opacity: 0; }
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.editing) .nav-label { font-size: 0; height: 1px; padding: 0; margin: 0.45rem 0.6rem; background: var(--border); }
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.editing) .count {
+    position: absolute; top: 6px; left: 30px; width: 9px; height: 9px; min-width: 0; padding: 0; font-size: 0;
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.editing) .nav-footer { border-top-color: transparent; }
 }
 
 @media (max-width: 800px) {

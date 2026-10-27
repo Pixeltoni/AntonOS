@@ -155,9 +155,12 @@ function Shell() {
   return (
     <div className="layout">
       <AppearanceLayer />
-      <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${menuOpen ? 'open' : ''} ${editingSidebar ? 'editing' : ''}`}>
         <div className="brand">
-          <span>🎓 AntonOS</span>
+          <span className="brand-name">
+            <span className="nav-icon" aria-hidden>🎓</span>
+            <span className="nav-text">AntonOS</span>
+          </span>
           <button className="icon menu-toggle" onClick={() => setMenuOpen((o) => !o)} aria-label={menuOpen ? 'Menü schließen' : 'Menü öffnen'} aria-expanded={menuOpen}>
             {menuOpen ? '✕' : '☰'}
           </button>
@@ -175,9 +178,9 @@ function Shell() {
               <div key={i} className="nav-group" onClick={() => setMenuOpen(false)}>
                 {section.group && <span className="nav-label">{section.group}</span>}
                 {section.items.map((n) => (
-                  <a key={n.path} href={`#/${n.path}`} className={current === n.path ? 'active' : ''}>
-                    <span aria-hidden>{n.icon}</span>
-                    <span className="grow">{n.label}</span>
+                  <a key={n.path} href={`#/${n.path}`} className={current === n.path ? 'active' : ''} title={n.label}>
+                    <span className="nav-icon" aria-hidden>{n.icon}</span>
+                    <span className="grow nav-text">{n.label}</span>
                     {counts[n.path] > 0 && <span className="count">{counts[n.path]}</span>}
                   </a>
                 ))}
@@ -187,8 +190,14 @@ function Shell() {
           {!editingSidebar && (
             <div className="nav-group nav-footer">
               <SyncBadge />
-              <button className="nav-button" onClick={() => setEditingSidebar(true)}>✏️ Sidebar bearbeiten</button>
-              <a className="nav-button" href="#/dashboard/bearbeiten" onClick={() => setMenuOpen(false)}>🧩 Dashboard bearbeiten</a>
+              <button className="nav-button" onClick={() => setEditingSidebar(true)} title="Sidebar bearbeiten">
+                <span className="nav-icon" aria-hidden>✏️</span>
+                <span className="nav-text">Sidebar bearbeiten</span>
+              </button>
+              <a className="nav-button" href="#/dashboard/bearbeiten" onClick={() => setMenuOpen(false)} title="Dashboard bearbeiten">
+                <span className="nav-icon" aria-hidden>🧩</span>
+                <span className="nav-text">Dashboard bearbeiten</span>
+              </a>
             </div>
           )}
         </nav>

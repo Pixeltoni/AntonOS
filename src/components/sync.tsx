@@ -337,8 +337,9 @@ export function SyncBadge() {
   const { status } = useSync();
   const [icon, text] = STATUS_TEXT[status];
   return (
-    <a className={`nav-button sync-badge ${status}`} href="#/einstellungen" title="Synchronisierung">
-      <span aria-hidden>{icon}</span> {text}
+    <a className={`nav-button sync-badge ${status}`} href="#/einstellungen" title={`Synchronisierung: ${text}`}>
+      <span className="nav-icon" aria-hidden>{icon}</span>
+      <span className="nav-text">{text}</span>
     </a>
   );
 }

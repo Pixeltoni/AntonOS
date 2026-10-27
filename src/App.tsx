@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRingReminder } from './components/rings';
 import { FocusPill } from './components/focus';
+import { useRecurringBookings } from './pages/Finance';
 import { useStore } from './store';
 import type { NavItem } from './types';
 import { today } from './lib/dates';
@@ -131,6 +132,7 @@ function Shell() {
   const current = route[0] ?? 'dashboard';
   const routeKey = route.join('/');
   useRingReminder();
+  useRecurringBookings();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);

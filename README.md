@@ -24,7 +24,7 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 - **Projekte:** mit Titelbild, Status und eigenen Aufgaben; der Fortschritt ergibt sich aus den erledigten Aufgaben
 - **Gewohnheiten:** Aktivitätsringe wie bei Apple Fitness – Lernen (aus dem Fokus-Timer), Bewegung (aus dem Training) und Gewohnheiten – mit einstellbaren Tageszielen, Wochenleiste, Auszeichnungen und Erinnerung am Abend. Dazu Mengen-Gewohnheiten (z. B. „+ 0,25 l“), Wochenraster, Serien 🔥 und 30-Tage-Quote
 - **Ziele:** Vision Board nach Lebensbereichen mit Inspirationsbildern und Fortschritt
-- **Finanzen:** Einnahmen und Ausgaben pro Monat, Saldo und Ausgaben nach Kategorie
+- **Finanzen:** im Stil von Apple Wallet – Budget-Karte mit „Verfügbar“, Ausgaben als Kategorien-Ring, Buchungen mit Kategoriesymbolen. Monatsbudget und Budgets pro Kategorie mit Warnung ab 90 %, Daueraufträge (Miete, Abos, Gehalt) werden jeden Monat automatisch gebucht, Spartöpfe mit Ziel und CSV-Export für Excel
 - **Training:** geplante und erledigte Workouts mit Dauer (zählt für den Bewegungsring)
 
 ### Sammlungen

@@ -886,3 +886,55 @@ html.glass[data-theme='dark'] .modal { --surface-2: #1f2330; --border: #2a2f3d; 
 .stacked-bar.today small { color: var(--text); }
 .screen-time-legend { list-style: none; padding: 0; margin: 0.8rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; font-size: 0.85rem; }
 @media (max-width: 520px) { .focus-time { font-size: 2.8rem; } .focus-controls { gap: 2rem; } }
+
+/* ---------- Finanzen im Wallet-Stil (Vorschlag 4) ---------- */
+.wallet-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
+.wallet-row > .panel { margin: 0; }
+.wallet-card {
+  position: relative; overflow: hidden; color: #fff; border-radius: 20px; padding: 1.2rem 1.3rem; min-height: 170px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;
+  background: radial-gradient(120% 140% at 100% 0%, #3A3A3C 0%, #1C1C1E 55%, #000 100%);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.12);
+}
+.wallet-card::after { content: ''; position: absolute; right: -40px; top: -60px; width: 180px; height: 180px; border-radius: 50%; background: rgb(255 255 255 / 0.05); }
+.wallet-card.compact { min-height: 0; padding: 0.9rem 1rem; gap: 0.6rem; }
+.wallet-top { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 0.9rem; color: #AEAEB2; }
+.wallet-top strong { color: #fff; font-size: 1rem; }
+.wallet-bottom { display: flex; flex-direction: column; gap: 0.2rem; }
+.wallet-label { font-size: 0.8rem; color: #AEAEB2; }
+.wallet-value { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.wallet-card.compact .wallet-value { font-size: 1.6rem; }
+.wallet-value.negative { color: #FF453A; }
+.wallet-bar { display: block; height: 6px; border-radius: 999px; background: rgb(255 255 255 / 0.15); overflow: hidden; margin-top: 0.5rem; }
+.wallet-bar span { display: block; height: 100%; border-radius: 999px; }
+
+.donut-row { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.donut-row > .cat-legend, .donut-row > .empty { flex: 1; min-width: 180px; }
+.donut { position: relative; flex: none; }
+.donut svg { display: block; }
+.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.donut-center strong { font-size: 1.25rem; }
+.cat-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.9rem; }
+.cat-legend li { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.cat-legend li.warn { color: #C93400; font-weight: 600; }
+.cat-bar { flex-basis: 100%; height: 4px; border-radius: 999px; background: var(--ring-track); overflow: hidden; margin-left: 1.1rem; }
+.cat-bar span { display: block; height: 100%; border-radius: 999px; }
+.budget-warnings { background: #FFF4E5; color: #7A3E00; border-radius: 14px; padding: 0.6rem 1rem; margin-bottom: 1rem; }
+.budget-warnings p { margin: 0.2rem 0; font-weight: 500; }
+:root[data-theme='dark'] .budget-warnings { background: #3A2600; color: #FFD8A8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .budget-warnings { background: #3A2600; color: #FFD8A8; } }
+
+.cat-icon { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 1rem; }
+.tx-list li { align-items: center; gap: 0.75rem; }
+.tx-list li.paused { opacity: 0.55; }
+.tx-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tx-list .tx-delete { opacity: 0; transition: opacity 0.15s; }
+.tx-list li:hover .tx-delete, .tx-list .tx-delete:focus-visible { opacity: 1; }
+@media (hover: none) { .tx-list .tx-delete { opacity: 0.6; } }
+
+.pots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem; }
+.pot { border: 1px solid var(--border); border-radius: 16px; padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 0.45rem; background: color-mix(in srgb, var(--pot) 7%, transparent); }
+.pot-amount { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pot-bar { display: block; height: 8px; border-radius: 999px; background: var(--ring-track); overflow: hidden; }
+.pot-bar span { display: block; height: 100%; border-radius: 999px; background: var(--pot); transition: width 0.4s; }
+@media (max-width: 800px) { .wallet-row { grid-template-columns: minmax(0, 1fr); } }

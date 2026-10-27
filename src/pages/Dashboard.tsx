@@ -17,7 +17,7 @@ import { focusMode } from '../lib/focus';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
 import { HabitsToday } from './Habits';
 import { ProjectCard, useProjectProgress } from './Projects';
-import { sortTx, TransactionList } from './Finance';
+import { BudgetWidget, sortTx, TransactionList } from './Finance';
 import { MediaCard, READ_KINDS, WATCH_KINDS } from './Media';
 import { WorkoutList } from './Training';
 import { AlbumCard } from './Albums';
@@ -255,6 +255,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
     watching: { title: '📺 Gerade am Schauen', link: ['#/schauen', 'Alle →'], render: media(watching, 'Nichts am Laufen.') },
     reading: { title: '📖 Gerade am Lesen', link: ['#/lesen', 'Alle →'], render: media(reading, 'Kein Buch offen.') },
     habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], render: (v) => <HabitsToday variant={v} /> },
+    budget: { title: '💳 Budget', link: ['#/finanzen', 'Finanzen →'], render: (v) => <BudgetWidget variant={v} /> },
     focus: { title: '⏱️ Fokus', link: ['#/fokus', 'Öffnen →'], render: () => <FocusWidget /> },
     rings: { title: '⭕ Aktivitätsringe', link: ['#/gewohnheiten', 'Details →'], render: (v) => <RingsWidget variant={v} /> },
     period: { title: '⏳ Fortschritt', render: (v) => <PeriodBars variant={v} /> },

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Collection, Data, ID, Settings } from './types';
-import { defaultAppearance, defaultSettings, demoData } from './demo';
+import { defaultAppearance, defaultFinance, defaultSettings, demoData } from './demo';
 import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
 
@@ -19,6 +19,8 @@ export const emptyData = (): Data => ({
   habits: [],
   habitLogs: [],
   transactions: [],
+  recurring: [],
+  pots: [],
   media: [],
   workouts: [],
   events: [],
@@ -44,7 +46,7 @@ export function normalize(raw: unknown): Data {
   }
   if (obj.settings && typeof obj.settings === 'object') {
     const stored = obj.settings as Partial<Settings>;
-    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) } };
+    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) } };
   }
   if (typeof obj.schemaVersion === 'number') result.schemaVersion = obj.schemaVersion;
   return result;
@@ -72,6 +74,8 @@ interface Store {
   removeCourse(id: ID): void;
   updateSettings(patch: Partial<Settings>): void;
   replaceAll(data: Data): void;
+  /** Mehrere Änderungen auf einmal, immer auf dem neuesten Stand */
+  mutate(fn: (data: Data) => Data): void;
   /** true, wenn das letzte Speichern fehlgeschlagen ist (z. B. Speicher voll) */
   saveFailed: boolean;
 }
@@ -133,10 +137,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const replaceAll = useCallback((next: Data) => setData(next), []);
+  const mutate = useCallback((fn: (d: Data) => Data) => setData(fn), []);
 
   const value = useMemo(
-    () => ({ data, add, update, remove, removeCourse, updateSettings, replaceAll, saveFailed }),
-    [data, add, update, remove, removeCourse, updateSettings, replaceAll, saveFailed],
+    () => ({ data, add, update, remove, removeCourse, updateSettings, replaceAll, mutate, saveFailed }),
+    [data, add, update, remove, removeCourse, updateSettings, replaceAll, mutate, saveFailed],
   );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

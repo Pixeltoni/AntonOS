@@ -1,8 +1,8 @@
 /**
  * Datenformat-Version. Erhöhen, sobald eine neue Version Bereiche hinzufügt,
- * die ältere Versionen nicht kennen (z. B. 2 = Kalendertermine).
+ * die ältere Versionen nicht kennen (z. B. 2 = Kalendertermine, 3 = Daueraufträge und Spartöpfe).
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Build-Kennung, wird beim Bauen gesetzt (siehe vite.config.ts). */
 export const APP_VERSION: string = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';

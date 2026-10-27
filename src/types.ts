@@ -140,6 +140,40 @@ export interface Transaction {
   date: DateStr;
 }
 
+/** Wiederkehrende Zahlung (Miete, Abos, Gehalt), wird jeden Monat automatisch gebucht */
+export interface Recurring {
+  id: ID;
+  type: TxType;
+  description: string;
+  amount: number;
+  category: string;
+  account: string;
+  /** Tag im Monat (1–31; in kürzeren Monaten der letzte Tag) */
+  day: number;
+  /** Erster Monat (YYYY-MM) */
+  start: string;
+  /** Zuletzt automatisch gebuchter Monat (YYYY-MM) */
+  lastBooked: string | null;
+  paused?: boolean;
+}
+
+/** Spartopf mit Ziel, z. B. „Auslandssemester“ */
+export interface SavingsPot {
+  id: ID;
+  name: string;
+  icon: string;
+  target: number;
+  saved: number;
+  color: string;
+}
+
+export interface FinanceSettings {
+  /** Monatsbudget für Ausgaben (0 = keins) */
+  budget: number;
+  /** Budget pro Kategorie */
+  categoryBudgets: { category: string; amount: number }[];
+}
+
 export type MediaKind = 'Serie' | 'Film' | 'Buch' | 'Hörbuch';
 export type MediaStatus = 'geplant' | 'läuft' | 'fertig' | 'abgebrochen';
 
@@ -202,7 +236,7 @@ export interface Tool {
 export type WidgetId =
   | 'topnav' | 'stats' | 'clock' | 'quick' | 'notes' | 'music' | 'tools' | 'tasks' | 'projects'
   | 'transactions' | 'watching' | 'reading' | 'habits' | 'period' | 'exams' | 'trainings'
-  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus';
+  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus' | 'budget';
 
 /** Breite im 12-Spalten-Raster: ¼, ⅓, ½, ⅔ oder ganze Breite */
 export type WidgetSize = 's' | 'm' | 'l' | 'xl' | 'full';
@@ -261,6 +295,7 @@ export interface Settings {
   appearance: Appearance;
   /** Tagesziele der Aktivitätsringe */
   rings: RingGoals;
+  finance: FinanceSettings;
 }
 
 export interface RingGoals {
@@ -298,6 +333,8 @@ export interface Data {
   habits: Habit[];
   habitLogs: HabitLog[];
   transactions: Transaction[];
+  recurring: Recurring[];
+  pots: SavingsPot[];
   media: Media[];
   workouts: Workout[];
   events: CalEvent[];

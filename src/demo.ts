@@ -1,4 +1,4 @@
-import type { Appearance, Data, Settings } from './types';
+import type { Appearance, Data, FinanceSettings, Settings } from './types';
 import { addDays, today } from './lib/dates';
 import { START_EASE } from './lib/srs';
 import { defaultRingGoals } from './lib/rings';
@@ -12,7 +12,10 @@ export const defaultSettings = (): Settings => ({
   sidebar: [],
   appearance: defaultAppearance(),
   rings: defaultRingGoals(),
+  finance: defaultFinance(),
 });
+
+export const defaultFinance = (): FinanceSettings => ({ budget: 0, categoryBudgets: [] });
 
 export function defaultAppearance(): Appearance {
   return { theme: 'system', background: 'standard', color: '#1f2937', gradient: 'herbst', image: '', dim: 30, glass: false, glassLevel: 50, accent: '' };
@@ -84,6 +87,13 @@ export function demoData(): Data {
       { id: 'demo-x4', type: 'Ausgabe', description: 'Mensa', amount: 4.5, category: 'Lebensmittel', account: 'Bar', date: addDays(t, -1) },
       { id: 'demo-x5', type: 'Ausgabe', description: 'Lehrbuch Analysis', amount: 29.99, category: 'Studium', account: 'Kreditkarte', date: addDays(t, -1) },
     ],
+    recurring: [
+      { id: 'demo-r1', type: 'Ausgabe', description: 'WG-Zimmer', amount: 390, category: 'Miete', account: 'Girokonto', day: 1, start: t.slice(0, 7), lastBooked: t.slice(0, 7) },
+      { id: 'demo-r2', type: 'Ausgabe', description: 'Spotify', amount: 6.99, category: 'Abos', account: 'Kreditkarte', day: 15, start: t.slice(0, 7), lastBooked: null },
+    ],
+    pots: [
+      { id: 'demo-pot1', name: 'Auslandssemester', icon: '✈️', target: 3000, saved: 1150, color: '#007AFF' },
+    ],
     media: [
       { id: 'demo-m1', kind: 'Serie', title: 'The Office', creator: 'Netflix', cover: '', status: 'läuft', rating: 4, progress: 'S3 E7' },
       { id: 'demo-m2', kind: 'Buch', title: 'Die 1%-Methode', creator: 'James Clear', cover: '', status: 'läuft', rating: 5, progress: 'S. 120' },
@@ -108,6 +118,6 @@ export function demoData(): Data {
       { id: 'demo-tl3', name: 'DeepL', url: 'https://www.deepl.com/', category: 'Produktivität' },
       { id: 'demo-tl4', name: 'Claude', url: 'https://claude.ai/', category: 'KI' },
     ],
-    settings: defaultSettings(),
+    settings: { ...defaultSettings(), finance: { budget: 1200, categoryBudgets: [{ category: 'Lebensmittel', amount: 200 }, { category: 'Freizeit', amount: 80 }] } },
   };
 }

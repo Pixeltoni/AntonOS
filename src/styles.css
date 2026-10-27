@@ -340,6 +340,96 @@ button.cal-item { width: 100%; text-align: left; font: inherit; font-size: 0.72r
   .cal-week-head { flex-direction: row; justify-content: flex-start; gap: 0.5rem; }
 }
 
+/* Kalender kompakt (Handy, schmale Kästen) – angelehnt an den iPhone-Kalender */
+.calendar { --ios-red: #ff3b30; --tl-gutter: 52px; }
+.cal-toolbar-compact { display: flex; flex-direction: column; gap: 10px; }
+.cal-big-title { font-size: clamp(1.05rem, 5vw, 1.35rem); font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; }
+button.cal-arrow { font-size: 1.6rem; color: var(--accent); padding: 0 6px; }
+.cal-today { background: none !important; border: 0 !important; color: var(--accent); font-weight: 600; padding: 4px 6px; }
+.cal-plus { width: 34px; height: 34px; padding: 0; border-radius: 50%; font-size: 1.5rem; line-height: 1; background: var(--accent) !important; color: #fff; border: 0 !important; display: grid; place-items: center; }
+.cal-modes { display: flex; width: 100%; }
+.calendar.compact .cal-modes button { flex: 1; }
+
+.mini-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; }
+.mm-head { text-align: center; font-size: 0.72rem; color: var(--muted); padding-bottom: 4px; }
+.mm-day { background: none !important; border: 0 !important; padding: 2px 0 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text); border-radius: 0; min-height: 50px; }
+.mm-num { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.mm-day.other { opacity: 0.35; }
+.mm-day.today .mm-num { color: var(--ios-red); font-weight: 700; }
+.mm-day.selected .mm-num { background: var(--text); color: var(--surface); font-weight: 700; }
+.mm-day.selected.today .mm-num { background: var(--ios-red); color: #fff; }
+.mm-dots { display: flex; gap: 3px; height: 6px; }
+.cal-dot { --p: var(--accent); width: 6px; height: 6px; border-radius: 50%; background: var(--p); display: inline-block; }
+.cal-dot.exam { --p: var(--danger); }
+.cal-dot.project { --p: var(--warn); }
+.cal-dot.workout { --p: var(--ok); }
+.cal-dot.task { --p: #8b5cf6; }
+.cal-dot.prio-hoch { --p: var(--danger); }
+.cal-dot.prio-mittel { --p: var(--warn); }
+.cal-dot.prio-niedrig { --p: var(--ok); }
+
+.day-list { border-top: 1px solid var(--border); padding-top: 8px; }
+.day-list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 0 2px 4px; }
+.day-list-head strong { font-size: 0.95rem; }
+.day-list-empty { padding: 6px 2px; margin: 0; }
+.day-list ul { list-style: none; margin: 0; padding: 0; }
+.dl-row { width: 100%; display: grid; grid-template-columns: 4px 1fr auto; gap: 10px; align-items: stretch; padding: 9px 4px; background: none !important; border: 0 !important; border-bottom: 1px solid var(--border) !important; border-radius: 0; color: var(--text); text-align: left; font: inherit; }
+.day-list li:last-child .dl-row { border-bottom: 0 !important; }
+.dl-row:hover { text-decoration: none; background: var(--surface-2) !important; }
+.dl-bar { width: 4px; height: auto; border-radius: 4px; }
+.dl-main { display: flex; flex-direction: column; min-width: 0; }
+.dl-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-title.done { text-decoration: line-through; color: var(--muted); }
+.dl-note { font-size: 0.8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-time { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.week-agenda { display: flex; flex-direction: column; gap: 10px; }
+
+.week-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.ws-day { background: none !important; border: 0 !important; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px 0; color: var(--text); }
+.ws-name { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; }
+.ws-num { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.ws-day.today .ws-num { color: var(--ios-red); font-weight: 700; }
+.ws-day.selected .ws-num { background: var(--text); color: var(--surface); font-weight: 700; }
+.ws-day.selected.today .ws-num { background: var(--ios-red); color: #fff; }
+.ws-dot { width: 5px; height: 5px; border-radius: 50%; }
+.ws-dot.on { background: var(--muted); }
+.tl-date { margin: 2px 0 0; font-weight: 600; text-align: center; font-size: 0.9rem; }
+
+/* Zeitleiste (Tagesansicht) */
+.timeline-wrap { display: flex; flex-direction: column; gap: 6px; }
+.tl-allday { display: grid; grid-template-columns: var(--tl-gutter) 1fr; gap: 6px; align-items: start; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.tl-allday-label { font-size: 0.7rem; color: var(--muted); text-align: right; padding: 3px 6px 0 0; }
+.tl-allday-items { display: flex; flex-direction: column; gap: 3px; }
+.tl-allday-items .cal-item { font-size: 0.82rem; padding: 3px 8px; }
+.timeline { max-height: 620px; overflow-y: auto; overscroll-behavior: contain; }
+.calendar.compact .timeline { max-height: 62vh; }
+.tl-canvas { position: relative; margin: 10px 0; cursor: pointer; }
+.tl-hour { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; }
+.tl-hour span { position: absolute; left: 0; width: calc(var(--tl-gutter) - 8px); text-align: right; transform: translateY(-50%); font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tl-hour::after { content: ''; position: absolute; left: var(--tl-gutter); right: 0; border-top: 1px solid var(--border); }
+.tl-event {
+  --p: var(--accent);
+  position: absolute; display: flex; flex-direction: column; gap: 1px; overflow: hidden;
+  padding: 3px 7px; border-radius: 6px; border: 0 !important; border-left: 3px solid var(--p) !important;
+  background: color-mix(in srgb, var(--p) 20%, var(--surface)) !important; color: var(--text);
+  font: inherit; font-size: 0.78rem; line-height: 1.25; text-align: left; cursor: pointer;
+}
+.tl-event:hover { text-decoration: none; filter: brightness(0.97); }
+.tl-event strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-event span { color: var(--muted); }
+.tl-event .tl-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-event.exam { --p: var(--danger); }
+.tl-event.project { --p: var(--warn); }
+.tl-event.workout { --p: var(--ok); }
+.tl-event.task { --p: #8b5cf6; }
+.tl-event.prio-hoch { --p: var(--danger); }
+.tl-event.prio-mittel { --p: var(--warn); }
+.tl-event.prio-niedrig { --p: var(--ok); }
+.tl-event.done { opacity: 0.55; }
+.tl-now { position: absolute; left: var(--tl-gutter); right: 0; height: 0; border-top: 2px solid var(--ios-red); pointer-events: none; z-index: 2; }
+.tl-now::before { content: ''; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--ios-red); }
+.tl-now span { position: absolute; right: calc(100% + 8px); top: -0.7em; font-size: 0.68rem; font-weight: 700; color: var(--ios-red); background: var(--surface); padding: 0 2px; }
+
 /* Gewohnheiten */
 .table-wrap { overflow-x: auto; }
 .habit-table { border-collapse: collapse; width: 100%; }
@@ -619,7 +709,5 @@ html.glass[data-theme='dark'] .modal { --surface-2: #1f2330; --border: #2a2f3d; 
   .timer { font-size: 3rem; }
   .layout:has(.sidebar-editor) { grid-template-columns: minmax(0, 1fr); }
   .np-cover { width: 72px; height: 72px; }
-  .cal-day { min-height: 56px; }
-  .cal-item { font-size: 0; height: 6px; padding: 0; border-left-width: 0; }
   .banner, .cover.banner { height: 130px; }
 }

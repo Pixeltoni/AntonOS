@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { onDay, rangeLabel, shiftAnchor, sortEntries, validateEvent, weekDays, type CalendarEntry } from './calendar';
+import { layoutTimed, onDay, rangeLabel, shiftAnchor, sortEntries, validateEvent, weekDays, type CalendarEntry } from './calendar';
 import { isoWeek } from './dates';
 
 const entry = (patch: Partial<CalendarEntry>): CalendarEntry => ({
@@ -44,5 +44,30 @@ describe('Kalender', () => {
     expect(validateEvent({ ...ok, end: '2026-10-26' })).toMatch(/Enddatum/);
     expect(validateEvent({ ...ok, startTime: '10:00', endTime: '09:00' })).toMatch(/Endzeit/);
     expect(validateEvent({ ...ok, end: '2026-10-28', startTime: '10:00', endTime: '09:00' })).toBeNull();
+  });
+});
+
+describe('Zeitleiste', () => {
+  it('positioniert Termine nach Uhrzeit und Dauer', () => {
+    const [b] = layoutTimed([entry({ time: '09:30', endTime: '11:00' })], '2026-10-27');
+    expect([b.start, b.end, b.col, b.cols]).toEqual([570, 660, 0, 1]);
+  });
+  it('nimmt ohne Endzeit eine Stunde an', () => {
+    expect(layoutTimed([entry({ time: '14:00' })], '2026-10-27')[0].end).toBe(900);
+  });
+  it('legt überlappende Termine nebeneinander', () => {
+    const blocks = layoutTimed(
+      [
+        entry({ key: 'a', time: '09:00', endTime: '10:00' }),
+        entry({ key: 'b', time: '09:30', endTime: '10:30' }),
+        entry({ key: 'c', time: '11:00', endTime: '12:00' }),
+      ],
+      '2026-10-27',
+    );
+    const by = Object.fromEntries(blocks.map((b) => [b.entry.key, [b.col, b.cols]]));
+    expect(by).toEqual({ a: [0, 2], b: [1, 2], c: [0, 1] });
+  });
+  it('zeigt mehrtägige Termine nicht in der Zeitleiste', () => {
+    expect(layoutTimed([entry({ time: '10:00', end: '2026-10-29' })], '2026-10-27')).toEqual([]);
   });
 });

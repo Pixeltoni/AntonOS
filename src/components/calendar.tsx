@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { CalEvent, DateStr, EventPriority } from '../types';
 import { formatDate, isoWeek, parseDate, today } from '../lib/dates';
 import { monthGrid, monthKey } from '../lib/life';
-import { onDay, rangeLabel, shiftAnchor, sortEntries, timeRange, validateEvent, weekDays, type CalendarEntry, type CalendarMode } from '../lib/calendar';
+import { isTimedOn, layoutTimed, onDay, rangeLabel, shiftAnchor, sortEntries, timeRange, validateEvent, weekDays, type CalendarEntry, type CalendarMode } from '../lib/calendar';
 
 export const PRIORITIES: { value: EventPriority; label: string }[] = [
   { value: 'niedrig', label: 'Niedrig' },
@@ -187,6 +187,8 @@ function EntryChip({ e, onOpen, showTime = true }: { e: CalendarEntry; onOpen: (
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
+/** Unter dieser Breite wird der Kalender kompakt wie auf dem iPhone dargestellt */
+const COMPACT_WIDTH = 640;
 
 const MODE_KEY = 'antonos:kalender-ansicht';
 function loadMode(fallback: CalendarMode): CalendarMode {
@@ -199,6 +201,204 @@ function loadMode(fallback: CalendarMode): CalendarMode {
   return fallback;
 }
 
+/** Breite des Kalenders – entscheidet über die kompakte Darstellung (auch im schmalen Dashboard-Kasten). */
+function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(1000);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    ro.observe(el);
+    setWidth(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width];
+}
+
+const nowMinutes = () => {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+};
+
+function useNowMinutes(): number {
+  const [m, setM] = useState(nowMinutes);
+  useEffect(() => {
+    const timer = setInterval(() => setM(nowMinutes()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  return m;
+}
+
+const dotClass = (e: CalendarEntry) => `cal-dot ${e.kind} ${e.priority ? `prio-${e.priority}` : ''}`;
+
+/** Wochenleiste mit Datums-Kreisen wie oben im iPhone-Kalender. */
+function WeekStrip({ anchor, entries, onPick }: { anchor: DateStr; entries: CalendarEntry[]; onPick: (d: DateStr) => void }) {
+  const t = today();
+  return (
+    <div className="week-strip" role="tablist" aria-label="Woche">
+      {weekDays(anchor).map((d, i) => {
+        const has = entries.some((e) => onDay(e, d));
+        return (
+          <button
+            key={d}
+            type="button"
+            role="tab"
+            aria-selected={d === anchor}
+            className={`ws-day ${d === anchor ? 'selected' : ''} ${d === t ? 'today' : ''}`}
+            onClick={() => onPick(d)}
+          >
+            <span className="ws-name">{WEEKDAYS[i]}</span>
+            <span className="ws-num">{Number(d.slice(8))}</span>
+            <span className={`ws-dot ${has ? 'on' : ''}`} aria-hidden />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Terminliste eines Tages im Stil der iPhone-Listenansicht. */
+function DayList({ day, entries, onOpen, onNew, hideEmpty = false }: { day: DateStr; entries: CalendarEntry[]; onOpen: (e: CalendarEntry) => void; onNew: () => void; hideEmpty?: boolean }) {
+  const items = sortEntries(entries.filter((e) => onDay(e, day)));
+  if (hideEmpty && items.length === 0) return null;
+  return (
+    <div className="day-list" data-day={day}>
+      <div className="day-list-head">
+        <strong>{parseDate(day).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+        <button type="button" className="link" onClick={onNew}>+ Termin</button>
+      </div>
+      {items.length === 0 ? (
+        <p className="muted small day-list-empty">Keine Termine</p>
+      ) : (
+        <ul>
+          {items.map((e) => {
+            const body = (
+              <>
+                <span className={`dl-bar ${dotClass(e)}`} aria-hidden />
+                <span className="dl-main">
+                  <span className={`dl-title ${e.done ? 'done' : ''}`}>
+                    {e.priority === 'hoch' && '❗ '}
+                    {e.label}
+                  </span>
+                  {e.note && <span className="dl-note">{e.note}</span>}
+                </span>
+                <span className="dl-time">
+                  {e.time ? (
+                    <>
+                      <span>{e.time}</span>
+                      {e.endTime && <span className="muted">{e.endTime}</span>}
+                    </>
+                  ) : (
+                    <span className="muted">ganztägig</span>
+                  )}
+                </span>
+              </>
+            );
+            return (
+              <li key={e.key}>
+                {e.eventId ? (
+                  <button type="button" className="dl-row" onClick={() => onOpen(e)}>{body}</button>
+                ) : (
+                  <a className="dl-row" href={e.href}>{body}</a>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Zeitleiste eines Tages: Termine als Blöcke nach Uhrzeit und Dauer, rote Linie für „jetzt“. */
+function Timeline({ day, entries, compact, onOpen, onNew }: {
+  day: DateStr;
+  entries: CalendarEntry[];
+  compact: boolean;
+  onOpen: (e: CalendarEntry) => void;
+  onNew: (time: string) => void;
+}) {
+  const hourH = compact ? 48 : 52;
+  const scroller = useRef<HTMLDivElement>(null);
+  const now = useNowMinutes();
+  const isToday = day === today();
+  const blocks = layoutTimed(entries, day);
+  const allDay = sortEntries(entries.filter((e) => onDay(e, day) && !isTimedOn(e, day)));
+
+  // Beim Öffnen zur aktuellen Uhrzeit (heute) bzw. zum ersten Termin oder 8 Uhr scrollen
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const target = isToday ? now - 90 : blocks.length ? blocks[0].start - 30 : 8 * 60;
+    el.scrollTop = Math.max(0, (target / 60) * hourH);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day]);
+
+  return (
+    <div className="timeline-wrap">
+      {allDay.length > 0 && (
+        <div className="tl-allday">
+          <span className="tl-allday-label">ganztägig</span>
+          <div className="tl-allday-items">
+            {allDay.map((e) => <EntryChip key={e.key} e={e} onOpen={onOpen} />)}
+          </div>
+        </div>
+      )}
+      <div className="timeline" ref={scroller}>
+        <div
+          className="tl-canvas"
+          style={{ height: 24 * hourH }}
+          onClick={(ev) => {
+            const y = ev.clientY - (ev.currentTarget as HTMLElement).getBoundingClientRect().top;
+            const hour = Math.min(23, Math.max(0, Math.floor(y / hourH)));
+            onNew(`${String(hour).padStart(2, '0')}:00`);
+          }}
+          title="Klicken für neuen Termin"
+        >
+          {HOURS.map((h) => (
+            <div key={h} className="tl-hour" style={{ top: h * hourH }}>
+              <span>{String(h).padStart(2, '0')}:00</span>
+            </div>
+          ))}
+          {blocks.map((b) => {
+            const e = b.entry;
+            const height = Math.max(22, ((b.end - b.start) / 60) * hourH - 2);
+            const style = {
+              top: (b.start / 60) * hourH + 1,
+              height,
+              left: `calc(var(--tl-gutter) + (100% - var(--tl-gutter) - 6px) * ${b.col / b.cols})`,
+              width: `calc((100% - var(--tl-gutter) - 6px) / ${b.cols} - 3px)`,
+            };
+            const inner = (
+              <>
+                <strong>{e.priority === 'hoch' && '❗ '}{e.label}</strong>
+                {height > 34 && <span>{timeRange(e)}</span>}
+                {height > 54 && e.note && <span className="tl-note">{e.note}</span>}
+              </>
+            );
+            const cls = `tl-event ${e.kind} ${e.priority ? `prio-${e.priority}` : ''} ${e.done ? 'done' : ''}`;
+            return e.eventId ? (
+              <button key={e.key} type="button" className={cls} style={style} onClick={(ev) => { ev.stopPropagation(); onOpen(e); }} title={`${e.label} · ${timeRange(e)}`}>
+                {inner}
+              </button>
+            ) : (
+              <a key={e.key} className={cls} style={style} href={e.href} onClick={(ev) => ev.stopPropagation()} title={`${e.label} · ${timeRange(e)}`}>
+                {inner}
+              </a>
+            );
+          })}
+          {isToday && (
+            <div className="tl-now" style={{ top: (now / 60) * hourH }} aria-label="Jetzt">
+              <span>{`${String(Math.floor(now / 60)).padStart(2, '0')}:${String(now % 60).padStart(2, '0')}`}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Kalender mit Tages-, Wochen- und Monatsansicht und eigenen Terminen. */
 export function CalendarView({ defaultMode = 'monat', remember = false }: { defaultMode?: CalendarMode; remember?: boolean }) {
   const { data } = useStore();
@@ -207,6 +407,8 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
   const [anchor, setAnchor] = useState(t);
   const [modal, setModal] = useState<{ initial: Draft; eventId?: string } | null>(null);
   const entries = useCalendarEntries();
+  const [rootRef, width] = useWidth();
+  const compact = width < COMPACT_WIDTH;
 
   const setMode = (m: CalendarMode) => {
     setModeState(m);
@@ -228,31 +430,85 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
     setMode('tag');
   };
   const dayEntries = (d: DateStr) => sortEntries(entries.filter((e) => onDay(e, d)));
+  const title = compact
+    ? mode === 'monat'
+      ? parseDate(anchor).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+      : mode === 'woche'
+        ? `${parseDate(anchor).toLocaleDateString('de-DE', { month: 'short' })} · KW ${isoWeek(parseDate(anchor))}`
+        : parseDate(anchor).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+    : rangeLabel(mode, anchor, isoWeek);
+
+  const segmented = (
+    <div className="segmented cal-modes" role="radiogroup" aria-label="Ansicht">
+      {(['tag', 'woche', 'monat'] as CalendarMode[]).map((m) => (
+        <button key={m} role="radio" aria-checked={mode === m} className={mode === m ? 'selected' : ''} onClick={() => setMode(m)}>
+          {m === 'tag' ? 'Tag' : m === 'woche' ? 'Woche' : 'Monat'}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="calendar">
-      <div className="cal-toolbar">
-        <div className="row">
-          <button onClick={() => setAnchor(shiftAnchor(mode, anchor, -1))} aria-label="Zurück">‹</button>
-          <button onClick={() => setAnchor(t)}>Heute</button>
-          <button onClick={() => setAnchor(shiftAnchor(mode, anchor, 1))} aria-label="Weiter">›</button>
-          <strong className="cal-title">{rangeLabel(mode, anchor, isoWeek)}</strong>
-        </div>
-        <div className="row">
-          <div className="segmented" role="radiogroup" aria-label="Ansicht">
-            {(['tag', 'woche', 'monat'] as CalendarMode[]).map((m) => (
-              <button key={m} role="radio" aria-checked={mode === m} className={mode === m ? 'selected' : ''} onClick={() => setMode(m)}>
-                {m === 'tag' ? 'Tag' : m === 'woche' ? 'Woche' : 'Monat'}
-              </button>
-            ))}
+    <div className={`calendar ${compact ? 'compact' : ''}`} ref={rootRef}>
+      {compact ? (
+        <div className="cal-toolbar-compact">
+          <div className="row between">
+            <div className="row">
+              <button className="icon cal-arrow" onClick={() => setAnchor(shiftAnchor(mode, anchor, -1))} aria-label="Zurück">‹</button>
+              <strong className="cal-big-title">{title}</strong>
+              <button className="icon cal-arrow" onClick={() => setAnchor(shiftAnchor(mode, anchor, 1))} aria-label="Weiter">›</button>
+            </div>
+            <div className="row">
+              <button className="cal-today" onClick={() => setAnchor(t)}>Heute</button>
+              <button className="cal-plus" onClick={() => openNew(anchor)} aria-label="Neuer Termin">+</button>
+            </div>
           </div>
-          <button className="primary" onClick={() => openNew(mode === 'monat' && monthKey(anchor) !== monthKey(t) ? anchor : mode === 'monat' ? t : anchor)}>
-            + Termin
-          </button>
+          {segmented}
         </div>
-      </div>
+      ) : (
+        <div className="cal-toolbar">
+          <div className="row">
+            <button onClick={() => setAnchor(shiftAnchor(mode, anchor, -1))} aria-label="Zurück">‹</button>
+            <button onClick={() => setAnchor(t)}>Heute</button>
+            <button onClick={() => setAnchor(shiftAnchor(mode, anchor, 1))} aria-label="Weiter">›</button>
+            <strong className="cal-title">{title}</strong>
+          </div>
+          <div className="row">
+            {segmented}
+            <button className="primary" onClick={() => openNew(mode === 'monat' && monthKey(anchor) !== monthKey(t) ? anchor : mode === 'monat' ? t : anchor)}>
+              + Termin
+            </button>
+          </div>
+        </div>
+      )}
 
-      {mode === 'monat' && (
+      {mode === 'monat' && compact && (
+        <>
+          <div className="mini-month">
+            {WEEKDAYS.map((d) => <span key={d} className="mm-head">{d.slice(0, 1)}</span>)}
+            {monthGrid(parseDate(anchor).getFullYear(), parseDate(anchor).getMonth()).map((d) => {
+              const items = dayEntries(d);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  className={`mm-day ${monthKey(d) !== monthKey(anchor) ? 'other' : ''} ${d === t ? 'today' : ''} ${d === anchor ? 'selected' : ''}`}
+                  onClick={() => setAnchor(d)}
+                  aria-label={`${formatDate(d)}, ${items.length} Einträge`}
+                >
+                  <span className="mm-num">{Number(d.slice(8))}</span>
+                  <span className="mm-dots" aria-hidden>
+                    {items.slice(0, 3).map((e) => <span key={e.key} className={dotClass(e)} />)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <DayList day={anchor} entries={entries} onOpen={openEntry} onNew={() => openNew(anchor)} />
+        </>
+      )}
+
+      {mode === 'monat' && !compact && (
         <div className="cal-grid">
           {WEEKDAYS.map((d) => <div key={d} className="cal-head">{d}</div>)}
           {monthGrid(parseDate(anchor).getFullYear(), parseDate(anchor).getMonth()).map((d) => {
@@ -279,7 +535,25 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
         </div>
       )}
 
-      {mode === 'woche' && (
+      {mode === 'woche' && compact && (
+        <>
+          <WeekStrip
+            anchor={anchor}
+            entries={entries}
+            onPick={(d) => {
+              setAnchor(d);
+              rootRef.current?.querySelector(`[data-day="${d}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }}
+          />
+          <div className="week-agenda">
+            {weekDays(anchor).map((d) => (
+              <DayList key={d} day={d} entries={entries} onOpen={openEntry} onNew={() => openNew(d)} hideEmpty={d !== anchor} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {mode === 'woche' && !compact && (
         <div className="cal-week">
           {weekDays(anchor).map((d, i) => (
             <div key={d} className={`cal-week-day ${d === t ? 'today' : ''}`} onClick={() => openNew(d)}>
@@ -295,49 +569,29 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
         </div>
       )}
 
-      {mode === 'tag' && (() => {
-        const items = dayEntries(anchor);
-        const allDay = items.filter((e) => !e.time);
-        return (
-          <div className="cal-dayview">
-            <div className="cal-allday">
-              <span className="small muted">Ganztägig</span>
-              <div className="col">
-                {allDay.length === 0 ? <span className="muted small">–</span> : allDay.map((e) => <EntryChip key={e.key} e={e} onOpen={openEntry} />)}
-              </div>
-            </div>
-            <div className="cal-hours">
-              {HOURS.map((h) => {
-                const hh = String(h).padStart(2, '0');
-                const inHour = items.filter((e) => e.time && e.time.slice(0, 2) === hh);
-                return (
-                  <div key={h} className="cal-hour" onClick={() => openNew(anchor, `${hh}:00`)} title={`Neuer Termin um ${hh}:00`}>
-                    <span className="cal-hour-label">{hh}:00</span>
-                    <div className="cal-hour-items">
-                      {inHour.map((e) => (
-                        <div key={e.key} className="cal-hour-entry">
-                          <EntryChip e={e} onOpen={openEntry} showTime={false} />
-                          <span className="small muted">{timeRange(e)}{e.note ? ` · ${e.note}` : ''}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      {mode === 'tag' && (
+        <>
+          {compact && (
+            <>
+              <WeekStrip anchor={anchor} entries={entries} onPick={setAnchor} />
+              <p className="tl-date">{parseDate(anchor).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            </>
+          )}
+          <Timeline day={anchor} entries={entries} compact={compact} onOpen={openEntry} onNew={(time) => openNew(anchor, time)} />
+        </>
+      )}
 
-      <div className="row wrap small muted cal-legend">
-        <span className="cal-item event prio-hoch">Termin: hoch</span>
-        <span className="cal-item event prio-mittel">mittel</span>
-        <span className="cal-item event prio-niedrig">niedrig</span>
-        <span className="cal-item task">Aufgabe</span>
-        <span className="cal-item exam">Prüfung</span>
-        <span className="cal-item project">Projekt</span>
-        <span className="cal-item workout">Training</span>
-      </div>
+      {!compact && (
+        <div className="row wrap small muted cal-legend">
+          <span className="cal-item event prio-hoch">Termin: hoch</span>
+          <span className="cal-item event prio-mittel">mittel</span>
+          <span className="cal-item event prio-niedrig">niedrig</span>
+          <span className="cal-item task">Aufgabe</span>
+          <span className="cal-item exam">Prüfung</span>
+          <span className="cal-item project">Projekt</span>
+          <span className="cal-item workout">Training</span>
+        </div>
+      )}
 
       {modal && <EventModal initial={modal.initial} eventId={modal.eventId} onClose={() => setModal(null)} />}
     </div>

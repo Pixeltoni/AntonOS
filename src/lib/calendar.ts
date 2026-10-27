@@ -76,3 +76,60 @@ export function timeRange(e: Pick<CalendarEntry, 'time' | 'endTime'>): string {
   if (!e.time) return 'ganztägig';
   return e.endTime ? `${e.time}–${e.endTime}` : e.time;
 }
+
+export interface TimedBlock {
+  entry: CalendarEntry;
+  /** Minuten seit Mitternacht */
+  start: number;
+  end: number;
+  /** Spalte und Spaltenzahl bei überlappenden Terminen */
+  col: number;
+  cols: number;
+}
+
+const toMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + (m || 0);
+};
+
+/** Termine mit Uhrzeit, die an diesem Tag beginnen und enden – der Rest gilt dort als ganztägig. */
+export function isTimedOn(e: CalendarEntry, day: DateStr): boolean {
+  return !!e.time && e.start === day && e.end === day;
+}
+
+/**
+ * Ordnet Termine für die Zeitleiste an (wie im iPhone-Kalender): Position und
+ * Länge nach Uhrzeit, überlappende Termine teilen sich die Breite nebeneinander.
+ */
+export function layoutTimed(entries: CalendarEntry[], day: DateStr): TimedBlock[] {
+  const blocks = entries
+    .filter((e) => isTimedOn(e, day))
+    .map((entry) => {
+      const start = toMinutes(entry.time);
+      let end = entry.endTime ? toMinutes(entry.endTime) : start + 60;
+      if (end <= start) end = start + 30;
+      return { entry, start, end: Math.min(end, 24 * 60), col: 0, cols: 1 };
+    })
+    .sort((a, b) => a.start - b.start || b.end - a.end);
+
+  let cluster: TimedBlock[] = [];
+  let clusterEnd = -1;
+  const columnsEnd: number[] = [];
+  const close = () => {
+    const cols = Math.max(1, ...cluster.map((b) => b.col + 1));
+    cluster.forEach((b) => (b.cols = cols));
+    cluster = [];
+    columnsEnd.length = 0;
+  };
+  for (const b of blocks) {
+    if (b.start >= clusterEnd && cluster.length) close();
+    let col = columnsEnd.findIndex((end) => end <= b.start);
+    if (col === -1) col = columnsEnd.length;
+    columnsEnd[col] = b.end;
+    b.col = col;
+    cluster.push(b);
+    clusterEnd = Math.max(clusterEnd, b.end);
+  }
+  if (cluster.length) close();
+  return blocks;
+}

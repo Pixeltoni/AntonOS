@@ -20,7 +20,7 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 - **Fokus:** Timer mit Ablenkungszähler und Wochenübersicht
 
 ### Leben
-- **Kalender:** Tages-, Wochen- und Monatsansicht. Eigene Termine mit Name, Notiz, Datum (optional über mehrere Tage), optionaler Uhrzeit und Wichtigkeit (niedrig/mittel/hoch); dazu Aufgaben, Prüfungen, Projekt-Deadlines und Trainings
+- **Kalender:** Tages-, Wochen- und Monatsansicht; auf dem Handy und in schmalen Kästen im Stil des iPhone-Kalenders (Mini-Monat mit Punkten und Tagesliste, Wochenleiste, Zeitleiste mit Jetzt-Linie). Eigene Termine mit Name, Notiz, Datum (optional über mehrere Tage), optionaler Uhrzeit und Wichtigkeit (niedrig/mittel/hoch); dazu Aufgaben, Prüfungen, Projekt-Deadlines und Trainings
 - **Projekte:** mit Titelbild, Status und eigenen Aufgaben; der Fortschritt ergibt sich aus den erledigten Aufgaben
 - **Gewohnheiten:** tägliches Abhaken, Wochenraster, Serien 🔥 und 30-Tage-Quote
 - **Ziele:** Vision Board nach Lebensbereichen mit Inspirationsbildern und Fortschritt

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { ID, Priority, Task, TaskKind, TaskStatus } from '../types';
 import { formatDate, relativeLabel, today } from '../lib/dates';
@@ -86,7 +87,8 @@ export function TaskModal({ task, onClose }: { task: Task; onClose: () => void }
     onClose();
   };
 
-  return (
+  // Als Portal direkt in <body>, damit Glas-Effekte der Kästen das Fenster nicht einsperren
+  return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <form className="modal" role="dialog" aria-modal="true" aria-label="Aufgabe bearbeiten" onSubmit={save}>
         <div className="row between">
@@ -147,7 +149,8 @@ export function TaskModal({ task, onClose }: { task: Task; onClose: () => void }
           </div>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

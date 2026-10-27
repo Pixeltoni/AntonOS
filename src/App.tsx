@@ -127,6 +127,23 @@ function Shell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editingSidebar, setEditingSidebar] = useState(false);
   const current = route[0] ?? 'dashboard';
+  const routeKey = route.join('/');
+
+  // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
+  useEffect(() => setMenuOpen(false), [routeKey]);
+
+  // Solange das Menü offen ist: Seite dahinter nicht mitscrollen, Escape schließt
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
   const t = today();
   const counts: Record<string, number> = {
     aufgaben: data.tasks.filter((x) => x.status !== 'erledigt' && x.due !== null && x.due <= t).length,
@@ -141,9 +158,16 @@ function Shell() {
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
           <span>🎓 AntonOS</span>
-          <button className="icon menu-toggle" onClick={() => setMenuOpen((o) => !o)} aria-label="Menü">☰</button>
+          <button className="icon menu-toggle" onClick={() => setMenuOpen((o) => !o)} aria-label={menuOpen ? 'Menü schließen' : 'Menü öffnen'} aria-expanded={menuOpen}>
+            {menuOpen ? '✕' : '☰'}
+          </button>
         </div>
-        <nav>
+        <nav
+          onClick={(e) => {
+            // Jeder Link im Menü schließt es – auch wenn er auf die aktuelle Seite zeigt
+            if ((e.target as HTMLElement).closest('a')) setMenuOpen(false);
+          }}
+        >
           {editingSidebar ? (
             <SidebarEditor items={items} onChange={(sidebar) => updateSettings({ sidebar })} onDone={() => setEditingSidebar(false)} />
           ) : (

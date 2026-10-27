@@ -554,11 +554,26 @@ html.glass[data-theme='dark'] {
 @media (max-width: 800px) {
   .tile-inner.h-s .tile-body, .tile-inner.h-m .tile-body, .tile-inner.h-l .tile-body { height: auto; max-height: 70vh; }
   .layout { grid-template-columns: minmax(0, 1fr); }
-  .sidebar { position: sticky; height: auto; z-index: 10; border-right: 0; border-bottom: 1px solid var(--border); padding: 0.6rem 1rem; }
-  .brand { padding: 0; }
-  .menu-toggle { display: block; }
-  .sidebar nav { display: none; padding-top: 0.5rem; }
-  .sidebar.open nav { display: flex; }
+  /* Kopfzeile mit Menü-Knopf; das Menü öffnet sich als scrollbare Vollbild-Fläche */
+  .sidebar {
+    position: sticky; top: 0; z-index: 20; height: auto; overflow: visible;
+    border-right: 0; border-bottom: 1px solid var(--border);
+    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
+  }
+  .brand { padding: 0; min-height: 40px; }
+  .menu-toggle { display: block; font-size: 1.4rem; min-width: 44px; min-height: 40px; }
+  .sidebar nav { display: none; }
+  .sidebar.open nav {
+    display: flex; position: fixed; z-index: 30; left: 0; right: 0; bottom: 0;
+    top: calc(57px + env(safe-area-inset-top));
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    padding: 0.75rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border);
+  }
+  /* Unschärfe-Effekte am Kopf würden das feste Menü einsperren – beim offenen Menü abschalten */
+  .sidebar.open { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--surface) !important; }
+  .glass .sidebar.open nav { background: linear-gradient(var(--glass-tint-hi), var(--glass-tint-hi)), var(--surface); }
+  .sidebar nav a, .sidebar .nav-button { padding: 0.7rem 0.6rem; }
   main { padding: 1rem 16px 3rem; }
   .grid-2, .split { grid-template-columns: 1fr; }
   .ratings { grid-template-columns: repeat(2, 1fr); }

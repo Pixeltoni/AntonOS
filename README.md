@@ -45,7 +45,14 @@ Der Login läuft über PKCE direkt zwischen Browser und Spotify. Das Token bleib
 
 Bilder lassen sich per Link einfügen oder hochladen; hochgeladene Bilder werden verkleinert, damit der Browser-Speicher reicht.
 
-Alle Daten bleiben lokal im Browser (`localStorage`). Es gibt keinen Server und kein Konto.
+Ohne Anmeldung bleiben alle Daten lokal im Browser (`localStorage`).
+
+### Synchronisierung (Supabase)
+Unter *Einstellungen → Synchronisierung* meldest du dich mit E-Mail und Passwort an. Danach werden deine Daten automatisch gespeichert und auf allen Geräten abgeglichen; offline arbeitest du normal weiter. Wurde auf zwei Geräten gleichzeitig etwas geändert, fragt AntonOS, welche Version gelten soll.
+
+- Die Daten liegen in der Tabelle `user_data` (ein Datensatz pro Konto). Row Level Security sorgt dafür, dass jedes Konto ausschließlich seine eigenen Daten lesen und ändern kann; ohne Anmeldung ist nichts lesbar.
+- Adresse und Publishable Key des Projekts stehen bewusst im Code (`src/lib/cloud.ts`) – sie sind öffentlich und geben ohne Login keinen Zugriff.
+- Der Workflow `keepalive.yml` ruft alle zwei Tage `keepalive()` auf, damit das kostenlose Projekt nicht wegen Inaktivität pausiert.
 
 ## Online nutzen
 

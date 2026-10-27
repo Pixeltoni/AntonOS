@@ -130,6 +130,8 @@ export async function handleRedirect(clientId: string): Promise<boolean> {
   const code = params.get('code');
   const error = params.get('error');
   if (!code && !error) return false;
+  // Nur Rückleitungen verarbeiten, die wir selbst gestartet haben (nicht z. B. den Login der Synchronisierung)
+  if (!params.has('state') || !safeGet(sessionStorage, STATE_KEY)) return false;
 
   // URL aufräumen und zur Musikseite springen
   history.replaceState(null, '', `${location.pathname}#/musik`);

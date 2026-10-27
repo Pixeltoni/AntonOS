@@ -1,0 +1,21 @@
+name: Supabase wach halten
+
+# Kostenlose Supabase-Projekte werden nach einer Woche ohne Zugriffe pausiert.
+# Dieser Workflow ruft alle zwei Tage eine harmlose Funktion auf (liefert nur "1").
+on:
+  schedule:
+    - cron: '23 5 */2 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Datenbank anpingen
+        run: |
+          curl --fail --silent --show-error -X POST \
+            "https://nvbavfkkzipphcxoujhz.supabase.co/rest/v1/rpc/keepalive" \
+            -H "apikey: sb_publishable_l3rkg588KOfoGH_SQMSwfA_waP0u23E" \
+            -H "Content-Type: application/json" -d '{}'

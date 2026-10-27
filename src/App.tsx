@@ -6,6 +6,7 @@ import { isDue } from './lib/srs';
 import { DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem } from './lib/layout';
 import { MiniPlayer, SpotifyProvider } from './components/spotify';
 import { AppearanceLayer } from './components/appearance';
+import { ConflictBanner, SyncBadge } from './components/sync';
 import { Dashboard } from './pages/Dashboard';
 import { CourseDetail, Courses } from './pages/Courses';
 import { Tasks } from './pages/Tasks';
@@ -160,6 +161,7 @@ function Shell() {
           )}
           {!editingSidebar && (
             <div className="nav-group nav-footer">
+              <SyncBadge />
               <button className="nav-button" onClick={() => setEditingSidebar(true)}>✏️ Sidebar bearbeiten</button>
               <a className="nav-button" href="#/dashboard/bearbeiten" onClick={() => setMenuOpen(false)}>🧩 Dashboard bearbeiten</a>
             </div>
@@ -173,6 +175,7 @@ function Shell() {
             Bild-Links statt Uploads, und lade ein <a href="#/einstellungen">Backup</a> herunter.
           </p>
         )}
+        <ConflictBanner />
         <Page route={route} />
       </main>
       <MiniPlayer hidden={current === 'musik' || current === 'dashboard'} />

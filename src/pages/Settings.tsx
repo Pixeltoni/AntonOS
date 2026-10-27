@@ -5,10 +5,12 @@ import { today } from '../lib/dates';
 import { spotifyEmbedUrl } from '../lib/life';
 import { ImageInput } from '../components/widgets';
 import { AppearanceEditor } from '../components/appearance';
+import { CloudPanel, useSync } from '../components/sync';
 import { PageHeader, Panel } from '../components/ui';
 
 export function Settings() {
   const { data, replaceAll, updateSettings } = useStore();
+  const { user } = useSync();
   const spotify = data.settings.spotifyUrl;
   const file = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
@@ -52,10 +54,14 @@ export function Settings() {
       <Panel title="🎨 Hintergrund & Design">
         <AppearanceEditor />
       </Panel>
+      <Panel title="☁️ Synchronisierung">
+        <CloudPanel />
+      </Panel>
       <Panel title="Daten">
         <p className="muted">
-          Alle Daten werden nur lokal in diesem Browser gespeichert. Mach ab und zu ein Backup – besonders bevor du den
-          Browser-Speicher löschst oder das Gerät wechselst.
+          {user
+            ? 'Deine Daten liegen auf diesem Gerät und geschützt in der Cloud. Ein zusätzliches Backup schadet trotzdem nicht.'
+            : 'Ohne Anmeldung werden alle Daten nur lokal in diesem Browser gespeichert. Mach ab und zu ein Backup – besonders bevor du den Browser-Speicher löschst oder das Gerät wechselst.'}
         </p>
         <div className="row wrap">
           <button className="primary" onClick={exportData}>Backup herunterladen</button>

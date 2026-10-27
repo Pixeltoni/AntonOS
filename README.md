@@ -17,7 +17,7 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 - **Lernkarten:** Wiederholung nach dem Prinzip der verteilten Wiederholung (vereinfachter SM-2-Algorithmus wie bei Anki), bedienbar per Tastatur (Leertaste, 1–4)
 - **Prüfungen:** mit Countdown
 - **Noten:** deutsches Notensystem (1,0–5,0). Teilnoten werden pro Kurs gewichtet, der Gesamtschnitt nach ECTS. Wie in vielen Prüfungsordnungen wird nach der ersten Nachkommastelle abgeschnitten.
-- **Fokus:** Timer mit Ablenkungszähler und Wochenübersicht
+- **Fokus:** Fokus-Modi (Lernen, Arbeiten, Lesen) mit großem Ring-Timer, Pomodoro-Runden und automatischen Pausen. Der Timer läuft auf allen Seiten als schwebende Live-Aktivität weiter (auch nach dem Neuladen), blendet im Fokus unpassende Dashboard-Kästen aus und zeigt die Woche als gestapelte Balken pro Kurs. Lernzeit fließt in den Lernen-Ring und auf die Kursseite
 
 ### Leben
 - **Kalender:** Tages-, Wochen- und Monatsansicht; auf dem Handy und in schmalen Kästen im Stil des iPhone-Kalenders (Mini-Monat mit Punkten und Tagesliste, Wochenleiste, Zeitleiste mit Jetzt-Linie). Eigene Termine mit Name, Notiz, Datum (optional über mehrere Tage), optionaler Uhrzeit und Wichtigkeit (niedrig/mittel/hoch); dazu Aufgaben, Prüfungen, Projekt-Deadlines und Trainings

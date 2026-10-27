@@ -32,7 +32,7 @@ export interface RingSources {
 
 /** Stand der drei Ringe an einem Tag: Lernen aus dem Fokus-Timer, Bewegung aus dem Training. */
 export function ringDay(src: RingSources, goals: RingGoals, date: DateStr): RingDay {
-  const learn = src.sessions.filter((s) => s.date === date).reduce((sum, s) => sum + s.minutes, 0);
+  const learn = src.sessions.filter((s) => s.date === date && (!s.mode || s.mode === 'lernen')).reduce((sum, s) => sum + s.minutes, 0);
   const move = src.workouts
     .filter((w) => w.done && w.date === date)
     .reduce((sum, w) => sum + (w.minutes && w.minutes > 0 ? w.minutes : DEFAULT_WORKOUT_MINUTES), 0);
@@ -85,7 +85,7 @@ export function longestClosedRun(src: RingSources, goals: RingGoals, on: DateStr
 
 export function awards(src: RingSources, goals: RingGoals, on: DateStr): Award[] {
   const bestStreak = Math.max(0, ...src.habits.map((h) => streak(src.habitLogs, h, on)));
-  const learnedHours = src.sessions.reduce((sum, s) => sum + s.minutes, 0) / 60;
+  const learnedHours = src.sessions.filter((s) => !s.mode || s.mode === 'lernen').reduce((sum, s) => sum + s.minutes, 0) / 60;
   const workouts = src.workouts.filter((w) => w.done).length;
   const closedRun = longestClosedRun(src, goals, on);
   const closedToday = ringDay(src, goals, on).closed || closedRun > 0;

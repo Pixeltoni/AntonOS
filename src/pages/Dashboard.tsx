@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
 import type { WidgetConfig, WidgetId, WidgetVariant } from '../types';
 import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
@@ -12,6 +12,8 @@ import { CalendarView } from '../components/calendar';
 import { SpotifyPlayer } from '../components/spotify';
 import { AppearanceEditor } from '../components/appearance';
 import { RingsWidget } from '../components/rings';
+import { FocusWidget, useFocus } from '../components/focus';
+import { focusMode } from '../lib/focus';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
 import { HabitsToday } from './Habits';
 import { ProjectCard, useProjectProgress } from './Projects';
@@ -253,6 +255,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
     watching: { title: '📺 Gerade am Schauen', link: ['#/schauen', 'Alle →'], render: media(watching, 'Nichts am Laufen.') },
     reading: { title: '📖 Gerade am Lesen', link: ['#/lesen', 'Alle →'], render: media(reading, 'Kein Buch offen.') },
     habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], render: (v) => <HabitsToday variant={v} /> },
+    focus: { title: '⏱️ Fokus', link: ['#/fokus', 'Öffnen →'], render: () => <FocusWidget /> },
     rings: { title: '⭕ Aktivitätsringe', link: ['#/gewohnheiten', 'Details →'], render: (v) => <RingsWidget variant={v} /> },
     period: { title: '⏳ Fortschritt', render: (v) => <PeriodBars variant={v} /> },
     exams: {
@@ -403,10 +406,22 @@ export function Dashboard({ editing }: { editing: boolean }) {
   const grid = useRef<HTMLDivElement>(null);
   useMasonry(grid);
   const hidden = layout.filter((w) => w.hidden);
+  const { timer } = useFocus();
+  const [showAll, setShowAll] = useState(false);
+  const mode = focusMode(timer.config.mode);
+  const focusing = !editing && !showAll && timer.active && timer.phase === 'fokus' && timer.config.filterDashboard;
+  const visible = (id: WidgetId) => !focusing || mode.widgets.includes(id);
+  const filtered = focusing ? layout.filter((w) => !w.hidden && !visible(w.id)).length : 0;
 
   return (
     <>
       <Banner editing={editing} />
+      {focusing && filtered > 0 && (
+        <div className="focus-banner" style={{ ['--mode' as string]: mode.color }} role="status">
+          <span>{mode.icon} Fokus: {mode.label} – {filtered} Kästen ausgeblendet</span>
+          <button type="button" onClick={() => setShowAll(true)}>Alle zeigen</button>
+        </div>
+      )}
       {editing ? (
         <Panel
           title="🧩 Dashboard bearbeiten"
@@ -444,7 +459,7 @@ export function Dashboard({ editing }: { editing: boolean }) {
 
       <div ref={grid} className={`dash-grid ${editing ? 'editing' : ''}`}>
         {layout.map((w, index) => {
-          if (w.hidden) return null;
+          if (w.hidden || !visible(w.id)) return null;
           const def = widgets[w.id];
           const variant = def.variants && !def.variants.includes(w.variant) ? 'standard' : w.variant;
           const body = def.render(variant);

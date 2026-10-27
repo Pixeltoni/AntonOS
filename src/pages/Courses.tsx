@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import type { Course, ID } from '../types';
 import { courseGrade, formatGrade } from '../lib/grades';
-import { formatDate, relativeLabel, today } from '../lib/dates';
+import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
 import { isDue } from '../lib/srs';
 import { TaskForm, TaskList } from '../components/TaskList';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
@@ -104,6 +104,9 @@ export function CourseDetail({ id }: { id: ID }) {
   const exams = data.exams.filter((x) => x.courseId === id).sort((a, b) => a.date.localeCompare(b.date));
   const grades = data.grades.filter((x) => x.courseId === id);
   const grade = courseGrade(data.grades, id);
+  const courseSessions = data.sessions.filter((x) => x.courseId === id);
+  const totalFocus = courseSessions.reduce((sum, x) => sum + x.minutes, 0);
+  const weekFocus = courseSessions.filter((x) => x.date >= addDays(t, -6)).reduce((sum, x) => sum + x.minutes, 0);
 
   return (
     <>
@@ -157,6 +160,11 @@ export function CourseDetail({ id }: { id: ID }) {
                 ))}
               </ul>
             )}
+          </Panel>
+          <Panel title="⏱️ Lernzeit" actions={<a href="#/fokus">Fokus starten →</a>}>
+            <p>
+              Diese Woche <strong>{hours(weekFocus)} Std.</strong> · insgesamt <strong>{hours(totalFocus)} Std.</strong>
+            </p>
           </Panel>
           <Panel title="Lernkarten" actions={<a href={`#/lernen/${id}`}>Lernen →</a>}>
             <p>{cards.length} Karten, davon <strong>{cards.filter((c) => isDue(c, t)).length}</strong> heute fällig.</p>

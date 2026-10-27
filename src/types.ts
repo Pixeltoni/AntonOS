@@ -202,7 +202,7 @@ export interface Tool {
 export type WidgetId =
   | 'topnav' | 'stats' | 'clock' | 'quick' | 'notes' | 'music' | 'tools' | 'tasks' | 'projects'
   | 'transactions' | 'watching' | 'reading' | 'habits' | 'period' | 'exams' | 'trainings'
-  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings';
+  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus';
 
 /** Breite im 12-Spalten-Raster: ¼, ⅓, ½, ⅔ oder ganze Breite */
 export type WidgetSize = 's' | 'm' | 'l' | 'xl' | 'full';
@@ -273,12 +273,16 @@ export interface RingGoals {
   reminderTime: string;
 }
 
+export type FocusMode = 'lernen' | 'arbeiten' | 'lesen';
+
 export interface FocusSession {
   id: ID;
   date: DateStr;
   minutes: number;
   courseId: ID | null;
   distractions: number;
+  /** Fokus-Modus (ältere Einträge ohne Modus zählen als Lernen) */
+  mode?: FocusMode;
 }
 
 export interface Data {

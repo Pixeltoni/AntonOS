@@ -4,6 +4,7 @@ import { StoreProvider } from './store';
 import { App } from './App';
 import { SyncProvider } from './components/sync';
 import { ToastProvider } from './components/toast';
+import { FocusProvider } from './components/focus';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -11,7 +12,9 @@ createRoot(document.getElementById('root')!).render(
     <StoreProvider>
       <SyncProvider>
         <ToastProvider>
-          <App />
+          <FocusProvider>
+            <App />
+          </FocusProvider>
         </ToastProvider>
       </SyncProvider>
     </StoreProvider>

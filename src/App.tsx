@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRingReminder } from './components/rings';
+import { FocusPill } from './components/focus';
 import { useStore } from './store';
 import type { NavItem } from './types';
 import { today } from './lib/dates';
@@ -216,6 +217,7 @@ function Shell() {
         <Page route={route} />
       </main>
       <MiniPlayer hidden={current === 'musik' || current === 'dashboard'} />
+      <FocusPill hidden={current === 'fokus'} />
     </div>
   );
 }

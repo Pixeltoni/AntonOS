@@ -37,6 +37,13 @@ Bilder lassen sich per Link einfügen oder hochladen; hochgeladene Bilder werden
 
 Alle Daten bleiben lokal im Browser (`localStorage`). Es gibt keinen Server und kein Konto.
 
+## Online nutzen
+
+Die App wird bei jedem Push auf `Main` automatisch gebaut und auf GitHub Pages veröffentlicht:
+https://pixeltoni.github.io/AntonOS/
+
+Einmalig nötig: unter *Settings → Pages → Build and deployment → Source* „GitHub Actions“ auswählen.
+
 ## Loslegen
 
 ```bash

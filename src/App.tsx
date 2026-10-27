@@ -7,6 +7,7 @@ import { DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem } from './lib/la
 import { MiniPlayer, SpotifyProvider } from './components/spotify';
 import { AppearanceLayer } from './components/appearance';
 import { ConflictBanner, SyncBadge } from './components/sync';
+import { UpdateBanner } from './components/update';
 import { Dashboard } from './pages/Dashboard';
 import { CourseDetail, Courses } from './pages/Courses';
 import { Tasks } from './pages/Tasks';
@@ -175,6 +176,7 @@ function Shell() {
             Bild-Links statt Uploads, und lade ein <a href="#/einstellungen">Backup</a> herunter.
           </p>
         )}
+        <UpdateBanner />
         <ConflictBanner />
         <Page route={route} />
       </main>

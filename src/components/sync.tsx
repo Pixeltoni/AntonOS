@@ -3,8 +3,9 @@ import type { User } from '@supabase/supabase-js';
 import { emptyData, normalize, useStore } from '../store';
 import type { Data } from '../types';
 import { decide, loadMeta, saveMeta, supabase, type SyncMeta } from '../lib/cloud';
+import { isNewerSchema, SCHEMA_VERSION } from '../lib/version';
 
-export type SyncStatus = 'aus' | 'verbinde' | 'synchron' | 'speichert' | 'offline' | 'konflikt' | 'fehler';
+export type SyncStatus = 'aus' | 'verbinde' | 'synchron' | 'speichert' | 'offline' | 'konflikt' | 'fehler' | 'veraltet';
 
 interface Conflict {
   remote: Data;
@@ -72,6 +73,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const version = useRef(0);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const queue = useRef<Promise<void>>(Promise.resolve());
+  /** Die Cloud wurde von einer neueren AntonOS-Version gespeichert: nichts mehr hochladen */
+  const outdated = useRef(false);
 
   const setMeta = useCallback((patch: Partial<SyncMeta>) => {
     meta.current = { ...meta.current, ...patch };
@@ -109,10 +112,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const push = useCallback(
     async (force = false) => {
       const u = userRef.current;
-      if (!u) return;
+      // Eine veraltete App-Version darf den neueren Cloud-Stand nicht überschreiben
+      if (!u || outdated.current) return;
       setStatus('speichert');
       const startVersion = version.current;
-      const payload = dataRef.current;
+      const payload = { ...dataRef.current, schemaVersion: SCHEMA_VERSION };
       const m = meta.current;
       let at: string | null = null;
 
@@ -155,8 +159,17 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const pull = useCallback(async () => {
     const u = userRef.current;
     if (!u) return;
-    const { data: head, error: err } = await supabase.from('user_data').select('updated_at').eq('user_id', u.id).maybeSingle();
+    const { data: head, error: err } = await supabase
+      .from('user_data')
+      .select('updated_at, schemaVersion:data->schemaVersion')
+      .eq('user_id', u.id)
+      .maybeSingle();
     if (err) throw err;
+    if (isNewerSchema(head)) {
+      outdated.current = true;
+      setStatus('veraltet');
+      return;
+    }
     const remoteAt = (head?.updated_at as string | undefined) ?? null;
     const decision = decide(remoteAt, meta.current, u.id);
     if (decision === 'nichts') {
@@ -197,7 +210,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     version.current++;
     setMeta({ dirty: true });
     if (userRef.current) {
-      setStatus((s) => (s === 'konflikt' ? s : 'speichert'));
+      setStatus((s) => (s === 'konflikt' || s === 'veraltet' ? s : 'speichert'));
       schedulePush();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -317,6 +330,7 @@ const STATUS_TEXT: Record<SyncStatus, [string, string]> = {
   offline: ['📴', 'Offline – wird später abgeglichen'],
   konflikt: ['⚠️', 'Bitte Version wählen'],
   fehler: ['⚠️', 'Sync-Fehler'],
+  veraltet: ['⬆️', 'Update nötig – bitte neu laden'],
 };
 
 export function SyncBadge() {

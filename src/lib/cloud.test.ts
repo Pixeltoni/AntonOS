@@ -29,3 +29,23 @@ describe('Synchronisierung', () => {
     expect(decide(T2, meta({ userId: 'anderes-konto' }), 'u1')).toBe('konflikt');
   });
 });
+
+describe('Versionen', () => {
+  it('erkennt Cloud-Stände von neueren App-Versionen', async () => {
+    const { isNewerSchema, SCHEMA_VERSION } = await import('./version');
+    expect(isNewerSchema({ schemaVersion: SCHEMA_VERSION + 1 })).toBe(true);
+    expect(isNewerSchema({ schemaVersion: SCHEMA_VERSION })).toBe(false);
+    expect(isNewerSchema({})).toBe(false);
+    expect(isNewerSchema(null)).toBe(false);
+  });
+
+  it('verliert beim Laden keine Bereiche, die diese Version nicht kennt', async () => {
+    const { normalize } = await import('../store');
+    const raw = { tasks: [{ id: 't' }], zukunft: [{ id: 'z' }], schemaVersion: 9 };
+    const data = normalize(raw) as unknown as Record<string, unknown>;
+    expect(data.zukunft).toEqual([{ id: 'z' }]);
+    expect(data.tasks).toEqual([{ id: 't' }]);
+    expect(data.events).toEqual([]);
+    expect(data.schemaVersion).toBe(9);
+  });
+});

@@ -265,10 +265,12 @@ export interface Data {
   media: Media[];
   workouts: Workout[];
   events: CalEvent[];
+  /** Datenformat-Version der AntonOS-Version, die zuletzt gespeichert hat */
+  schemaVersion?: number;
   albums: Album[];
   tools: Tool[];
   settings: Settings;
 }
 
 /** Alle Listen-Sammlungen in `Data` (also alles außer den Einstellungen) */
-export type Collection = { [K in keyof Data]: Data[K] extends unknown[] ? K : never }[keyof Data];
+export type Collection = { [K in keyof Data]-?: Data[K] extends unknown[] ? K : never }[keyof Data];

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Collection, Data, ID, Settings } from './types';
 import { defaultAppearance, defaultSettings, demoData } from './demo';
+import { SCHEMA_VERSION } from './lib/version';
 
 const STORAGE_KEY = 'antonos:v1';
 
@@ -23,21 +24,29 @@ export const emptyData = (): Data => ({
   albums: [],
   tools: [],
   settings: defaultSettings(),
+  schemaVersion: SCHEMA_VERSION,
 });
 
 /** Ergänzt fehlende Sammlungen, z. B. bei Importen älterer Exporte. */
+/**
+ * Ergänzt fehlende Sammlungen, z. B. bei Importen älterer Exporte.
+ * Unbekannte Bereiche (von einer neueren AntonOS-Version) bleiben erhalten,
+ * damit eine ältere Version beim Speichern nichts davon löscht.
+ */
 export function normalize(raw: unknown): Data {
   const base = emptyData();
   if (!raw || typeof raw !== 'object') return base;
   const obj = raw as Record<string, unknown>;
+  const result = { ...obj, ...base } as Data & Record<string, unknown>;
   for (const key of Object.keys(base) as (keyof Data)[]) {
-    if (key !== 'settings' && Array.isArray(obj[key])) (base[key] as unknown[]) = obj[key] as unknown[];
+    if (key !== 'settings' && key !== 'schemaVersion' && Array.isArray(obj[key])) (result[key] as unknown[]) = obj[key] as unknown[];
   }
   if (obj.settings && typeof obj.settings === 'object') {
     const stored = obj.settings as Partial<Settings>;
-    base.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) } };
+    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) } };
   }
-  return base;
+  if (typeof obj.schemaVersion === 'number') result.schemaVersion = obj.schemaVersion;
+  return result;
 }
 
 function load(): Data {

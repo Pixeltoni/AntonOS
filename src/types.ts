@@ -162,10 +162,37 @@ export interface Tool {
   category: string;
 }
 
+export type WidgetId =
+  | 'topnav' | 'stats' | 'clock' | 'quick' | 'notes' | 'music' | 'tools' | 'tasks' | 'projects'
+  | 'transactions' | 'watching' | 'reading' | 'habits' | 'period' | 'exams' | 'trainings'
+  | 'calendar' | 'courses' | 'albums' | 'vision';
+
+export type WidgetArea = 'oben' | 'links' | 'mitte' | 'rechts' | 'unten';
+
+export interface WidgetConfig {
+  id: WidgetId;
+  area: WidgetArea;
+  hidden: boolean;
+}
+
+export interface NavItem {
+  path: string;
+  label: string;
+  icon: string;
+  group: string;
+  hidden: boolean;
+}
+
 export interface Settings {
   name: string;
   cover: string;
   spotifyUrl: string;
+  /** Client-ID einer eigenen Spotify-App für die Verbindung mit dem Konto */
+  spotifyClientId: string;
+  /** Reihenfolge, Bereich und Sichtbarkeit der Dashboard-Widgets (leer = Standard) */
+  dashboard: WidgetConfig[];
+  /** Reihenfolge, Namen und Sichtbarkeit der Sidebar-Einträge (leer = Standard) */
+  sidebar: NavItem[];
 }
 
 export interface FocusSession {

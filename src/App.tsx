@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store';
+import type { NavItem } from './types';
 import { today } from './lib/dates';
 import { isDue } from './lib/srs';
+import { DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem } from './lib/layout';
+import { MiniPlayer, SpotifyProvider } from './components/spotify';
 import { Dashboard } from './pages/Dashboard';
 import { CourseDetail, Courses } from './pages/Courses';
 import { Tasks } from './pages/Tasks';
@@ -20,48 +23,7 @@ import { Training } from './pages/Training';
 import { Albums } from './pages/Albums';
 import { Tools } from './pages/Tools';
 import { Calendar } from './pages/Calendar';
-
-const NAV: { group: string; items: { path: string; label: string; icon: string }[] }[] = [
-  {
-    group: '',
-    items: [
-      { path: 'dashboard', label: 'Dashboard', icon: '🏠' },
-      { path: 'kalender', label: 'Kalender', icon: '🗓️' },
-    ],
-  },
-  {
-    group: 'Studium',
-    items: [
-      { path: 'kurse', label: 'Kurse', icon: '📚' },
-      { path: 'aufgaben', label: 'Aufgaben', icon: '✅' },
-      { path: 'notizen', label: 'Notizen', icon: '📝' },
-      { path: 'lernen', label: 'Lernkarten', icon: '🧠' },
-      { path: 'pruefungen', label: 'Prüfungen', icon: '📅' },
-      { path: 'noten', label: 'Noten', icon: '📊' },
-      { path: 'fokus', label: 'Fokus', icon: '⏱️' },
-    ],
-  },
-  {
-    group: 'Leben',
-    items: [
-      { path: 'projekte', label: 'Projekte', icon: '🚀' },
-      { path: 'gewohnheiten', label: 'Gewohnheiten', icon: '✨' },
-      { path: 'ziele', label: 'Ziele', icon: '🎯' },
-      { path: 'finanzen', label: 'Finanzen', icon: '💰' },
-      { path: 'training', label: 'Training', icon: '🏋️' },
-    ],
-  },
-  {
-    group: 'Sammlungen',
-    items: [
-      { path: 'schauen', label: 'Watchlist', icon: '📺' },
-      { path: 'lesen', label: 'Leseliste', icon: '📖' },
-      { path: 'alben', label: 'Alben', icon: '📸' },
-      { path: 'tools', label: 'Tools', icon: '🧰' },
-    ],
-  },
-  { group: '', items: [{ path: 'einstellungen', label: 'Einstellungen', icon: '⚙️' }] },
-];
+import { Music } from './pages/Music';
 
 function useRoute(): string[] {
   const read = () => location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -100,6 +62,8 @@ function Page({ route }: { route: string[] }) {
       return <Settings />;
     case 'kalender':
       return <Calendar />;
+    case 'musik':
+      return <Music />;
     case 'projekte':
       return param ? <ProjectDetail id={param} /> : <Projects />;
     case 'gewohnheiten':
@@ -117,14 +81,48 @@ function Page({ route }: { route: string[] }) {
     case 'tools':
       return <Tools />;
     default:
-      return <Dashboard />;
+      return <Dashboard editing={param === 'bearbeiten'} />;
   }
 }
 
-export function App() {
+function SidebarEditor({ items, onChange, onDone }: { items: NavItem[]; onChange: (items: NavItem[]) => void; onDone: () => void }) {
+  const groups = [...new Set(items.map((i) => i.group).filter(Boolean))];
+  const set = (index: number, patch: Partial<NavItem>) => onChange(items.map((x, i) => (i === index ? { ...x, ...patch } : x)));
+  return (
+    <div className="sidebar-editor">
+      <p className="muted small">Umbenennen, Symbol ändern, verschieben, Gruppe wählen oder ausblenden.</p>
+      <datalist id="nav-groups">{groups.map((g) => <option key={g} value={g} />)}</datalist>
+      {items.map((item, i) => (
+        <div key={item.path} className={`nav-edit ${item.hidden ? 'is-hidden' : ''}`}>
+          <div className="row">
+            <input className="emoji-input" value={item.icon} onChange={(e) => set(i, { icon: e.target.value })} aria-label={`Symbol für ${item.label}`} maxLength={4} />
+            <input className="grow" value={item.label} onChange={(e) => set(i, { label: e.target.value })} aria-label={`Name für ${item.path}`} />
+          </div>
+          <div className="row">
+            <input className="grow" list="nav-groups" placeholder="ohne Gruppe" value={item.group} onChange={(e) => set(i, { group: e.target.value })} aria-label={`Gruppe für ${item.label}`} />
+            <button className="icon" onClick={() => onChange(moveItem(items, i, -1))} aria-label={`${item.label} nach oben`} title="Nach oben">↑</button>
+            <button className="icon" onClick={() => onChange(moveItem(items, i, 1))} aria-label={`${item.label} nach unten`} title="Nach unten">↓</button>
+            {item.path !== 'einstellungen' && (
+              <button className="icon" onClick={() => set(i, { hidden: !item.hidden })} aria-label={item.hidden ? `${item.label} einblenden` : `${item.label} ausblenden`} title={item.hidden ? 'Einblenden' : 'Ausblenden'}>
+                {item.hidden ? '🙈' : '👁'}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      <div className="row between">
+        <button onClick={() => confirm('Sidebar auf den Standard zurücksetzen?') && onChange([])}>Zurücksetzen</button>
+        <button className="primary" onClick={onDone}>Fertig</button>
+      </div>
+    </div>
+  );
+}
+
+function Shell() {
   const route = useRoute();
-  const { data, saveFailed } = useStore();
+  const { data, saveFailed, updateSettings } = useStore();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [editingSidebar, setEditingSidebar] = useState(false);
   const current = route[0] ?? 'dashboard';
   const t = today();
   const counts: Record<string, number> = {
@@ -132,6 +130,7 @@ export function App() {
     lernen: data.cards.filter((c) => isDue(c, t)).length,
     gewohnheiten: data.habits.filter((h) => !data.habitLogs.some((l) => l.habitId === h.id && l.date === t)).length,
   };
+  const items = mergeWithDefaults(data.settings.sidebar, DEFAULT_SIDEBAR, 'path');
 
   return (
     <div className="layout">
@@ -140,19 +139,29 @@ export function App() {
           <span>🎓 AntonOS</span>
           <button className="icon menu-toggle" onClick={() => setMenuOpen((o) => !o)} aria-label="Menü">☰</button>
         </div>
-        <nav onClick={() => setMenuOpen(false)}>
-          {NAV.map((section, i) => (
-            <div key={i} className="nav-group">
-              {section.group && <span className="nav-label">{section.group}</span>}
-              {section.items.map((n) => (
-                <a key={n.path} href={`#/${n.path}`} className={current === n.path ? 'active' : ''}>
-                  <span aria-hidden>{n.icon}</span>
-                  <span className="grow">{n.label}</span>
-                  {counts[n.path] > 0 && <span className="count">{counts[n.path]}</span>}
-                </a>
-              ))}
+        <nav>
+          {editingSidebar ? (
+            <SidebarEditor items={items} onChange={(sidebar) => updateSettings({ sidebar })} onDone={() => setEditingSidebar(false)} />
+          ) : (
+            groupNav(items.filter((i) => !i.hidden)).map((section, i) => (
+              <div key={i} className="nav-group" onClick={() => setMenuOpen(false)}>
+                {section.group && <span className="nav-label">{section.group}</span>}
+                {section.items.map((n) => (
+                  <a key={n.path} href={`#/${n.path}`} className={current === n.path ? 'active' : ''}>
+                    <span aria-hidden>{n.icon}</span>
+                    <span className="grow">{n.label}</span>
+                    {counts[n.path] > 0 && <span className="count">{counts[n.path]}</span>}
+                  </a>
+                ))}
+              </div>
+            ))
+          )}
+          {!editingSidebar && (
+            <div className="nav-group nav-footer">
+              <button className="nav-button" onClick={() => setEditingSidebar(true)}>✏️ Sidebar bearbeiten</button>
+              <a className="nav-button" href="#/dashboard/bearbeiten" onClick={() => setMenuOpen(false)}>🧩 Dashboard bearbeiten</a>
             </div>
-          ))}
+          )}
         </nav>
       </aside>
       <main>
@@ -164,6 +173,15 @@ export function App() {
         )}
         <Page route={route} />
       </main>
+      <MiniPlayer hidden={current === 'musik' || current === 'dashboard'} />
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <SpotifyProvider>
+      <Shell />
+    </SpotifyProvider>
   );
 }

@@ -6,6 +6,9 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 
 - **Dashboard:** Titelbild, Uhr, Tages-/Wochen-/Monats-/Jahresfortschritt, Schnellaktionen, Aufgaben der Woche, aktive Projekte, letzte Buchungen, „Gerade am Schauen/Lesen“, Gewohnheiten heute, letzte Trainings, Lieblingsmusik (Spotify), nützliche Tools, Monatskalender, Alben und Vision Board
 
+- **Anpassbar:** Über *Dashboard bearbeiten* lassen sich Widgets verschieben, einer Spalte zuordnen oder ausblenden. Über *Sidebar bearbeiten* (ganz unten in der Sidebar) lassen sich Einträge umbenennen, mit anderem Symbol versehen, umsortieren, in Gruppen einordnen oder ausblenden.
+- **Musik:** Spotify-Fenster mit Anmeldung über dein eigenes Konto. Es zeigt, was gerade läuft, steuert die Wiedergabe (Play/Pause, vor/zurück, Lautstärke), spielt deine Playlists und kann direkt im Browser abspielen. Die Steuerung erfordert Spotify Premium; ohne Premium bleibt die eingebettete Playlist. Ein Mini-Player bleibt auf allen Seiten sichtbar.
+
 ### Studium
 
 - **Kurse:** mit Kürzel, Semester, Dozent/in, Raum, ECTS und Farbe. Jede Kursseite bündelt Aufgaben, Prüfungen, Lernkarten, Noten und Notizen.
@@ -28,6 +31,13 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 - **Watchlist & Leseliste:** Serien, Filme, Bücher und Hörbücher mit Cover, Status, Fortschritt und Sternebewertung
 - **Alben:** Erinnerungen mit Titelbild und Tags
 - **Tools:** deine wichtigsten Links nach Kategorie
+
+### Spotify verbinden
+1. Im [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) eine App anlegen.
+2. Als Redirect URI die Adresse von AntonOS eintragen, z. B. `https://pixeltoni.github.io/AntonOS/` (lokal: `http://127.0.0.1:5173/`).
+3. „Web API“ und „Web Playback SDK“ auswählen, speichern und die Client ID unter *Musik* in AntonOS einfügen.
+
+Der Login läuft über PKCE direkt zwischen Browser und Spotify. Das Token bleibt im Browser und landet nicht im Backup.
 
 ### Einstellungen
 - Name, Titelbild und Spotify-Playlist fürs Dashboard

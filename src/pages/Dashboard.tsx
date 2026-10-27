@@ -1,10 +1,14 @@
+import type { ReactNode } from 'react';
 import { useStore } from '../store';
+import type { WidgetArea, WidgetConfig, WidgetId } from '../types';
 import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
 import { formatGrade, summary } from '../lib/grades';
-import { formatMoney, safeImageSrc, spotifyEmbedUrl } from '../lib/life';
+import { formatMoney, safeImageSrc } from '../lib/life';
+import { AREAS, DEFAULT_DASHBOARD, mergeWithDefaults, moveWidget, WIDGET_LABELS } from '../lib/layout';
 import { isDue } from '../lib/srs';
 import { TaskForm, TaskList } from '../components/TaskList';
-import { Clock, MonthCalendar, PeriodBars } from '../components/widgets';
+import { Clock, ImageInput, MonthCalendar, PeriodBars } from '../components/widgets';
+import { SpotifyPlayer } from '../components/spotify';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
 import { HabitsToday } from './Habits';
 import { ProjectCard } from './Projects';
@@ -39,6 +43,7 @@ const TOP_NAV = [
   { label: 'Finanzen', icon: '💰', href: '#/finanzen' },
   { label: 'Gewohnheiten', icon: '✨', href: '#/gewohnheiten' },
   { label: 'Training', icon: '🏋️', href: '#/training' },
+  { label: 'Musik', icon: '🎵', href: '#/musik' },
   { label: 'Kalender', icon: '📅', href: '#/kalender' },
   { label: 'Ziele', icon: '🎯', href: '#/ziele' },
 ];
@@ -57,22 +62,8 @@ function Banner() {
   );
 }
 
-function Music() {
-  const { data } = useStore();
-  const embed = spotifyEmbedUrl(data.settings.spotifyUrl);
-  if (!embed) return <Empty>Füge in den <a href="#/einstellungen">Einstellungen</a> einen Spotify-Link zu deiner Lieblingsplaylist hinzu.</Empty>;
-  return (
-    <iframe
-      title="Lieblingsmusik"
-      src={embed}
-      className="spotify"
-      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-      loading="lazy"
-    />
-  );
-}
-
-export function Dashboard() {
+/** Inhalt aller Widgets. Titel `null` = ohne Rahmen (z. B. Kennzahlen). */
+function useWidgets(): Record<WidgetId, { title: string | null; link?: [string, string]; body: ReactNode }> {
   const { data } = useStore();
   const t = today();
   const weekEnd = addDays(t, 7);
@@ -94,113 +85,213 @@ export function Dashboard() {
   const albums = [...data.albums].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
   const monthSpent = data.transactions.filter((x) => x.type === 'Ausgabe' && x.date.slice(0, 7) === t.slice(0, 7)).reduce((s, x) => s + x.amount, 0);
 
+  return {
+    topnav: {
+      title: null,
+      body: (
+        <nav className="top-nav" aria-label="Bereiche">
+          {TOP_NAV.map((n) => <a key={n.href} href={n.href}><span aria-hidden>{n.icon}</span> {n.label}</a>)}
+        </nav>
+      ),
+    },
+    stats: {
+      title: null,
+      body: (
+        <div className="stats">
+          <Stat label="Offene Aufgaben" value={open.length} hint={`${thisWeek.length} diese Woche`} href="#/aufgaben" />
+          <Stat label="Karten fällig" value={dueCards} hint="heute wiederholen" href="#/lernen" />
+          <Stat label="Nächste Prüfung" value={exams[0] ? relativeLabel(exams[0].date, t) : '–'} hint={exams[0]?.title} href="#/pruefungen" />
+          <Stat label="Notenschnitt" value={formatGrade(truncated, 1)} hint={`${hours(focusMinutes)} h Fokus (7 Tage)`} href="#/noten" />
+          <Stat label="Ausgaben im Monat" value={formatMoney(monthSpent)} href="#/finanzen" />
+        </div>
+      ),
+    },
+    clock: { title: '', body: <Clock /> },
+    quick: {
+      title: '⚡ Schnellaktionen',
+      body: (
+        <div className="quick">
+          {QUICK_ACTIONS.map((a) => <a key={a.label} href={a.href}><span aria-hidden>{a.icon}</span> {a.label}</a>)}
+        </div>
+      ),
+    },
+    notes: {
+      title: '📝 Letzte Notizen',
+      link: ['#/notizen', 'Alle →'],
+      body: notes.length === 0 ? <Empty>Keine Notizen.</Empty> : (
+        <ul className="list">{notes.map((n) => <li key={n.id}><a href={`#/notizen/${n.id}`}>{n.title || 'Ohne Titel'}</a></li>)}</ul>
+      ),
+    },
+    music: { title: '🎵 Musik', link: ['#/musik', 'Öffnen →'], body: <SpotifyPlayer compact /> },
+    tools: { title: '🧰 Nützliche Tools', link: ['#/tools', 'Verwalten →'], body: <ToolLinks tools={data.tools} /> },
+    tasks: {
+      title: '✅ Aufgaben diese Woche',
+      link: ['#/aufgaben', 'Alle →'],
+      body: (
+        <>
+          <TaskForm compact />
+          <TaskList tasks={upNext} />
+        </>
+      ),
+    },
+    projects: {
+      title: '🚀 Aktive Projekte',
+      link: ['#/projekte', 'Alle →'],
+      body: activeProjects.length === 0 ? <Empty>Keine aktiven Projekte.</Empty> : (
+        <div className="gallery small-cards">{activeProjects.map((p) => <ProjectCard key={p.id} project={p} />)}</div>
+      ),
+    },
+    transactions: { title: '💸 Letzte Buchungen', link: ['#/finanzen', 'Finanzen →'], body: <TransactionList txs={sortTx(data.transactions).slice(0, 5)} /> },
+    watching: {
+      title: '📺 Gerade am Schauen',
+      link: ['#/schauen', 'Alle →'],
+      body: watching.length === 0 ? <Empty>Nichts am Laufen.</Empty> : <div className="gallery small-cards">{watching.map((m) => <MediaCard key={m.id} item={m} compact />)}</div>,
+    },
+    reading: {
+      title: '📖 Gerade am Lesen',
+      link: ['#/lesen', 'Alle →'],
+      body: reading.length === 0 ? <Empty>Kein Buch offen.</Empty> : <div className="gallery small-cards">{reading.map((m) => <MediaCard key={m.id} item={m} compact />)}</div>,
+    },
+    habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], body: <HabitsToday /> },
+    period: { title: '⏳ Fortschritt', body: <PeriodBars /> },
+    exams: {
+      title: '📅 Anstehende Prüfungen',
+      link: ['#/pruefungen', 'Alle →'],
+      body: exams.length === 0 ? <Empty>Keine Prüfungen.</Empty> : (
+        <ul className="list">
+          {exams.slice(0, 3).map((e) => (
+            <li key={e.id}>
+              <div className="grow">
+                <div className="task-title">{e.title}</div>
+                <div className="meta"><CourseBadge id={e.courseId} /></div>
+              </div>
+              <strong>{relativeLabel(e.date, t)}</strong>
+            </li>
+          ))}
+        </ul>
+      ),
+    },
+    trainings: { title: '🏋️ Letzte Trainings', link: ['#/training', 'Alle →'], body: <WorkoutList workouts={workouts} /> },
+    calendar: { title: '🗓️ Monatskalender', link: ['#/kalender', 'Groß anzeigen →'], body: <MonthCalendar /> },
+    courses: {
+      title: '📚 Kurse',
+      link: ['#/kurse', 'Alle →'],
+      body: data.courses.length === 0 ? <Empty>Leg deinen ersten Kurs an.</Empty> : (
+        <div className="course-grid">
+          {data.courses.map((c) => {
+            const tasks = data.tasks.filter((x) => x.courseId === c.id);
+            const done = tasks.filter((x) => x.status === 'erledigt').length;
+            return (
+              <a key={c.id} className="course-card" href={`#/kurse/${c.id}`} style={{ ['--c' as string]: c.color }}>
+                <strong>{c.name}</strong>
+                <span className="muted">{c.code} · {c.ects} ECTS</span>
+                <Progress value={tasks.length ? (done / tasks.length) * 100 : 0} color={c.color} />
+                <span className="muted small">{done} von {tasks.length} Aufgaben erledigt</span>
+              </a>
+            );
+          })}
+        </div>
+      ),
+    },
+    albums: {
+      title: '📸 Letzte Alben',
+      link: ['#/alben', 'Alle →'],
+      body: albums.length === 0 ? <Empty>Noch keine Alben.</Empty> : <div className="gallery">{albums.map((a) => <AlbumCard key={a.id} album={a} />)}</div>,
+    },
+    vision: { title: '🌄 Vision Board', link: ['#/ziele', 'Ziele →'], body: <VisionBoard /> },
+  };
+}
+
+function EditBar({ widget, layout, onChange }: { widget: WidgetConfig; layout: WidgetConfig[]; onChange: (l: WidgetConfig[]) => void }) {
+  const set = (patch: Partial<WidgetConfig>) => onChange(layout.map((w) => (w.id === widget.id ? { ...w, ...patch } : w)));
+  return (
+    <div className="edit-bar">
+      <strong className="grow small">{WIDGET_LABELS[widget.id]}</strong>
+      <button onClick={() => onChange(moveWidget(layout, widget.id, -1))} aria-label="Nach oben" title="Nach oben">↑</button>
+      <button onClick={() => onChange(moveWidget(layout, widget.id, 1))} aria-label="Nach unten" title="Nach unten">↓</button>
+      <select
+        value={widget.area}
+        onChange={(e) => {
+          // In den neuen Bereich ganz ans Ende verschieben
+          const rest = layout.filter((w) => w.id !== widget.id);
+          onChange([...rest, { ...widget, area: e.target.value as WidgetArea }]);
+        }}
+        aria-label="Bereich"
+      >
+        {AREAS.map((a) => <option key={a.area} value={a.area}>{a.label}</option>)}
+      </select>
+      <button onClick={() => set({ hidden: true })} title="Ausblenden">Ausblenden</button>
+    </div>
+  );
+}
+
+export function Dashboard({ editing }: { editing: boolean }) {
+  const { data, updateSettings } = useStore();
+  const widgets = useWidgets();
+  const layout = mergeWithDefaults(data.settings.dashboard, DEFAULT_DASHBOARD, 'id');
+  const save = (l: WidgetConfig[]) => updateSettings({ dashboard: l });
+
+  const render = (w: WidgetConfig) => {
+    const def = widgets[w.id];
+    const content =
+      def.title === null ? def.body : (
+        <Panel title={def.title || undefined} actions={def.link && !editing ? <a href={def.link[0]}>{def.link[1]}</a> : undefined}>
+          {def.body}
+        </Panel>
+      );
+    if (!editing) return <div key={w.id}>{content}</div>;
+    return (
+      <div key={w.id} className="editable">
+        <EditBar widget={w} layout={layout} onChange={save} />
+        <div className="editable-body">{content}</div>
+      </div>
+    );
+  };
+  const area = (a: WidgetArea) => layout.filter((w) => w.area === a && !w.hidden).map(render);
+  const hidden = layout.filter((w) => w.hidden);
+
   return (
     <>
       <Banner />
-      <nav className="top-nav" aria-label="Bereiche">
-        {TOP_NAV.map((n) => <a key={n.href} href={n.href}><span aria-hidden>{n.icon}</span> {n.label}</a>)}
-      </nav>
-
-      <div className="stats">
-        <Stat label="Offene Aufgaben" value={open.length} hint={`${thisWeek.length} diese Woche`} href="#/aufgaben" />
-        <Stat label="Karten fällig" value={dueCards} hint="heute wiederholen" href="#/lernen" />
-        <Stat label="Nächste Prüfung" value={exams[0] ? relativeLabel(exams[0].date, t) : '–'} hint={exams[0]?.title} href="#/pruefungen" />
-        <Stat label="Notenschnitt" value={formatGrade(truncated, 1)} hint={`${hours(focusMinutes)} h Fokus (7 Tage)`} href="#/noten" />
-        <Stat label="Ausgaben im Monat" value={formatMoney(monthSpent)} href="#/finanzen" />
-      </div>
-
-      <div className="dash">
-        <div className="stack">
-          <Panel><Clock /></Panel>
-          <Panel title="⚡ Schnellaktionen">
-            <div className="quick">
-              {QUICK_ACTIONS.map((a) => <a key={a.label} href={a.href}><span aria-hidden>{a.icon}</span> {a.label}</a>)}
+      {editing ? (
+        <Panel
+          title="🧩 Dashboard bearbeiten"
+          actions={
+            <div className="row">
+              <button onClick={() => confirm('Dashboard auf den Standard zurücksetzen?') && save([])}>Zurücksetzen</button>
+              <a className="button primary" href="#/dashboard">Fertig</a>
             </div>
-          </Panel>
-          <Panel title="📝 Letzte Notizen" actions={<a href="#/notizen">Alle →</a>}>
-            {notes.length === 0 ? <Empty>Keine Notizen.</Empty> : (
-              <ul className="list">
-                {notes.map((n) => <li key={n.id}><a href={`#/notizen/${n.id}`}>{n.title || 'Ohne Titel'}</a></li>)}
-              </ul>
-            )}
-          </Panel>
-          <Panel title="🎵 Lieblingsmusik"><Music /></Panel>
-          <Panel title="🧰 Nützliche Tools" actions={<a href="#/tools">Verwalten →</a>}>
-            <ToolLinks tools={data.tools} />
-          </Panel>
-        </div>
-
-        <div className="stack">
-          <Panel title="✅ Aufgaben diese Woche" actions={<a href="#/aufgaben">Alle →</a>}>
-            <TaskForm compact />
-            <TaskList tasks={upNext} />
-          </Panel>
-          <Panel title="🚀 Aktive Projekte" actions={<a href="#/projekte">Alle →</a>}>
-            {activeProjects.length === 0 ? <Empty>Keine aktiven Projekte.</Empty> : (
-              <div className="gallery small-cards">{activeProjects.map((p) => <ProjectCard key={p.id} project={p} />)}</div>
-            )}
-          </Panel>
-          <Panel title="💸 Letzte Buchungen" actions={<a href="#/finanzen">Finanzen →</a>}>
-            <TransactionList txs={sortTx(data.transactions).slice(0, 5)} />
-          </Panel>
-          <div className="grid-2">
-            <Panel title="📺 Gerade am Schauen" actions={<a href="#/schauen">Alle →</a>}>
-              {watching.length === 0 ? <Empty>Nichts am Laufen.</Empty> : watching.map((m) => <MediaCard key={m.id} item={m} compact />)}
-            </Panel>
-            <Panel title="📖 Gerade am Lesen" actions={<a href="#/lesen">Alle →</a>}>
-              {reading.length === 0 ? <Empty>Kein Buch offen.</Empty> : reading.map((m) => <MediaCard key={m.id} item={m} compact />)}
-            </Panel>
+          }
+        >
+          <p className="muted small">Verschiebe Widgets mit ↑ ↓, wähle ihren Bereich oder blende sie aus.</p>
+          <div className="form-grid">
+            <label>Dein Name<input value={data.settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></label>
+            <label className="full">Titelbild<ImageInput value={data.settings.cover} onChange={(cover) => updateSettings({ cover })} /></label>
           </div>
+          {hidden.length > 0 && (
+            <div className="row wrap">
+              <span className="muted small">Ausgeblendet:</span>
+              {hidden.map((w) => (
+                <button key={w.id} onClick={() => save(layout.map((x) => (x.id === w.id ? { ...x, hidden: false } : x)))}>
+                  + {WIDGET_LABELS[w.id]}
+                </button>
+              ))}
+            </div>
+          )}
+        </Panel>
+      ) : (
+        <div className="row end">
+          <a className="button" href="#/dashboard/bearbeiten">✏️ Dashboard bearbeiten</a>
         </div>
+      )}
 
-        <div className="stack">
-          <Panel title="✨ Gewohnheiten heute" actions={<a href="#/gewohnheiten">Alle →</a>}><HabitsToday /></Panel>
-          <Panel title="⏳ Fortschritt"><PeriodBars /></Panel>
-          <Panel title="📅 Anstehende Prüfungen">
-            {exams.length === 0 ? <Empty>Keine Prüfungen.</Empty> : (
-              <ul className="list">
-                {exams.slice(0, 3).map((e) => (
-                  <li key={e.id}>
-                    <div className="grow">
-                      <div className="task-title">{e.title}</div>
-                      <div className="meta"><CourseBadge id={e.courseId} /></div>
-                    </div>
-                    <strong>{relativeLabel(e.date, t)}</strong>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-          <Panel title="🏋️ Letzte Trainings" actions={<a href="#/training">Alle →</a>}><WorkoutList workouts={workouts} /></Panel>
-        </div>
+      {area('oben')}
+      <div className={`dash ${editing ? 'editing' : ''}`}>
+        <div className="stack">{area('links')}</div>
+        <div className="stack">{area('mitte')}</div>
+        <div className="stack">{area('rechts')}</div>
       </div>
-
-      <Panel title="🗓️ Monatskalender" actions={<a href="#/kalender">Groß anzeigen →</a>}><MonthCalendar /></Panel>
-
-      <Panel title="📚 Kurse" actions={<a href="#/kurse">Alle →</a>}>
-        {data.courses.length === 0 ? <Empty>Leg deinen ersten Kurs an.</Empty> : (
-          <div className="course-grid">
-            {data.courses.map((c) => {
-              const tasks = data.tasks.filter((x) => x.courseId === c.id);
-              const done = tasks.filter((x) => x.status === 'erledigt').length;
-              return (
-                <a key={c.id} className="course-card" href={`#/kurse/${c.id}`} style={{ ['--c' as string]: c.color }}>
-                  <strong>{c.name}</strong>
-                  <span className="muted">{c.code} · {c.ects} ECTS</span>
-                  <Progress value={tasks.length ? (done / tasks.length) * 100 : 0} color={c.color} />
-                  <span className="muted small">{done} von {tasks.length} Aufgaben erledigt</span>
-                </a>
-              );
-            })}
-          </div>
-        )}
-      </Panel>
-
-      <Panel title="📸 Letzte Alben" actions={<a href="#/alben">Alle →</a>}>
-        {albums.length === 0 ? <Empty>Noch keine Alben.</Empty> : <div className="gallery">{albums.map((a) => <AlbumCard key={a.id} album={a} />)}</div>}
-      </Panel>
-
-      <Panel title="🌄 Vision Board" actions={<a href="#/ziele">Ziele →</a>}><VisionBoard /></Panel>
+      {area('unten')}
     </>
   );
 }

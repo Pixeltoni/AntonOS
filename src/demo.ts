@@ -2,7 +2,14 @@ import type { Data, Settings } from './types';
 import { addDays, today } from './lib/dates';
 import { START_EASE } from './lib/srs';
 
-export const defaultSettings = (): Settings => ({ name: 'Anton', cover: '', spotifyUrl: '' });
+export const defaultSettings = (): Settings => ({
+  name: 'Anton',
+  cover: '',
+  spotifyUrl: '',
+  spotifyClientId: '',
+  dashboard: [],
+  sidebar: [],
+});
 
 /** Beispieldaten für den ersten Start, damit man sofort sieht, wie alles zusammenspielt. */
 export function demoData(): Data {

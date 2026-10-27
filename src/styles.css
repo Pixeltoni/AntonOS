@@ -253,6 +253,47 @@ a.gallery-card:hover { text-decoration: none; border-color: var(--accent); }
 .habit-table th.today { color: var(--accent); font-weight: 600; }
 .habit-table .habit-name { text-align: left; white-space: normal; min-width: 140px; }
 
+/* Bearbeiten */
+a.button { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.75rem; color: var(--text); }
+a.button:hover { text-decoration: none; border-color: var(--accent); }
+a.button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.link { background: none; border: 0; padding: 0; color: var(--accent); }
+code { background: var(--surface-2); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.85rem; overflow-wrap: anywhere; }
+h3 { font-size: 0.95rem; margin: 0.5rem 0 0; }
+.editable { border: 2px dashed var(--accent); border-radius: calc(var(--radius) + 4px); padding: 4px; display: flex; flex-direction: column; gap: 4px; }
+.editable-body { pointer-events: none; opacity: 0.85; max-height: 340px; overflow: hidden; }
+.edit-bar { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; background: var(--accent-soft); border-radius: 8px; padding: 0.35rem 0.5rem; }
+.edit-bar button, .edit-bar select { padding: 0.2rem 0.5rem; font-size: 0.85rem; }
+.dash.editing > .stack { min-height: 80px; border-radius: var(--radius); outline: 1px dashed var(--border); }
+.nav-footer { border-top: 1px solid var(--border); padding-top: 0.6rem; margin-top: 0.4rem; }
+.nav-button { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; background: none; border: 0; padding: 0.45rem 0.6rem; border-radius: 8px; color: var(--muted); font-size: 0.9rem; }
+.nav-button:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.sidebar-editor { display: flex; flex-direction: column; gap: 0.5rem; }
+.nav-edit { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.4rem; border: 1px solid var(--border); border-radius: 8px; }
+.nav-edit input { padding: 0.25rem 0.4rem; font-size: 0.85rem; }
+.nav-edit.is-hidden { opacity: 0.5; }
+.emoji-input { width: 2.6rem; text-align: center; }
+.layout:has(.sidebar-editor) { grid-template-columns: 300px minmax(0, 1fr); }
+
+/* Spotify */
+.spotify-btn { background: #1db954; border-color: #1db954; color: #000; font-weight: 600; border-radius: 999px; padding: 0.6rem 1.2rem; align-self: flex-start; }
+.spotify-setup ol { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.now-playing { display: flex; gap: 0.9rem; align-items: center; }
+.np-cover { width: 96px; height: 96px; border-radius: 8px; object-fit: cover; flex: none; }
+.np-cover.placeholder { display: grid; place-items: center; background: var(--surface-2); font-size: 2rem; }
+.np-info { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; flex: 1; }
+.np-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.np-progress { display: flex; gap: 0.5rem; align-items: center; }
+.np-controls { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.np-controls button { min-width: 2.4rem; }
+.np-controls input[type='range'] { width: 110px; }
+.now-playing.mini .np-cover { width: 48px; height: 48px; }
+.playlists { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem; }
+.playlist { display: flex; flex-direction: column; gap: 0.35rem; align-items: stretch; text-align: left; padding: 0.4rem; background: var(--surface-2); }
+.playlist img, .playlist .np-cover { width: 100%; height: auto; aspect-ratio: 1; border-radius: 6px; object-fit: cover; }
+.playlist span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-player { position: fixed; right: 16px; bottom: 16px; z-index: 20; width: min(360px, calc(100vw - 32px)); display: flex; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem; box-shadow: 0 10px 30px rgb(0 0 0 / 0.2); }
+
 @media (max-width: 1100px) {
   .dash { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .dash > .stack:nth-child(2) { grid-column: 1 / -1; grid-row: 1; }
@@ -271,6 +312,8 @@ a.gallery-card:hover { text-decoration: none; border-color: var(--accent); }
   .timer { font-size: 3rem; }
   .dash { grid-template-columns: 1fr; }
   .dash > .stack:nth-child(2) { grid-row: auto; order: -1; }
+  .layout:has(.sidebar-editor) { grid-template-columns: minmax(0, 1fr); }
+  .np-cover { width: 72px; height: 72px; }
   .cal-day { min-height: 56px; }
   .cal-item { font-size: 0; height: 6px; padding: 0; border-left-width: 0; }
   .banner, .cover.banner { height: 130px; }

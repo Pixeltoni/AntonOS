@@ -27,6 +27,7 @@ export interface Task {
   status: TaskStatus;
   priority: Priority;
   due: DateStr | null;
+  note?: string;
 }
 
 export interface Note {

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useStore } from '../store';
-import type { Task, WidgetConfig, WidgetId, WidgetVariant } from '../types';
+import type { WidgetConfig, WidgetId, WidgetVariant } from '../types';
 import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
 import { courseGrade, formatGrade, summary } from '../lib/grades';
 import { formatMoney, monthTotals, safeHttpUrl, safeImageSrc } from '../lib/life';
@@ -66,23 +66,6 @@ function Banner({ editing }: { editing: boolean }) {
       </div>
       {!editing && <a className="button banner-edit" href="#/dashboard/bearbeiten">✏️ Bearbeiten</a>}
     </div>
-  );
-}
-
-function MiniTaskList({ tasks }: { tasks: Task[] }) {
-  const { update } = useStore();
-  const t = today();
-  if (tasks.length === 0) return <Empty>Alles erledigt 🎉</Empty>;
-  return (
-    <ul className="list dense">
-      {tasks.map((task) => (
-        <li key={task.id}>
-          <input type="checkbox" checked={false} onChange={() => update('tasks', task.id, { status: 'erledigt' })} aria-label={`${task.title} erledigt`} />
-          <span className="grow">{task.title}</span>
-          {task.due && <span className={`small ${task.due < t ? 'danger' : 'muted'}`}>{relativeLabel(task.due, t)}</span>}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -227,7 +210,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
     tasks: {
       title: '✅ Aufgaben',
       link: ['#/aufgaben', 'Alle →'],
-      render: (v) => v === 'kompakt' ? <MiniTaskList tasks={upNext.slice(0, 6)} /> : (
+      render: (v) => v === 'kompakt' ? <TaskList tasks={upNext.slice(0, 6)} compact /> : (
         <>
           <TaskForm compact />
           <TaskList tasks={v === 'detail' ? open : upNext} />

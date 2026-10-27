@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import type { WidgetConfig, WidgetId, WidgetVariant } from '../types';
 import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
 import { courseGrade, formatGrade, summary } from '../lib/grades';
-import { formatMoney, monthTotals, safeHttpUrl, safeImageSrc } from '../lib/life';
+import { formatMoney, isHabitDone, monthTotals, safeHttpUrl, safeImageSrc } from '../lib/life';
 import { DEFAULT_DASHBOARD, HEIGHTS, mergeWithDefaults, moveItem, normalizeWidgets, SIZES, VARIANT_LABELS, WIDGET_LABELS } from '../lib/layout';
 import { isDue } from '../lib/srs';
 import { TaskForm, TaskList } from '../components/TaskList';
@@ -11,6 +11,7 @@ import { Agenda, Clock, Cover, ImageInput, PeriodBars } from '../components/widg
 import { CalendarView } from '../components/calendar';
 import { SpotifyPlayer } from '../components/spotify';
 import { AppearanceEditor } from '../components/appearance';
+import { RingsWidget } from '../components/rings';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
 import { HabitsToday } from './Habits';
 import { ProjectCard, useProjectProgress } from './Projects';
@@ -109,7 +110,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
   const workouts = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date));
   const albums = [...data.albums].sort((a, b) => b.date.localeCompare(a.date));
   const month = monthTotals(data.transactions, t.slice(0, 7));
-  const habitsDone = data.habits.filter((h) => data.habitLogs.some((l) => l.habitId === h.id && l.date === t)).length;
+  const habitsDone = data.habits.filter((h) => isHabitDone(data.habitLogs, h, t)).length;
   const workouts30 = data.workouts.filter((w) => w.done && w.date >= addDays(t, -29)).length;
 
   const media = (items: typeof watching, empty: string) => (v: WidgetVariant) =>
@@ -252,6 +253,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
     watching: { title: '📺 Gerade am Schauen', link: ['#/schauen', 'Alle →'], render: media(watching, 'Nichts am Laufen.') },
     reading: { title: '📖 Gerade am Lesen', link: ['#/lesen', 'Alle →'], render: media(reading, 'Kein Buch offen.') },
     habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], render: (v) => <HabitsToday variant={v} /> },
+    rings: { title: '⭕ Aktivitätsringe', link: ['#/gewohnheiten', 'Details →'], render: (v) => <RingsWidget variant={v} /> },
     period: { title: '⏳ Fortschritt', render: (v) => <PeriodBars variant={v} /> },
     exams: {
       title: '📅 Anstehende Prüfungen',

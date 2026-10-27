@@ -1,6 +1,7 @@
 import type { Appearance, Data, Settings } from './types';
 import { addDays, today } from './lib/dates';
 import { START_EASE } from './lib/srs';
+import { defaultRingGoals } from './lib/rings';
 
 export const defaultSettings = (): Settings => ({
   name: 'Anton',
@@ -10,6 +11,7 @@ export const defaultSettings = (): Settings => ({
   dashboard: [],
   sidebar: [],
   appearance: defaultAppearance(),
+  rings: defaultRingGoals(),
 });
 
 export function defaultAppearance(): Appearance {
@@ -68,12 +70,12 @@ export function demoData(): Data {
     habits: [
       { id: 'demo-h1', name: '10 Minuten meditieren', icon: '🧘' },
       { id: 'demo-h2', name: '10 Seiten lesen', icon: '📖' },
-      { id: 'demo-h3', name: '2 Liter Wasser', icon: '💧' },
+      { id: 'demo-h3', name: '2 Liter Wasser', icon: '💧', target: 2, unit: 'l', step: 0.25 },
       { id: 'demo-h4', name: 'Tagesrückblick', icon: '📝' },
     ],
     habitLogs: [1, 2, 3].flatMap((d) => [
       { id: `demo-hl1-${d}`, habitId: 'demo-h1', date: addDays(t, -d) },
-      { id: `demo-hl3-${d}`, habitId: 'demo-h3', date: addDays(t, -d) },
+      { id: `demo-hl3-${d}`, habitId: 'demo-h3', date: addDays(t, -d), amount: 2 },
     ]),
     transactions: [
       { id: 'demo-x1', type: 'Einnahme', description: 'Werkstudentenjob', amount: 620, category: 'Gehalt', account: 'Girokonto', date: addDays(t, -6) },
@@ -88,8 +90,8 @@ export function demoData(): Data {
       { id: 'demo-m3', kind: 'Film', title: 'Interstellar', creator: '', cover: '', status: 'geplant', rating: 0, progress: '' },
     ],
     workouts: [
-      { id: 'demo-w1', title: '5 km Lauf', type: 'Laufen', date: addDays(t, -2), done: true, notes: '28:40 min' },
-      { id: 'demo-w2', title: 'Ganzkörper', type: 'Krafttraining', date: addDays(t, -1), done: true, notes: '' },
+      { id: 'demo-w1', title: '5 km Lauf', type: 'Laufen', date: addDays(t, -2), done: true, notes: '28:40 min', minutes: 29 },
+      { id: 'demo-w2', title: 'Ganzkörper', type: 'Krafttraining', date: addDays(t, -1), done: true, notes: '', minutes: 45 },
       { id: 'demo-w3', title: 'Dehnen & Mobility', type: 'Dehnen', date: addDays(t, 1), done: false, notes: '' },
     ],
     events: [

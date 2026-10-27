@@ -111,12 +111,20 @@ export interface Habit {
   id: ID;
   name: string;
   icon: string;
+  /** Tagesziel bei Mengen-Gewohnheiten, z. B. 2 (Liter) */
+  target?: number;
+  /** Einheit, z. B. „l“ oder „Seiten“ */
+  unit?: string;
+  /** Schrittweite für den Plus-Knopf, z. B. 0,25 */
+  step?: number;
 }
 
 export interface HabitLog {
   id: ID;
   habitId: ID;
   date: DateStr;
+  /** Eingetragene Menge bei Mengen-Gewohnheiten */
+  amount?: number;
 }
 
 export type TxType = 'Ausgabe' | 'Einnahme';
@@ -155,6 +163,8 @@ export interface Workout {
   date: DateStr;
   done: boolean;
   notes: string;
+  /** Dauer in Minuten (für den Bewegungsring) */
+  minutes?: number;
 }
 
 export interface Album {
@@ -192,7 +202,7 @@ export interface Tool {
 export type WidgetId =
   | 'topnav' | 'stats' | 'clock' | 'quick' | 'notes' | 'music' | 'tools' | 'tasks' | 'projects'
   | 'transactions' | 'watching' | 'reading' | 'habits' | 'period' | 'exams' | 'trainings'
-  | 'calendar' | 'courses' | 'albums' | 'vision';
+  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings';
 
 /** Breite im 12-Spalten-Raster: ¼, ⅓, ½, ⅔ oder ganze Breite */
 export type WidgetSize = 's' | 'm' | 'l' | 'xl' | 'full';
@@ -249,6 +259,18 @@ export interface Settings {
   /** Reihenfolge, Namen und Sichtbarkeit der Sidebar-Einträge (leer = Standard) */
   sidebar: NavItem[];
   appearance: Appearance;
+  /** Tagesziele der Aktivitätsringe */
+  rings: RingGoals;
+}
+
+export interface RingGoals {
+  /** Lernminuten pro Tag (aus dem Fokus-Timer) */
+  learnMinutes: number;
+  /** Bewegungsminuten pro Tag (aus dem Training) */
+  moveMinutes: number;
+  /** Abends erinnern, wenn ein Ring noch offen ist */
+  reminder: boolean;
+  reminderTime: string;
 }
 
 export interface FocusSession {

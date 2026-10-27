@@ -22,10 +22,10 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 ### Leben
 - **Kalender:** Tages-, Wochen- und Monatsansicht; auf dem Handy und in schmalen Kästen im Stil des iPhone-Kalenders (Mini-Monat mit Punkten und Tagesliste, Wochenleiste, Zeitleiste mit Jetzt-Linie). Eigene Termine mit Name, Notiz, Datum (optional über mehrere Tage), optionaler Uhrzeit und Wichtigkeit (niedrig/mittel/hoch); dazu Aufgaben, Prüfungen, Projekt-Deadlines und Trainings
 - **Projekte:** mit Titelbild, Status und eigenen Aufgaben; der Fortschritt ergibt sich aus den erledigten Aufgaben
-- **Gewohnheiten:** tägliches Abhaken, Wochenraster, Serien 🔥 und 30-Tage-Quote
+- **Gewohnheiten:** Aktivitätsringe wie bei Apple Fitness – Lernen (aus dem Fokus-Timer), Bewegung (aus dem Training) und Gewohnheiten – mit einstellbaren Tageszielen, Wochenleiste, Auszeichnungen und Erinnerung am Abend. Dazu Mengen-Gewohnheiten (z. B. „+ 0,25 l“), Wochenraster, Serien 🔥 und 30-Tage-Quote
 - **Ziele:** Vision Board nach Lebensbereichen mit Inspirationsbildern und Fortschritt
 - **Finanzen:** Einnahmen und Ausgaben pro Monat, Saldo und Ausgaben nach Kategorie
-- **Training:** geplante und erledigte Workouts
+- **Training:** geplante und erledigte Workouts mit Dauer (zählt für den Bewegungsring)
 
 ### Sammlungen
 - **Watchlist & Leseliste:** Serien, Filme, Bücher und Hörbücher mit Cover, Status, Fortschritt und Sternebewertung

@@ -22,6 +22,7 @@ export function WorkoutList({ workouts }: { workouts: Workout[] }) {
             <div className="meta">
               <span className="tag">{w.type}</span>
               <span title={formatDate(w.date)}>{relativeLabel(w.date, t)}</span>
+              {w.minutes ? <span>{w.minutes} Min.</span> : null}
               {w.notes && <span>{w.notes}</span>}
             </div>
           </div>
@@ -39,6 +40,7 @@ export function Training() {
   const [type, setType] = useState(TYPES[0]);
   const [date, setDate] = useState(t);
   const [notes, setNotes] = useState('');
+  const [minutes, setMinutes] = useState('');
 
   const sorted = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date));
   const planned = sorted.filter((w) => !w.done).reverse();
@@ -58,14 +60,17 @@ export function Training() {
           onSubmit={(e) => {
             e.preventDefault();
             if (!title.trim()) return;
-            add('workouts', { title: title.trim(), type, date, notes: notes.trim(), done: date <= t });
+            const m = Number(minutes);
+            add('workouts', { title: title.trim(), type, date, notes: notes.trim(), done: date <= t, ...(m > 0 ? { minutes: m } : {}) });
             setTitle('');
+            setMinutes('');
             setNotes('');
           }}
         >
           <input className="grow" placeholder="z. B. 5 km Lauf" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Titel" />
           <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Art">{TYPES.map((x) => <option key={x}>{x}</option>)}</select>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Datum" required />
+          <input className="narrow" type="number" min={1} placeholder="Min." value={minutes} onChange={(e) => setMinutes(e.target.value)} aria-label="Dauer in Minuten" title="Dauer in Minuten (für den Bewegungsring)" />
           <input className="grow" placeholder="Notiz (z. B. Gewicht, Zeit)" value={notes} onChange={(e) => setNotes(e.target.value)} aria-label="Notiz" />
           <button className="primary" type="submit">Hinzufügen</button>
         </form>

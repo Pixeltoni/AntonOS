@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRingReminder } from './components/rings';
 import { useStore } from './store';
 import type { NavItem } from './types';
 import { today } from './lib/dates';
@@ -128,6 +129,7 @@ function Shell() {
   const [editingSidebar, setEditingSidebar] = useState(false);
   const current = route[0] ?? 'dashboard';
   const routeKey = route.join('/');
+  useRingReminder();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Collection, Data, ID, Settings } from './types';
 import { defaultAppearance, defaultSettings, demoData } from './demo';
+import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
 
 const STORAGE_KEY = 'antonos:v1';
@@ -43,7 +44,7 @@ export function normalize(raw: unknown): Data {
   }
   if (obj.settings && typeof obj.settings === 'object') {
     const stored = obj.settings as Partial<Settings>;
-    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) } };
+    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) } };
   }
   if (typeof obj.schemaVersion === 'number') result.schemaVersion = obj.schemaVersion;
   return result;

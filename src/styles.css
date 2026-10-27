@@ -773,3 +773,53 @@ html.glass[data-theme='dark'] .modal { --surface-2: #1f2330; --border: #2a2f3d; 
   .np-cover { width: 72px; height: 72px; }
   .banner, .cover.banner { height: 130px; }
 }
+
+/* ---------- Aktivitätsringe (Vorschlag 2) ---------- */
+.rings { display: block; flex: none; }
+.ring-arc { transition: stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.rings-card {
+  background: #000; color: #fff; border-radius: 22px; padding: 1.25rem 1.4rem; margin-bottom: 1rem;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.25rem;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+}
+.rings-card-main { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.rings-card h2 { margin: 0 0 0.5rem; font-size: 1.3rem; color: #fff; }
+.rings-closed { margin: 0.5rem 0 0; font-weight: 600; }
+.ring-legend { margin: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.ring-legend div { display: flex; flex-direction: column; }
+.ring-legend dt { font-size: 0.78rem; font-weight: 600; opacity: 0.85; }
+.ring-legend dd { margin: 0; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ring-week { display: flex; gap: 0.6rem; }
+.ring-week-day { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; font-size: 0.72rem; color: #AEAEB2; font-weight: 600; }
+.ring-week-day.today span { color: #fff; background: #3A3A3C; border-radius: 999px; padding: 0 0.4rem; }
+.ring-week-day.future { opacity: 0.45; }
+.ring-dot { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; margin-right: 0.2rem; vertical-align: middle; }
+
+.rings-widget { display: flex; flex-direction: column; gap: 0.75rem; background: #000; color: #fff; border-radius: 16px; padding: 0.9rem; }
+.rings-widget .ring-legend dd { font-size: 1rem; }
+.rings-widget .ring-week { justify-content: space-between; gap: 0.2rem; }
+.rings-widget-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.rings-widget.kompakt { display: grid; place-items: center; text-decoration: none; }
+
+.habit-rows .habit-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0; }
+.habit-row.done .task-title { color: var(--muted); }
+.pill-btn { border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.85rem; white-space: nowrap; }
+.pill-btn.accent { background: #00B8D4; border-color: #00B8D4; color: #fff; }
+.pill-btn.on { background: transparent; color: var(--muted); }
+
+.awards { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 0.75rem; }
+.award { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.2rem; padding: 0.6rem 0.3rem; border-radius: 14px; font-size: 0.82rem; }
+.award-medal {
+  width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem;
+  background: var(--border); filter: grayscale(1); opacity: 0.45;
+}
+.award.earned .award-medal {
+  filter: none; opacity: 1;
+  background: radial-gradient(circle at 35% 30%, #fff6c9, #f5b400 60%, #b57d00);
+  box-shadow: 0 4px 14px rgb(245 180 0 / 0.4);
+}
+@media (max-width: 520px) {
+  .rings-card { padding: 1rem; }
+  .rings-card-main { gap: 1rem; }
+  .ring-week { width: 100%; justify-content: space-between; gap: 0; }
+}

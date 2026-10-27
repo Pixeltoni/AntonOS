@@ -1,4 +1,4 @@
-import type { DateStr, HabitLog, ID, Transaction } from '../types';
+import type { DateStr, Habit, HabitLog, ID, Transaction } from '../types';
 import { addDays, parseDate, toDateStr } from './dates';
 
 /* ---------- Zeitfortschritt ---------- */
@@ -51,19 +51,37 @@ export function monthLabel(key: string): string {
 
 /* ---------- Gewohnheiten ---------- */
 
-export function isHabitDone(logs: HabitLog[], habitId: ID, date: DateStr): boolean {
-  return logs.some((l) => l.habitId === habitId && l.date === date);
+type HabitRef = ID | Pick<Habit, 'id' | 'target'>;
+
+const habitKey = (h: HabitRef) => (typeof h === 'string' ? { id: h, target: undefined } : h);
+
+/** Menge, die an einem Tag eingetragen wurde (z. B. 1,25 Liter). */
+export function habitAmount(logs: HabitLog[], habitId: ID, date: DateStr): number {
+  const log = logs.find((l) => l.habitId === habitId && l.date === date);
+  return log ? (log.amount ?? 0) : 0;
+}
+
+/**
+ * Erledigt ist eine Gewohnheit, wenn es einen Eintrag gibt – bei Mengen-Gewohnheiten
+ * (z. B. „2 Liter Wasser“) erst, wenn das Tagesziel erreicht ist.
+ */
+export function isHabitDone(logs: HabitLog[], habit: HabitRef, date: DateStr): boolean {
+  const { id, target } = habitKey(habit);
+  const log = logs.find((l) => l.habitId === id && l.date === date);
+  if (!log) return false;
+  return !target || log.amount === undefined || log.amount >= target;
 }
 
 /**
  * Anzahl aufeinanderfolgender erledigter Tage bis heute. Ist heute noch offen,
  * zählt die Serie bis gestern – sie ist ja noch nicht gerissen.
  */
-export function streak(logs: HabitLog[], habitId: ID, on: DateStr): number {
-  const days = new Set(logs.filter((l) => l.habitId === habitId).map((l) => l.date));
-  let day = days.has(on) ? on : addDays(on, -1);
+export function streak(logs: HabitLog[], habit: HabitRef, on: DateStr): number {
+  const h = habitKey(habit);
+  const done = (d: DateStr) => isHabitDone(logs, h, d);
+  let day = done(on) ? on : addDays(on, -1);
   let count = 0;
-  while (days.has(day)) {
+  while (done(day)) {
     count++;
     day = addDays(day, -1);
   }
@@ -71,10 +89,11 @@ export function streak(logs: HabitLog[], habitId: ID, on: DateStr): number {
 }
 
 /** Anteil erledigter Tage in den letzten `days` Tagen (inkl. heute), 0–100. */
-export function completionRate(logs: HabitLog[], habitId: ID, on: DateStr, days = 30): number {
-  const from = addDays(on, -(days - 1));
-  const done = new Set(logs.filter((l) => l.habitId === habitId && l.date >= from && l.date <= on).map((l) => l.date));
-  return (done.size / days) * 100;
+export function completionRate(logs: HabitLog[], habit: HabitRef, on: DateStr, days = 30): number {
+  const h = habitKey(habit);
+  let done = 0;
+  for (let i = 0; i < days; i++) if (isHabitDone(logs, h, addDays(on, -i))) done++;
+  return (done / days) * 100;
 }
 
 /* ---------- Finanzen ---------- */

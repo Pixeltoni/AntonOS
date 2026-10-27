@@ -19,8 +19,9 @@ export function AppearanceLayer() {
     if (/^#[0-9a-f]{6}$/i.test(a.accent)) root.style.setProperty('--accent', a.accent);
     else root.style.removeProperty('--accent');
     root.classList.toggle('glass', a.glass);
+    root.style.setProperty('--glass', String(Math.min(100, Math.max(0, a.glassLevel)) / 100));
     root.classList.toggle('has-bg', bg !== null);
-  }, [a.theme, a.accent, a.glass, bg]);
+  }, [a.theme, a.accent, a.glass, a.glassLevel, bg]);
 
   if (!bg) return null;
   return (
@@ -96,7 +97,7 @@ export function AppearanceEditor() {
 
       <div className="row wrap">
         <label className="row small">
-          <input type="checkbox" checked={a.glass} onChange={(e) => set({ glass: e.target.checked })} /> Durchsichtige Kästen
+          <input type="checkbox" checked={a.glass} onChange={(e) => set({ glass: e.target.checked })} /> Milchglas-Kästen (wie iOS)
         </label>
         <label className="row small">
           Design
@@ -111,6 +112,17 @@ export function AppearanceEditor() {
         </label>
         <button onClick={() => updateSettings({ appearance: defaultAppearance() })}>Design zurücksetzen</button>
       </div>
+      {a.glass && (
+        <label className="row small">
+          Milchigkeit
+          <span className="muted">klar</span>
+          <input type="range" min={0} max={100} step={5} value={a.glassLevel} onChange={(e) => set({ glassLevel: Number(e.target.value) })} className="grow" aria-label="Milchigkeit" />
+          <span className="muted">milchig</span>
+        </label>
+      )}
+      {a.glass && a.background === 'standard' && (
+        <p className="muted small">Tipp: Der Glas-Effekt wirkt am schönsten mit einem Bild oder Verlauf als Hintergrund.</p>
+      )}
       {a.background === 'bild' && a.image.startsWith('data:') && (
         <p className="muted small">Tipp: Große Bilder lieber als Link einfügen, damit der Browser-Speicher reicht.</p>
       )}

@@ -13,7 +13,7 @@ export const defaultSettings = (): Settings => ({
 });
 
 export function defaultAppearance(): Appearance {
-  return { theme: 'system', background: 'standard', color: '#1f2937', gradient: 'herbst', image: '', dim: 30, glass: false, accent: '' };
+  return { theme: 'system', background: 'standard', color: '#1f2937', gradient: 'herbst', image: '', dim: 30, glass: false, glassLevel: 50, accent: '' };
 }
 
 /** Beispieldaten für den ersten Start, damit man sofort sieht, wie alles zusammenspielt. */

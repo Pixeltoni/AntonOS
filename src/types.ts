@@ -214,6 +214,8 @@ export interface Appearance {
   dim: number;
   /** Halbdurchsichtige Kästen mit Unschärfe-Effekt */
   glass: boolean;
+  /** Wie milchig die Glas-Kästen sind (0–100) */
+  glassLevel: number;
   /** Akzentfarbe, leer = Standard */
   accent: string;
 }

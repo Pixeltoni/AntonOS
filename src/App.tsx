@@ -5,6 +5,7 @@ import { today } from './lib/dates';
 import { isDue } from './lib/srs';
 import { DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem } from './lib/layout';
 import { MiniPlayer, SpotifyProvider } from './components/spotify';
+import { AppearanceLayer } from './components/appearance';
 import { Dashboard } from './pages/Dashboard';
 import { CourseDetail, Courses } from './pages/Courses';
 import { Tasks } from './pages/Tasks';
@@ -134,6 +135,7 @@ function Shell() {
 
   return (
     <div className="layout">
+      <AppearanceLayer />
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
           <span>🎓 AntonOS</span>

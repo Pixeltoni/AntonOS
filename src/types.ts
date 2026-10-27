@@ -167,12 +167,38 @@ export type WidgetId =
   | 'transactions' | 'watching' | 'reading' | 'habits' | 'period' | 'exams' | 'trainings'
   | 'calendar' | 'courses' | 'albums' | 'vision';
 
-export type WidgetArea = 'oben' | 'links' | 'mitte' | 'rechts' | 'unten';
+/** Breite im 12-Spalten-Raster: ¼, ⅓, ½, ⅔ oder ganze Breite */
+export type WidgetSize = 's' | 'm' | 'l' | 'xl' | 'full';
+/** Höhe: automatisch nach Inhalt oder fest (mit Scrollen) */
+export type WidgetHeight = 'auto' | 's' | 'm' | 'l';
+/** Wie viel Information ein Kasten zeigt */
+export type WidgetVariant = 'kompakt' | 'standard' | 'detail';
 
 export interface WidgetConfig {
   id: WidgetId;
-  area: WidgetArea;
+  size: WidgetSize;
+  height: WidgetHeight;
+  variant: WidgetVariant;
   hidden: boolean;
+}
+
+export type BackgroundKind = 'standard' | 'farbe' | 'verlauf' | 'bild';
+export type ThemeMode = 'system' | 'hell' | 'dunkel';
+
+export interface Appearance {
+  theme: ThemeMode;
+  background: BackgroundKind;
+  color: string;
+  /** Kennung eines vordefinierten Verlaufs */
+  gradient: string;
+  /** Bild-URL oder hochgeladenes Bild */
+  image: string;
+  /** Abdunkeln des Hintergrunds in Prozent (0–80) */
+  dim: number;
+  /** Halbdurchsichtige Kästen mit Unschärfe-Effekt */
+  glass: boolean;
+  /** Akzentfarbe, leer = Standard */
+  accent: string;
 }
 
 export interface NavItem {
@@ -189,10 +215,11 @@ export interface Settings {
   spotifyUrl: string;
   /** Client-ID einer eigenen Spotify-App für die Verbindung mit dem Konto */
   spotifyClientId: string;
-  /** Reihenfolge, Bereich und Sichtbarkeit der Dashboard-Widgets (leer = Standard) */
+  /** Reihenfolge, Größe, Ansicht und Sichtbarkeit der Dashboard-Widgets (leer = Standard) */
   dashboard: WidgetConfig[];
   /** Reihenfolge, Namen und Sichtbarkeit der Sidebar-Einträge (leer = Standard) */
   sidebar: NavItem[];
+  appearance: Appearance;
 }
 
 export interface FocusSession {

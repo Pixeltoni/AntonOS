@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import type { GoalArea } from '../types';
+import type { GoalArea, WidgetVariant } from '../types';
 import { formatDate, relativeLabel, today } from '../lib/dates';
 import { Cover, ImageInput } from '../components/widgets';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
@@ -14,15 +14,20 @@ const AREAS: { area: GoalArea; icon: string }[] = [
 ];
 
 /** Bild-Mosaik aller Ziele – wie ein Vision Board an der Wand. */
-export function VisionBoard() {
+export function VisionBoard({ variant = 'standard' }: { variant?: WidgetVariant }) {
   const { data } = useStore();
   if (data.goals.length === 0) return <Empty>Noch keine Ziele. <a href="#/ziele">Anlegen →</a></Empty>;
+  const goals = variant === 'kompakt' ? data.goals.slice(0, 4) : data.goals;
   return (
-    <div className="vision">
-      {data.goals.map((g) => (
+    <div className={`vision ${variant}`}>
+      {goals.map((g) => (
         <a key={g.id} href="#/ziele" className="vision-tile" title={g.why || g.title}>
           <Cover src={g.image} seed={g.id} emoji={AREAS.find((a) => a.area === g.area)?.icon} />
-          <span>{g.title}</span>
+          <span>
+            {g.title}
+            {variant === 'detail' && g.why && <small>{g.why}</small>}
+            {variant === 'detail' && <Progress value={g.progress} />}
+          </span>
         </a>
       ))}
     </div>

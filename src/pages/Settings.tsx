@@ -4,6 +4,7 @@ import { demoData } from '../demo';
 import { today } from '../lib/dates';
 import { spotifyEmbedUrl } from '../lib/life';
 import { ImageInput } from '../components/widgets';
+import { AppearanceEditor } from '../components/appearance';
 import { PageHeader, Panel } from '../components/ui';
 
 export function Settings() {
@@ -47,6 +48,9 @@ export function Settings() {
             {spotify && !spotifyEmbedUrl(spotify) && <span className="danger small">Das ist kein gültiger Spotify-Link.</span>}
           </label>
         </div>
+      </Panel>
+      <Panel title="🎨 Hintergrund & Design">
+        <AppearanceEditor />
       </Panel>
       <Panel title="Daten">
         <p className="muted">

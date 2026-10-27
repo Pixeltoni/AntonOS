@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
+import type { WidgetVariant } from '../types';
 import { api, handleRedirect, loadToken, login, logout, accessToken, redirectUri } from '../lib/spotify';
 import { safeImageSrc, spotifyEmbedUrl } from '../lib/life';
 import { Empty, Panel } from './ui';
@@ -388,7 +389,7 @@ function useContextInfo(context: PlaybackContext | null, track: Track | null | u
 }
 
 /** Spotify-Fenster: Cover, Titel, Steuerung und die nächsten Titel – wie der Spotify-Player. */
-export function SpotifyCard() {
+export function SpotifyCard({ rows: maxRows = 5 }: { rows?: number }) {
   const s = useSpotify();
   const { state, clientId, busy, deviceId } = s;
   const track = state?.item ?? null;
@@ -407,7 +408,7 @@ export function SpotifyCard() {
     }
     let cancelled = false;
     api<Queue>(clientId, '/me/player/queue')
-      .then((q) => !cancelled && setQueue((q?.queue ?? []).slice(0, 8)))
+      .then((q) => !cancelled && setQueue((q?.queue ?? []).slice(0, 12)))
       .catch(() => !cancelled && setQueue([]));
     return () => {
       cancelled = true;
@@ -422,7 +423,7 @@ export function SpotifyCard() {
       }),
     );
 
-  const rows = track ? [track, ...queue.filter((t) => t.uri !== track.uri)] : [];
+  const rows = track ? [track, ...queue.filter((t) => t.uri !== track.uri)].slice(0, maxRows) : [];
   const link = state?.context?.external_urls?.spotify ?? 'https://open.spotify.com/';
 
   return (
@@ -457,7 +458,7 @@ export function SpotifyCard() {
         </div>
       </div>
 
-      {rows.length > 0 ? (
+      {maxRows === 0 ? null : rows.length > 0 ? (
         <ol className="sp-list">
           {rows.map((t, i) => (
             <li key={`${t.uri}-${i}`} className={i === 0 ? 'current' : ''}>
@@ -512,7 +513,7 @@ function Playlists() {
 }
 
 /** Das Spotify-Fenster: Einrichtung, Login, Player und Playlists. */
-export function SpotifyPlayer({ compact = false }: { compact?: boolean }) {
+export function SpotifyPlayer({ compact = false, variant = 'standard' }: { compact?: boolean; variant?: WidgetVariant }) {
   const s = useSpotify();
   // Auf dem Dashboard steht die Spotify-Karte ohne eigenen Rahmen, alles andere im Panel
   const frame = (body: ReactNode) => (compact ? <Panel title="🎵 Musik" actions={<a href="#/musik">Öffnen →</a>}>{body}</Panel> : body);
@@ -545,7 +546,7 @@ export function SpotifyPlayer({ compact = false }: { compact?: boolean }) {
   const premium = s.profile?.product === 'premium';
   return (
     <div className="col">
-      <SpotifyCard />
+      <SpotifyCard rows={compact ? (variant === 'kompakt' ? 0 : variant === 'detail' ? 10 : 5) : 10} />
       {s.error && <p className="danger small">{s.error}</p>}
       {s.profile && !premium && (
         <p className="muted small">Ohne Spotify Premium erlaubt Spotify keine Steuerung von außen. Du kannst aber die eingebettete Playlist nutzen.</p>

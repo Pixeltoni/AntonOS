@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Collection, Data, ID, Settings } from './types';
-import { defaultSettings, demoData } from './demo';
+import { defaultAppearance, defaultSettings, demoData } from './demo';
 
 const STORAGE_KEY = 'antonos:v1';
 
@@ -32,7 +32,10 @@ export function normalize(raw: unknown): Data {
   for (const key of Object.keys(base) as (keyof Data)[]) {
     if (key !== 'settings' && Array.isArray(obj[key])) (base[key] as unknown[]) = obj[key] as unknown[];
   }
-  if (obj.settings && typeof obj.settings === 'object') base.settings = { ...base.settings, ...(obj.settings as Partial<Settings>) };
+  if (obj.settings && typeof obj.settings === 'object') {
+    const stored = obj.settings as Partial<Settings>;
+    base.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) } };
+  }
   return base;
 }
 

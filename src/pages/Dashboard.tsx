@@ -1,17 +1,18 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useStore } from '../store';
-import type { WidgetArea, WidgetConfig, WidgetId } from '../types';
+import type { Task, WidgetConfig, WidgetId, WidgetVariant } from '../types';
 import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
-import { formatGrade, summary } from '../lib/grades';
-import { formatMoney, safeImageSrc } from '../lib/life';
-import { AREAS, DEFAULT_DASHBOARD, mergeWithDefaults, moveWidget, WIDGET_LABELS } from '../lib/layout';
+import { courseGrade, formatGrade, summary } from '../lib/grades';
+import { formatMoney, monthTotals, safeHttpUrl, safeImageSrc } from '../lib/life';
+import { DEFAULT_DASHBOARD, HEIGHTS, mergeWithDefaults, moveItem, normalizeWidgets, SIZES, VARIANT_LABELS, WIDGET_LABELS } from '../lib/layout';
 import { isDue } from '../lib/srs';
 import { TaskForm, TaskList } from '../components/TaskList';
-import { Clock, ImageInput, MonthCalendar, PeriodBars } from '../components/widgets';
+import { Agenda, Clock, Cover, ImageInput, MonthCalendar, PeriodBars } from '../components/widgets';
 import { SpotifyPlayer } from '../components/spotify';
+import { AppearanceEditor } from '../components/appearance';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
 import { HabitsToday } from './Habits';
-import { ProjectCard } from './Projects';
+import { ProjectCard, useProjectProgress } from './Projects';
 import { sortTx, TransactionList } from './Finance';
 import { MediaCard, READ_KINDS, WATCH_KINDS } from './Media';
 import { WorkoutList } from './Training';
@@ -48,6 +49,10 @@ const TOP_NAV = [
   { label: 'Ziele', icon: '🎯', href: '#/ziele' },
 ];
 
+/** Wie viele Einträge eine Liste je nach Ansicht zeigt. */
+const pick = (v: WidgetVariant, kompakt: number, standard: number, detail: number) =>
+  v === 'kompakt' ? kompakt : v === 'detail' ? detail : standard;
+
 function Banner() {
   const { data } = useStore();
   const cover = safeImageSrc(data.settings.cover);
@@ -62,8 +67,43 @@ function Banner() {
   );
 }
 
-/** Inhalt aller Widgets. Titel `null` = ohne Rahmen (z. B. Kennzahlen). */
-function useWidgets(): Record<WidgetId, { title: string | null; link?: [string, string]; body: ReactNode }> {
+function MiniTaskList({ tasks }: { tasks: Task[] }) {
+  const { update } = useStore();
+  const t = today();
+  if (tasks.length === 0) return <Empty>Alles erledigt 🎉</Empty>;
+  return (
+    <ul className="list dense">
+      {tasks.map((task) => (
+        <li key={task.id}>
+          <input type="checkbox" checked={false} onChange={() => update('tasks', task.id, { status: 'erledigt' })} aria-label={`${task.title} erledigt`} />
+          <span className="grow">{task.title}</span>
+          {task.due && <span className={`small ${task.due < t ? 'danger' : 'muted'}`}>{relativeLabel(task.due, t)}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ProjectRow({ id, title }: { id: string; title: string }) {
+  const progress = useProjectProgress(id);
+  return (
+    <li className="col">
+      <a href={`#/projekte/${id}`}>{title}</a>
+      {progress !== null && <Progress value={progress} />}
+    </li>
+  );
+}
+
+interface WidgetDef {
+  title: string | null;
+  link?: [string, string];
+  /** Welche Ansichten sinnvoll sind (Standard: alle drei) */
+  variants?: WidgetVariant[];
+  render: (v: WidgetVariant) => ReactNode;
+}
+
+/** Inhalt aller Widgets. Titel `null` = ohne eigenen Rahmen. */
+function useWidgets(): Record<WidgetId, WidgetDef> {
   const { data } = useStore();
   const t = today();
   const weekEnd = addDays(t, 7);
@@ -74,96 +114,178 @@ function useWidgets(): Record<WidgetId, { title: string | null; link?: [string, 
   const upNext = open.filter((x) => x.due === null || x.due <= weekEnd);
   const dueCards = data.cards.filter((c) => isDue(c, t)).length;
   const exams = [...data.exams].filter((e) => e.date >= t).sort((a, b) => a.date.localeCompare(b.date));
-  const { truncated } = summary(data.courses, data.grades);
+  const grades = summary(data.courses, data.grades);
   const weekStart = addDays(t, -6);
   const focusMinutes = data.sessions.filter((s) => s.date >= weekStart && s.date <= t).reduce((s, x) => s + x.minutes, 0);
   const activeProjects = data.projects.filter((p) => p.status === 'aktiv');
   const watching = data.media.filter((m) => WATCH_KINDS.includes(m.kind) && m.status === 'läuft');
   const reading = data.media.filter((m) => READ_KINDS.includes(m.kind) && m.status === 'läuft');
-  const notes = [...data.notes].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 6);
-  const workouts = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  const albums = [...data.albums].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
-  const monthSpent = data.transactions.filter((x) => x.type === 'Ausgabe' && x.date.slice(0, 7) === t.slice(0, 7)).reduce((s, x) => s + x.amount, 0);
+  const notes = [...data.notes].sort((a, b) => b.updated.localeCompare(a.updated));
+  const workouts = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date));
+  const albums = [...data.albums].sort((a, b) => b.date.localeCompare(a.date));
+  const month = monthTotals(data.transactions, t.slice(0, 7));
+  const habitsDone = data.habits.filter((h) => data.habitLogs.some((l) => l.habitId === h.id && l.date === t)).length;
+  const workouts30 = data.workouts.filter((w) => w.done && w.date >= addDays(t, -29)).length;
+
+  const media = (items: typeof watching, empty: string) => (v: WidgetVariant) =>
+    items.length === 0 ? <Empty>{empty}</Empty> : v === 'kompakt' ? (
+      <ul className="list dense">
+        {items.map((m) => <li key={m.id}><span className="grow">{m.title}</span><span className="muted small">{m.progress}</span></li>)}
+      </ul>
+    ) : (
+      <div className="gallery small-cards">{items.map((m) => <MediaCard key={m.id} item={m} compact={v === 'standard'} />)}</div>
+    );
 
   return {
     topnav: {
       title: null,
-      body: (
-        <nav className="top-nav" aria-label="Bereiche">
-          {TOP_NAV.map((n) => <a key={n.href} href={n.href}><span aria-hidden>{n.icon}</span> {n.label}</a>)}
+      variants: ['kompakt', 'standard'],
+      render: (v) => (
+        <nav className={`top-nav ${v}`} aria-label="Bereiche">
+          {TOP_NAV.map((n) => (
+            <a key={n.href} href={n.href} title={n.label}>
+              <span aria-hidden>{n.icon}</span>
+              {v !== 'kompakt' && ` ${n.label}`}
+            </a>
+          ))}
         </nav>
       ),
     },
     stats: {
       title: null,
-      body: (
+      render: (v) => (
         <div className="stats">
-          <Stat label="Offene Aufgaben" value={open.length} hint={`${thisWeek.length} diese Woche`} href="#/aufgaben" />
-          <Stat label="Karten fällig" value={dueCards} hint="heute wiederholen" href="#/lernen" />
-          <Stat label="Nächste Prüfung" value={exams[0] ? relativeLabel(exams[0].date, t) : '–'} hint={exams[0]?.title} href="#/pruefungen" />
-          <Stat label="Notenschnitt" value={formatGrade(truncated, 1)} hint={`${hours(focusMinutes)} h Fokus (7 Tage)`} href="#/noten" />
-          <Stat label="Ausgaben im Monat" value={formatMoney(monthSpent)} href="#/finanzen" />
+          <Stat label="Offene Aufgaben" value={open.length} hint={v === 'kompakt' ? undefined : `${thisWeek.length} diese Woche`} href="#/aufgaben" />
+          <Stat label="Karten fällig" value={dueCards} hint={v === 'kompakt' ? undefined : 'heute wiederholen'} href="#/lernen" />
+          <Stat label="Nächste Prüfung" value={exams[0] ? relativeLabel(exams[0].date, t) : '–'} hint={v === 'kompakt' ? undefined : exams[0]?.title} href="#/pruefungen" />
+          {v !== 'kompakt' && (
+            <>
+              <Stat label="Notenschnitt" value={formatGrade(grades.truncated, 1)} hint={`${hours(focusMinutes)} h Fokus (7 Tage)`} href="#/noten" />
+              <Stat label="Ausgaben im Monat" value={formatMoney(month.expenses)} href="#/finanzen" />
+            </>
+          )}
+          {v === 'detail' && (
+            <>
+              <Stat label="Gewohnheiten heute" value={`${habitsDone}/${data.habits.length}`} href="#/gewohnheiten" />
+              <Stat label="Saldo im Monat" value={formatMoney(month.balance)} href="#/finanzen" />
+              <Stat label="ECTS" value={grades.earnedEcts} hint={`von ${grades.plannedEcts}`} href="#/noten" />
+            </>
+          )}
         </div>
       ),
     },
-    clock: { title: '', body: <Clock /> },
+    clock: { title: '', render: (v) => <Clock variant={v} /> },
     quick: {
       title: '⚡ Schnellaktionen',
-      body: (
-        <div className="quick">
-          {QUICK_ACTIONS.map((a) => <a key={a.label} href={a.href}><span aria-hidden>{a.icon}</span> {a.label}</a>)}
+      render: (v) => (
+        <div className={`quick ${v}`}>
+          {QUICK_ACTIONS.map((a) => (
+            <a key={a.label} href={a.href} title={a.label}>
+              <span aria-hidden>{a.icon}</span>
+              {v !== 'kompakt' && ` ${a.label}`}
+            </a>
+          ))}
         </div>
       ),
     },
     notes: {
       title: '📝 Letzte Notizen',
       link: ['#/notizen', 'Alle →'],
-      body: notes.length === 0 ? <Empty>Keine Notizen.</Empty> : (
-        <ul className="list">{notes.map((n) => <li key={n.id}><a href={`#/notizen/${n.id}`}>{n.title || 'Ohne Titel'}</a></li>)}</ul>
+      render: (v) => notes.length === 0 ? <Empty>Keine Notizen.</Empty> : (
+        <ul className="list">
+          {notes.slice(0, pick(v, 3, 6, 8)).map((n) => (
+            <li key={n.id} className={v === 'detail' ? 'col' : ''}>
+              <a href={`#/notizen/${n.id}`}>{n.title || 'Ohne Titel'}</a>
+              {v === 'detail' && (
+                <>
+                  <div className="meta"><CourseBadge id={n.courseId} /><span>{new Date(n.updated).toLocaleDateString('de-DE')}</span></div>
+                  {n.content && <p className="muted small clamp">{n.content}</p>}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
       ),
     },
-    music: { title: null, body: <SpotifyPlayer compact /> },
-    tools: { title: '🧰 Nützliche Tools', link: ['#/tools', 'Verwalten →'], body: <ToolLinks tools={data.tools} /> },
+    music: { title: null, render: (v) => <SpotifyPlayer compact variant={v} /> },
+    tools: {
+      title: '🧰 Nützliche Tools',
+      link: ['#/tools', 'Verwalten →'],
+      render: (v) => v === 'kompakt' ? (
+        <div className="row wrap">
+          {data.tools.map((tool) => {
+            const url = safeHttpUrl(tool.url);
+            return url ? <a key={tool.id} className="chip" href={url} target="_blank" rel="noopener noreferrer">{tool.name}</a> : null;
+          })}
+        </div>
+      ) : (
+        <ToolLinks tools={v === 'standard' ? data.tools.slice(0, 8) : data.tools} />
+      ),
+    },
     tasks: {
-      title: '✅ Aufgaben diese Woche',
+      title: '✅ Aufgaben',
       link: ['#/aufgaben', 'Alle →'],
-      body: (
+      render: (v) => v === 'kompakt' ? <MiniTaskList tasks={upNext.slice(0, 6)} /> : (
         <>
           <TaskForm compact />
-          <TaskList tasks={upNext} />
+          <TaskList tasks={v === 'detail' ? open : upNext} />
         </>
       ),
     },
     projects: {
       title: '🚀 Aktive Projekte',
       link: ['#/projekte', 'Alle →'],
-      body: activeProjects.length === 0 ? <Empty>Keine aktiven Projekte.</Empty> : (
-        <div className="gallery small-cards">{activeProjects.map((p) => <ProjectCard key={p.id} project={p} />)}</div>
+      render: (v) => activeProjects.length === 0 ? <Empty>Keine aktiven Projekte.</Empty> : v === 'kompakt' ? (
+        <ul className="list">{activeProjects.map((p) => <ProjectRow key={p.id} id={p.id} title={p.title} />)}</ul>
+      ) : (
+        <div className="gallery small-cards">
+          {activeProjects.map((p) => (
+            <div key={p.id} className="col">
+              <ProjectCard project={p} />
+              {v === 'detail' && p.description && <p className="muted small">{p.description}</p>}
+            </div>
+          ))}
+        </div>
       ),
     },
-    transactions: { title: '💸 Letzte Buchungen', link: ['#/finanzen', 'Finanzen →'], body: <TransactionList txs={sortTx(data.transactions).slice(0, 5)} /> },
-    watching: {
-      title: '📺 Gerade am Schauen',
-      link: ['#/schauen', 'Alle →'],
-      body: watching.length === 0 ? <Empty>Nichts am Laufen.</Empty> : <div className="gallery small-cards">{watching.map((m) => <MediaCard key={m.id} item={m} compact />)}</div>,
+    transactions: {
+      title: '💸 Letzte Buchungen',
+      link: ['#/finanzen', 'Finanzen →'],
+      render: (v) => (
+        <>
+          {v === 'detail' && (
+            <div className="row wrap small">
+              <span>Einnahmen <strong className="positive">{formatMoney(month.income)}</strong></span>
+              <span>Ausgaben <strong>{formatMoney(month.expenses)}</strong></span>
+              <span>Saldo <strong>{formatMoney(month.balance)}</strong></span>
+            </div>
+          )}
+          <TransactionList txs={sortTx(data.transactions).slice(0, pick(v, 3, 5, 10))} />
+        </>
+      ),
     },
-    reading: {
-      title: '📖 Gerade am Lesen',
-      link: ['#/lesen', 'Alle →'],
-      body: reading.length === 0 ? <Empty>Kein Buch offen.</Empty> : <div className="gallery small-cards">{reading.map((m) => <MediaCard key={m.id} item={m} compact />)}</div>,
-    },
-    habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], body: <HabitsToday /> },
-    period: { title: '⏳ Fortschritt', body: <PeriodBars /> },
+    watching: { title: '📺 Gerade am Schauen', link: ['#/schauen', 'Alle →'], render: media(watching, 'Nichts am Laufen.') },
+    reading: { title: '📖 Gerade am Lesen', link: ['#/lesen', 'Alle →'], render: media(reading, 'Kein Buch offen.') },
+    habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], render: (v) => <HabitsToday variant={v} /> },
+    period: { title: '⏳ Fortschritt', render: (v) => <PeriodBars variant={v} /> },
     exams: {
       title: '📅 Anstehende Prüfungen',
       link: ['#/pruefungen', 'Alle →'],
-      body: exams.length === 0 ? <Empty>Keine Prüfungen.</Empty> : (
+      render: (v) => exams.length === 0 ? <Empty>Keine Prüfungen.</Empty> : v === 'kompakt' ? (
+        <div className="countdown">
+          <span className="countdown-value">{relativeLabel(exams[0].date, t)}</span>
+          <span className="muted">{exams[0].title}</span>
+        </div>
+      ) : (
         <ul className="list">
-          {exams.slice(0, 3).map((e) => (
+          {exams.slice(0, v === 'detail' ? 20 : 3).map((e) => (
             <li key={e.id}>
               <div className="grow">
                 <div className="task-title">{e.title}</div>
-                <div className="meta"><CourseBadge id={e.courseId} /></div>
+                <div className="meta">
+                  <CourseBadge id={e.courseId} />
+                  {v === 'detail' && <span>{formatDate(e.date)}{e.time && `, ${e.time} Uhr`}{e.location && ` · ${e.location}`}</span>}
+                </div>
               </div>
               <strong>{relativeLabel(e.date, t)}</strong>
             </li>
@@ -171,22 +293,51 @@ function useWidgets(): Record<WidgetId, { title: string | null; link?: [string, 
         </ul>
       ),
     },
-    trainings: { title: '🏋️ Letzte Trainings', link: ['#/training', 'Alle →'], body: <WorkoutList workouts={workouts} /> },
-    calendar: { title: '🗓️ Monatskalender', link: ['#/kalender', 'Groß anzeigen →'], body: <MonthCalendar /> },
+    trainings: {
+      title: '🏋️ Letzte Trainings',
+      link: ['#/training', 'Alle →'],
+      render: (v) => (
+        <>
+          {v === 'detail' && <p className="small">{workouts30} Trainings in den letzten 30 Tagen</p>}
+          <WorkoutList workouts={workouts.slice(0, pick(v, 3, 5, 10))} />
+        </>
+      ),
+    },
+    calendar: {
+      title: '🗓️ Kalender',
+      link: ['#/kalender', 'Groß anzeigen →'],
+      render: (v) => v === 'kompakt' ? <Agenda days={7} /> : (
+        <>
+          <MonthCalendar />
+          {v === 'detail' && <Agenda days={14} />}
+        </>
+      ),
+    },
     courses: {
       title: '📚 Kurse',
       link: ['#/kurse', 'Alle →'],
-      body: data.courses.length === 0 ? <Empty>Leg deinen ersten Kurs an.</Empty> : (
+      render: (v) => data.courses.length === 0 ? <Empty>Leg deinen ersten Kurs an.</Empty> : v === 'kompakt' ? (
+        <div className="row wrap">
+          {data.courses.map((c) => <a key={c.id} className="chip" href={`#/kurse/${c.id}`} style={{ borderColor: c.color }}>{c.name}</a>)}
+        </div>
+      ) : (
         <div className="course-grid">
           {data.courses.map((c) => {
             const tasks = data.tasks.filter((x) => x.courseId === c.id);
             const done = tasks.filter((x) => x.status === 'erledigt').length;
+            const nextExam = exams.find((e) => e.courseId === c.id);
             return (
               <a key={c.id} className="course-card" href={`#/kurse/${c.id}`} style={{ ['--c' as string]: c.color }}>
                 <strong>{c.name}</strong>
                 <span className="muted">{c.code} · {c.ects} ECTS</span>
                 <Progress value={tasks.length ? (done / tasks.length) * 100 : 0} color={c.color} />
                 <span className="muted small">{done} von {tasks.length} Aufgaben erledigt</span>
+                {v === 'detail' && (
+                  <span className="small">
+                    Note {formatGrade(courseGrade(data.grades, c.id), 1)}
+                    {nextExam && ` · Prüfung ${relativeLabel(nextExam.date, t)}`}
+                  </span>
+                )}
               </a>
             );
           })}
@@ -196,31 +347,63 @@ function useWidgets(): Record<WidgetId, { title: string | null; link?: [string, 
     albums: {
       title: '📸 Letzte Alben',
       link: ['#/alben', 'Alle →'],
-      body: albums.length === 0 ? <Empty>Noch keine Alben.</Empty> : <div className="gallery">{albums.map((a) => <AlbumCard key={a.id} album={a} />)}</div>,
+      render: (v) => albums.length === 0 ? <Empty>Noch keine Alben.</Empty> : v === 'kompakt' ? (
+        <div className="thumbs">
+          {albums.slice(0, 6).map((a) => <a key={a.id} href="#/alben" title={a.title}><Cover src={a.cover} seed={a.id} emoji="📸" /></a>)}
+        </div>
+      ) : (
+        <div className="gallery">{albums.slice(0, v === 'detail' ? 12 : 4).map((a) => <AlbumCard key={a.id} album={a} />)}</div>
+      ),
     },
-    vision: { title: '🌄 Vision Board', link: ['#/ziele', 'Ziele →'], body: <VisionBoard /> },
+    vision: { title: '🌄 Vision Board', link: ['#/ziele', 'Ziele →'], render: (v) => <VisionBoard variant={v} /> },
   };
 }
 
-function EditBar({ widget, layout, onChange }: { widget: WidgetConfig; layout: WidgetConfig[]; onChange: (l: WidgetConfig[]) => void }) {
+/**
+ * Lückenloses Raster: Jeder Kasten belegt so viele 4-px-Zeilen, wie er hoch ist.
+ * Mit `grid-auto-flow: dense` rutschen kleinere Kästen in frei gebliebene Lücken.
+ */
+function useMasonry(ref: React.RefObject<HTMLDivElement | null>) {
+  useLayoutEffect(() => {
+    const grid = ref.current;
+    if (!grid) return;
+    const ROW = 4;
+    const GAP = 16;
+    const layout = () => {
+      for (const item of Array.from(grid.children) as HTMLElement[]) {
+        const inner = item.firstElementChild as HTMLElement | null;
+        if (!inner) continue;
+        item.style.gridRowEnd = `span ${Math.max(1, Math.ceil((inner.getBoundingClientRect().height + GAP) / ROW))}`;
+      }
+    };
+    const ro = new ResizeObserver(layout);
+    ro.observe(grid);
+    for (const item of Array.from(grid.children)) if (item.firstElementChild) ro.observe(item.firstElementChild);
+    layout();
+    return () => ro.disconnect();
+  });
+}
+
+function EditBar({ widget, def, index, layout, onChange }: { widget: WidgetConfig; def: WidgetDef; index: number; layout: WidgetConfig[]; onChange: (l: WidgetConfig[]) => void }) {
   const set = (patch: Partial<WidgetConfig>) => onChange(layout.map((w) => (w.id === widget.id ? { ...w, ...patch } : w)));
+  const variants = def.variants ?? (['kompakt', 'standard', 'detail'] as WidgetVariant[]);
   return (
     <div className="edit-bar">
-      <strong className="grow small">{WIDGET_LABELS[widget.id]}</strong>
-      <button onClick={() => onChange(moveWidget(layout, widget.id, -1))} aria-label="Nach oben" title="Nach oben">↑</button>
-      <button onClick={() => onChange(moveWidget(layout, widget.id, 1))} aria-label="Nach unten" title="Nach unten">↓</button>
-      <select
-        value={widget.area}
-        onChange={(e) => {
-          // In den neuen Bereich ganz ans Ende verschieben
-          const rest = layout.filter((w) => w.id !== widget.id);
-          onChange([...rest, { ...widget, area: e.target.value as WidgetArea }]);
-        }}
-        aria-label="Bereich"
-      >
-        {AREAS.map((a) => <option key={a.area} value={a.area}>{a.label}</option>)}
-      </select>
-      <button onClick={() => set({ hidden: true })} title="Ausblenden">Ausblenden</button>
+      <strong className="edit-title small">{WIDGET_LABELS[widget.id]}</strong>
+      <div className="edit-controls">
+        <button onClick={() => onChange(moveItem(layout, index, -1))} aria-label="Nach vorn" title="Nach vorn">←</button>
+        <button onClick={() => onChange(moveItem(layout, index, 1))} aria-label="Nach hinten" title="Nach hinten">→</button>
+        <select value={widget.size} onChange={(e) => set({ size: e.target.value as WidgetConfig['size'] })} aria-label="Breite">
+          {SIZES.map((s) => <option key={s.size} value={s.size}>{s.label}</option>)}
+        </select>
+        <select value={widget.height} onChange={(e) => set({ height: e.target.value as WidgetConfig['height'] })} aria-label="Höhe">
+          {HEIGHTS.map((h) => <option key={h.height} value={h.height}>{h.label}</option>)}
+        </select>
+        <select value={variants.includes(widget.variant) ? widget.variant : 'standard'} onChange={(e) => set({ variant: e.target.value as WidgetVariant })} aria-label="Ansicht">
+          {variants.map((v) => <option key={v} value={v}>{VARIANT_LABELS[v]}</option>)}
+        </select>
+        <button onClick={() => set({ hidden: true })} title="Ausblenden">Ausblenden</button>
+      </div>
     </div>
   );
 }
@@ -228,26 +411,10 @@ function EditBar({ widget, layout, onChange }: { widget: WidgetConfig; layout: W
 export function Dashboard({ editing }: { editing: boolean }) {
   const { data, updateSettings } = useStore();
   const widgets = useWidgets();
-  const layout = mergeWithDefaults(data.settings.dashboard, DEFAULT_DASHBOARD, 'id');
+  const layout = mergeWithDefaults(normalizeWidgets(data.settings.dashboard), DEFAULT_DASHBOARD, 'id');
   const save = (l: WidgetConfig[]) => updateSettings({ dashboard: l });
-
-  const render = (w: WidgetConfig) => {
-    const def = widgets[w.id];
-    const content =
-      def.title === null ? def.body : (
-        <Panel title={def.title || undefined} actions={def.link && !editing ? <a href={def.link[0]}>{def.link[1]}</a> : undefined}>
-          {def.body}
-        </Panel>
-      );
-    if (!editing) return <div key={w.id}>{content}</div>;
-    return (
-      <div key={w.id} className="editable">
-        <EditBar widget={w} layout={layout} onChange={save} />
-        <div className="editable-body">{content}</div>
-      </div>
-    );
-  };
-  const area = (a: WidgetArea) => layout.filter((w) => w.area === a && !w.hidden).map(render);
+  const grid = useRef<HTMLDivElement>(null);
+  useMasonry(grid);
   const hidden = layout.filter((w) => w.hidden);
 
   return (
@@ -258,25 +425,32 @@ export function Dashboard({ editing }: { editing: boolean }) {
           title="🧩 Dashboard bearbeiten"
           actions={
             <div className="row">
-              <button onClick={() => confirm('Dashboard auf den Standard zurücksetzen?') && save([])}>Zurücksetzen</button>
+              <button onClick={() => confirm('Kästen auf den Standard zurücksetzen?') && save([])}>Kästen zurücksetzen</button>
               <a className="button primary" href="#/dashboard">Fertig</a>
             </div>
           }
         >
-          <p className="muted small">Verschiebe Widgets mit ↑ ↓, wähle ihren Bereich oder blende sie aus.</p>
+          <p className="muted small">
+            Mit ← → änderst du die Reihenfolge. Pro Kasten wählst du Breite, Höhe und Ansicht (kompakt, Standard oder mit mehr Details).
+            Auf kleineren Bildschirmen ordnen sich die Kästen automatisch um.
+          </p>
           <div className="form-grid">
             <label>Dein Name<input value={data.settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></label>
             <label className="full">Titelbild<ImageInput value={data.settings.cover} onChange={(cover) => updateSettings({ cover })} /></label>
           </div>
+          <h3>🎨 Hintergrund & Design</h3>
+          <AppearanceEditor />
           {hidden.length > 0 && (
-            <div className="row wrap">
-              <span className="muted small">Ausgeblendet:</span>
-              {hidden.map((w) => (
-                <button key={w.id} onClick={() => save(layout.map((x) => (x.id === w.id ? { ...x, hidden: false } : x)))}>
-                  + {WIDGET_LABELS[w.id]}
-                </button>
-              ))}
-            </div>
+            <>
+              <h3>Ausgeblendete Kästen</h3>
+              <div className="row wrap">
+                {hidden.map((w) => (
+                  <button key={w.id} onClick={() => save(layout.map((x) => (x.id === w.id ? { ...x, hidden: false } : x)))}>
+                    + {WIDGET_LABELS[w.id]}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </Panel>
       ) : (
@@ -285,13 +459,28 @@ export function Dashboard({ editing }: { editing: boolean }) {
         </div>
       )}
 
-      {area('oben')}
-      <div className={`dash ${editing ? 'editing' : ''}`}>
-        <div className="stack">{area('links')}</div>
-        <div className="stack">{area('mitte')}</div>
-        <div className="stack">{area('rechts')}</div>
+      <div ref={grid} className={`dash-grid ${editing ? 'editing' : ''}`}>
+        {layout.map((w, index) => {
+          if (w.hidden) return null;
+          const def = widgets[w.id];
+          const variant = def.variants && !def.variants.includes(w.variant) ? 'standard' : w.variant;
+          const body = def.render(variant);
+          const content =
+            def.title === null ? body : (
+              <Panel title={def.title || undefined} actions={def.link && !editing ? <a href={def.link[0]}>{def.link[1]}</a> : undefined}>
+                {body}
+              </Panel>
+            );
+          return (
+            <div key={w.id} className={`tile w-${w.size}`}>
+              <div className={`tile-inner h-${w.height} ${editing ? 'editable' : ''}`}>
+                {editing && <EditBar widget={w} def={def} index={index} layout={layout} onChange={save} />}
+                <div className="tile-body">{content}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-      {area('unten')}
     </>
   );
 }

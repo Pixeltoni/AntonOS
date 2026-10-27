@@ -1,37 +1,39 @@
 import { describe, expect, it } from 'vitest';
 import type { NavItem, WidgetConfig } from '../types';
-import { DEFAULT_DASHBOARD, DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem, moveWidget } from './layout';
+import { DEFAULT_DASHBOARD, DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem, normalizeWidgets } from './layout';
 import { base64url, codeChallenge, parseBody, randomString } from './spotify';
 
 describe('Dashboard-Layout', () => {
   it('nutzt ohne Anpassung den Standard', () => {
-    expect(mergeWithDefaults([], DEFAULT_DASHBOARD, 'id')).toBe(DEFAULT_DASHBOARD);
+    expect(mergeWithDefaults(normalizeWidgets([]), DEFAULT_DASHBOARD, 'id')).toBe(DEFAULT_DASHBOARD);
   });
 
   it('behält die eigene Reihenfolge, entfernt Unbekanntes und ergänzt neue Widgets', () => {
-    const stored = [
-      { id: 'vision', area: 'oben', hidden: false },
-      { id: 'gibtsnicht', area: 'links', hidden: false },
-      { id: 'clock', area: 'rechts', hidden: true },
-      { id: 'clock', area: 'links', hidden: false },
-    ] as unknown as WidgetConfig[];
+    const stored = normalizeWidgets([
+      { id: 'vision', size: 's', height: 'm', variant: 'kompakt', hidden: false },
+      { id: 'gibtsnicht', size: 'm' },
+      { id: 'clock', size: 'full', hidden: true },
+      { id: 'clock', size: 's' },
+    ]);
     const merged = mergeWithDefaults(stored, DEFAULT_DASHBOARD, 'id');
     expect(merged.slice(0, 2)).toEqual([
-      { id: 'vision', area: 'oben', hidden: false },
-      { id: 'clock', area: 'rechts', hidden: true },
+      { id: 'vision', size: 's', height: 'm', variant: 'kompakt', hidden: false },
+      { id: 'clock', size: 'full', height: 'auto', variant: 'standard', hidden: true },
     ]);
     expect(merged).toHaveLength(DEFAULT_DASHBOARD.length);
   });
 
-  it('verschiebt nur innerhalb des eigenen Bereichs', () => {
-    const list: WidgetConfig[] = [
-      { id: 'clock', area: 'links', hidden: false },
+  it('übernimmt Anpassungen aus dem alten Spalten-Format', () => {
+    const old = [
       { id: 'tasks', area: 'mitte', hidden: false },
-      { id: 'quick', area: 'links', hidden: false },
-    ];
-    expect(moveWidget(list, 'quick', -1).map((w) => w.id)).toEqual(['quick', 'tasks', 'clock']);
-    expect(moveWidget(list, 'clock', -1)).toBe(list);
-    expect(moveWidget(list, 'tasks', 1)).toBe(list);
+      { id: 'clock', area: 'links', hidden: true },
+      { id: 'stats', area: 'oben', hidden: false },
+    ] as unknown as WidgetConfig[];
+    expect(normalizeWidgets(old)).toEqual([
+      { id: 'stats', size: 'full', height: 'auto', variant: 'standard', hidden: false },
+      { id: 'clock', size: 's', height: 'auto', variant: 'standard', hidden: true },
+      { id: 'tasks', size: 'l', height: 'auto', variant: 'standard', hidden: false },
+    ]);
   });
 });
 

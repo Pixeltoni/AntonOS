@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import type { DateStr, ID } from '../types';
+import type { DateStr, ID, WidgetVariant } from '../types';
 import { addDays, parseDate, today } from '../lib/dates';
 import { completionRate, isHabitDone, streak } from '../lib/life';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
@@ -15,22 +15,45 @@ export function useToggleHabit() {
 }
 
 /** Checkliste für heute – wird auch auf dem Dashboard verwendet. */
-export function HabitsToday() {
+export function HabitsToday({ variant = 'standard' }: { variant?: WidgetVariant }) {
   const { data } = useStore();
   const toggle = useToggleHabit();
   const t = today();
   if (data.habits.length === 0) return <Empty>Noch keine Gewohnheiten. <a href="#/gewohnheiten">Anlegen →</a></Empty>;
   const done = data.habits.filter((h) => isHabitDone(data.habitLogs, h.id, t)).length;
+  const week = Array.from({ length: 7 }, (_, i) => addDays(t, i - 6));
+
+  if (variant === 'kompakt') {
+    return (
+      <div className="habit-chips">
+        {data.habits.map((h) => {
+          const checked = isHabitDone(data.habitLogs, h.id, t);
+          return (
+            <button key={h.id} className={`habit-chip ${checked ? 'on' : ''}`} onClick={() => toggle(h.id, t)} aria-pressed={checked} title={h.name}>
+              <span aria-hidden>{h.icon}</span>
+            </button>
+          );
+        })}
+        <span className="muted small">{done}/{data.habits.length}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="col">
       <ul className="list">
         {data.habits.map((h) => {
           const checked = isHabitDone(data.habitLogs, h.id, t);
           return (
-            <li key={h.id} className={`task ${checked ? 'done' : ''}`}>
+            <li key={h.id} className={`task ${checked ? 'done' : ''} ${variant === 'detail' ? 'wrap' : ''}`}>
               <input type="checkbox" checked={checked} onChange={() => toggle(h.id, t)} aria-label={h.name} />
               <span className="grow task-title">{h.icon} {h.name}</span>
               <span className="muted small" title="Serie">🔥 {streak(data.habitLogs, h.id, t)}</span>
+              {variant === 'detail' && (
+                <span className="dots" aria-label="Letzte 7 Tage">
+                  {week.map((d) => <span key={d} className={isHabitDone(data.habitLogs, h.id, d) ? 'on' : ''} title={d} />)}
+                </span>
+              )}
             </li>
           );
         })}

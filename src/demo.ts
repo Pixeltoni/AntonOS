@@ -1,4 +1,4 @@
-import type { Data, Settings } from './types';
+import type { Appearance, Data, Settings } from './types';
 import { addDays, today } from './lib/dates';
 import { START_EASE } from './lib/srs';
 
@@ -9,7 +9,12 @@ export const defaultSettings = (): Settings => ({
   spotifyClientId: '',
   dashboard: [],
   sidebar: [],
+  appearance: defaultAppearance(),
 });
+
+export function defaultAppearance(): Appearance {
+  return { theme: 'system', background: 'standard', color: '#1f2937', gradient: 'herbst', image: '', dim: 30, glass: false, accent: '' };
+}
 
 /** Beispieldaten für den ersten Start, damit man sofort sieht, wie alles zusammenspielt. */
 export function demoData(): Data {

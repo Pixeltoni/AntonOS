@@ -1,12 +1,25 @@
-import type { NavItem, WidgetArea, WidgetConfig, WidgetId } from '../types';
+import type { NavItem, WidgetConfig, WidgetHeight, WidgetId, WidgetSize, WidgetVariant } from '../types';
 
-export const AREAS: { area: WidgetArea; label: string }[] = [
-  { area: 'oben', label: 'Oben (volle Breite)' },
-  { area: 'links', label: 'Linke Spalte' },
-  { area: 'mitte', label: 'Mittlere Spalte' },
-  { area: 'rechts', label: 'Rechte Spalte' },
-  { area: 'unten', label: 'Unten (volle Breite)' },
+export const SIZES: { size: WidgetSize; label: string; span: number }[] = [
+  { size: 's', label: 'Klein (¼)', span: 3 },
+  { size: 'm', label: 'Mittel (⅓)', span: 4 },
+  { size: 'l', label: 'Groß (½)', span: 6 },
+  { size: 'xl', label: 'Breit (⅔)', span: 8 },
+  { size: 'full', label: 'Ganze Breite', span: 12 },
 ];
+
+export const HEIGHTS: { height: WidgetHeight; label: string }[] = [
+  { height: 'auto', label: 'Höhe: automatisch' },
+  { height: 's', label: 'Höhe: niedrig' },
+  { height: 'm', label: 'Höhe: mittel' },
+  { height: 'l', label: 'Höhe: hoch' },
+];
+
+export const VARIANT_LABELS: Record<WidgetVariant, string> = {
+  kompakt: 'Kompakt (weniger Infos)',
+  standard: 'Standard',
+  detail: 'Detail (mehr Infos)',
+};
 
 export const WIDGET_LABELS: Record<WidgetId, string> = {
   topnav: '🧭 Bereichsleiste',
@@ -16,7 +29,7 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   notes: '📝 Letzte Notizen',
   music: '🎵 Musik (Spotify)',
   tools: '🧰 Nützliche Tools',
-  tasks: '✅ Aufgaben diese Woche',
+  tasks: '✅ Aufgaben',
   projects: '🚀 Aktive Projekte',
   transactions: '💸 Letzte Buchungen',
   watching: '📺 Gerade am Schauen',
@@ -25,21 +38,60 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   period: '⏳ Fortschritt',
   exams: '📅 Anstehende Prüfungen',
   trainings: '🏋️ Letzte Trainings',
-  calendar: '🗓️ Monatskalender',
+  calendar: '🗓️ Kalender',
   courses: '📚 Kurse',
   albums: '📸 Letzte Alben',
   vision: '🌄 Vision Board',
 };
 
-export const DEFAULT_DASHBOARD: WidgetConfig[] = (
-  [
-    ['topnav', 'oben'], ['stats', 'oben'],
-    ['clock', 'links'], ['quick', 'links'], ['notes', 'links'], ['music', 'links'], ['tools', 'links'],
-    ['tasks', 'mitte'], ['projects', 'mitte'], ['transactions', 'mitte'], ['watching', 'mitte'], ['reading', 'mitte'],
-    ['habits', 'rechts'], ['period', 'rechts'], ['exams', 'rechts'], ['trainings', 'rechts'],
-    ['calendar', 'unten'], ['courses', 'unten'], ['albums', 'unten'], ['vision', 'unten'],
-  ] as [WidgetId, WidgetArea][]
-).map(([id, area]) => ({ id, area, hidden: false }));
+const w = (id: WidgetId, size: WidgetSize, variant: WidgetVariant = 'standard'): WidgetConfig => ({
+  id, size, height: 'auto', variant, hidden: false,
+});
+
+/** Standard-Layout, angelehnt an Life Planner OS: schmale Spalten außen, breite Mitte. */
+export const DEFAULT_DASHBOARD: WidgetConfig[] = [
+  w('topnav', 'full'),
+  w('stats', 'full'),
+  w('clock', 's'),
+  w('tasks', 'l'),
+  w('habits', 's'),
+  w('quick', 's'),
+  w('period', 's'),
+  w('projects', 'l'),
+  w('exams', 's'),
+  w('notes', 's'),
+  w('transactions', 'l'),
+  w('trainings', 's'),
+  w('music', 's'),
+  w('watching', 'm'),
+  w('reading', 'm'),
+  w('tools', 's'),
+  w('calendar', 'full'),
+  w('courses', 'full'),
+  w('albums', 'full'),
+  w('vision', 'full'),
+];
+
+/** Altes Format (Bereiche oben/links/mitte/rechts/unten) in Größen übersetzen. */
+const AREA_SIZE: Record<string, WidgetSize> = { oben: 'full', links: 's', mitte: 'l', rechts: 's', unten: 'full' };
+const AREA_ORDER = ['oben', 'links', 'mitte', 'rechts', 'unten'];
+
+/** Ergänzt fehlende Felder und übernimmt Anpassungen aus älteren Versionen. */
+export function normalizeWidgets(stored: unknown): WidgetConfig[] {
+  if (!Array.isArray(stored) || stored.length === 0) return [];
+  const items = stored as (Partial<WidgetConfig> & { area?: string })[];
+  const legacy = items.some((x) => x.area && !x.size);
+  const sorted = legacy ? [...items].sort((a, b) => AREA_ORDER.indexOf(a.area ?? '') - AREA_ORDER.indexOf(b.area ?? '')) : items;
+  return sorted
+    .filter((x): x is Partial<WidgetConfig> & { id: WidgetId; area?: string } => typeof x.id === 'string')
+    .map((x) => ({
+      id: x.id,
+      size: x.size ?? AREA_SIZE[x.area ?? ''] ?? 'm',
+      height: x.height ?? 'auto',
+      variant: x.variant ?? 'standard',
+      hidden: !!x.hidden,
+    }));
+}
 
 export const DEFAULT_SIDEBAR: NavItem[] = (
   [
@@ -71,19 +123,7 @@ export function mergeWithDefaults<T, K extends keyof T>(stored: T[] | undefined,
   return [...kept, ...defaults.filter((d) => !seen.has(d[key]))];
 }
 
-/** Verschiebt ein Widget innerhalb seines Bereichs um eine Position nach oben (-1) oder unten (+1). */
-export function moveWidget(list: WidgetConfig[], id: WidgetId, dir: -1 | 1): WidgetConfig[] {
-  const i = list.findIndex((w) => w.id === id);
-  if (i < 0) return list;
-  let j = i + dir;
-  while (j >= 0 && j < list.length && list[j].area !== list[i].area) j += dir;
-  if (j < 0 || j >= list.length) return list;
-  const next = [...list];
-  [next[i], next[j]] = [next[j], next[i]];
-  return next;
-}
-
-/** Verschiebt einen Sidebar-Eintrag um eine Position. */
+/** Verschiebt einen Eintrag um eine Position nach vorn (-1) oder hinten (+1). */
 export function moveItem<T>(list: T[], index: number, dir: -1 | 1): T[] {
   const j = index + dir;
   if (j < 0 || j >= list.length) return list;

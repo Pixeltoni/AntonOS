@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useStore } from '../store';
-import type { DateStr, WidgetVariant } from '../types';
-import { addDays, formatDate, relativeLabel, today } from '../lib/dates';
-import { monthGrid, monthKey, monthLabel, periodProgress, safeImageSrc, shiftMonth } from '../lib/life';
+import type { WidgetVariant } from '../types';
+import { addDays, formatDate, isoWeek, relativeLabel, today } from '../lib/dates';
+import { onDay, sortEntries } from '../lib/calendar';
+import { useCalendarEntries } from './calendar';
+import { periodProgress, safeImageSrc } from '../lib/life';
 import { Progress } from './ui';
 
 /** Liest ein Bild ein und verkleinert es, damit der Browser-Speicher nicht überläuft. */
@@ -105,14 +106,6 @@ function useNow(intervalMs: number): Date {
   return now;
 }
 
-/** Kalenderwoche nach ISO 8601. */
-export function isoWeek(d: Date): number {
-  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
-  return Math.ceil(((t.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
-}
-
 export function Clock({ variant = 'standard' }: { variant?: WidgetVariant }) {
   const now = useNow(1000);
   const s = now.getSeconds();
@@ -174,72 +167,12 @@ export function PeriodBars({ variant = 'standard' }: { variant?: WidgetVariant }
   );
 }
 
-interface CalendarEntry {
-  date: DateStr;
-  label: string;
-  href: string;
-  kind: 'task' | 'exam' | 'project' | 'workout';
-  done?: boolean;
-}
-
-function useCalendarEntries(): CalendarEntry[] {
-  const { data } = useStore();
-  return [
-    ...data.tasks.filter((t) => t.due).map((t) => ({ date: t.due!, label: t.title, href: '#/aufgaben', kind: 'task' as const, done: t.status === 'erledigt' })),
-    ...data.exams.map((e) => ({ date: e.date, label: e.title, href: '#/pruefungen', kind: 'exam' as const })),
-    ...data.projects.filter((p) => p.due).map((p) => ({ date: p.due!, label: p.title, href: `#/projekte/${p.id}`, kind: 'project' as const, done: p.status === 'abgeschlossen' })),
-    ...data.workouts.map((w) => ({ date: w.date, label: w.title, href: '#/training', kind: 'workout' as const, done: w.done })),
-  ];
-}
-
-export function MonthCalendar() {
-  const t = today();
-  const [month, setMonth] = useState(monthKey(t));
-  const entries = useCalendarEntries();
-  const [y, m] = month.split('-').map(Number);
-  const days = monthGrid(y, m - 1);
-
-  return (
-    <div className="calendar">
-      <div className="row between">
-        <strong>{monthLabel(month)}</strong>
-        <div className="row">
-          <button onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Voriger Monat">‹</button>
-          <button onClick={() => setMonth(monthKey(t))}>Heute</button>
-          <button onClick={() => setMonth(shiftMonth(month, 1))} aria-label="Nächster Monat">›</button>
-        </div>
-      </div>
-      <div className="cal-grid">
-        {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((d) => <div key={d} className="cal-head">{d}</div>)}
-        {days.map((d) => {
-          const items = entries.filter((e) => e.date === d);
-          return (
-            <div key={d} className={`cal-day ${monthKey(d) !== month ? 'other' : ''} ${d === t ? 'today' : ''}`} title={formatDate(d)}>
-              <span className="cal-num">{Number(d.slice(8))}</span>
-              {items.slice(0, 3).map((e, i) => (
-                <a key={i} href={e.href} className={`cal-item ${e.kind} ${e.done ? 'done' : ''}`} title={e.label}>{e.label}</a>
-              ))}
-              {items.length > 3 && <span className="muted small">+{items.length - 3}</span>}
-            </div>
-          );
-        })}
-      </div>
-      <div className="row wrap small muted">
-        <span className="cal-item task">Aufgabe</span>
-        <span className="cal-item exam">Prüfung</span>
-        <span className="cal-item project">Projekt</span>
-        <span className="cal-item workout">Training</span>
-      </div>
-    </div>
-  );
-}
-
 /** Terminliste für die nächsten Tage – die kompakte Variante des Kalenders. */
 export function Agenda({ days }: { days: number }) {
   const entries = useCalendarEntries();
   const t = today();
   const list = Array.from({ length: days }, (_, i) => addDays(t, i))
-    .map((d) => ({ d, items: entries.filter((e) => e.date === d && !e.done) }))
+    .map((d) => ({ d, items: sortEntries(entries.filter((e) => onDay(e, d) && !e.done)) }))
     .filter((x) => x.items.length > 0);
   if (list.length === 0) return <p className="empty">Keine Termine in den nächsten {days} Tagen.</p>;
   return (
@@ -248,7 +181,12 @@ export function Agenda({ days }: { days: number }) {
         <li key={d}>
           <span className="agenda-day">{d === t ? 'Heute' : relativeLabel(d, t) === 'morgen' ? 'Morgen' : formatDate(d).slice(0, 9)}</span>
           <div className="col">
-            {items.map((e, i) => <a key={i} href={e.href} className={`cal-item ${e.kind}`}>{e.label}</a>)}
+            {items.map((e) => (
+              <a key={e.key} href={e.href ?? '#/kalender'} className={`cal-item ${e.kind} ${e.priority ? `prio-${e.priority}` : ''}`}>
+                {e.time && <span className="cal-time">{e.time}</span>}
+                {e.label}
+              </a>
+            ))}
           </div>
         </li>
       ))}

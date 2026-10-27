@@ -155,6 +155,22 @@ export interface Album {
   description: string;
 }
 
+export type EventPriority = 'niedrig' | 'mittel' | 'hoch';
+
+/** Eigener Kalendertermin */
+export interface CalEvent {
+  id: ID;
+  title: string;
+  note: string;
+  start: DateStr;
+  /** Letzter Tag bei mehrtägigen Terminen, sonst null */
+  end: DateStr | null;
+  /** Uhrzeit HH:MM, leer = ganztägig */
+  startTime: string;
+  endTime: string;
+  priority: EventPriority;
+}
+
 export interface Tool {
   id: ID;
   name: string;
@@ -245,6 +261,7 @@ export interface Data {
   transactions: Transaction[];
   media: Media[];
   workouts: Workout[];
+  events: CalEvent[];
   albums: Album[];
   tools: Tool[];
   settings: Settings;

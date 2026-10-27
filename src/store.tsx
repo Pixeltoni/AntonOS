@@ -19,6 +19,7 @@ export const emptyData = (): Data => ({
   transactions: [],
   media: [],
   workouts: [],
+  events: [],
   albums: [],
   tools: [],
   settings: defaultSettings(),

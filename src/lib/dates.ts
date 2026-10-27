@@ -48,3 +48,11 @@ export function formatDate(s: DateStr): string {
 export function hours(minutes: number): string {
   return (minutes / 60).toLocaleString('de-DE', { maximumFractionDigits: 1 });
 }
+
+/** Kalenderwoche nach ISO 8601. */
+export function isoWeek(d: Date): number {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+}

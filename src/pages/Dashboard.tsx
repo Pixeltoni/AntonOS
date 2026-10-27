@@ -7,7 +7,8 @@ import { formatMoney, monthTotals, safeHttpUrl, safeImageSrc } from '../lib/life
 import { DEFAULT_DASHBOARD, HEIGHTS, mergeWithDefaults, moveItem, normalizeWidgets, SIZES, VARIANT_LABELS, WIDGET_LABELS } from '../lib/layout';
 import { isDue } from '../lib/srs';
 import { TaskForm, TaskList } from '../components/TaskList';
-import { Agenda, Clock, Cover, ImageInput, MonthCalendar, PeriodBars } from '../components/widgets';
+import { Agenda, Clock, Cover, ImageInput, PeriodBars } from '../components/widgets';
+import { CalendarView } from '../components/calendar';
 import { SpotifyPlayer } from '../components/spotify';
 import { AppearanceEditor } from '../components/appearance';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
@@ -309,7 +310,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
       link: ['#/kalender', 'Groß anzeigen →'],
       render: (v) => v === 'kompakt' ? <Agenda days={7} /> : (
         <>
-          <MonthCalendar />
+          <CalendarView />
           {v === 'detail' && <Agenda days={14} />}
         </>
       ),

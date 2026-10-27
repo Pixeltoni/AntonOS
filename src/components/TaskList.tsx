@@ -17,7 +17,7 @@ export function sortTasks(tasks: Task[]): Task[] {
   });
 }
 
-export function TaskForm({ courseId = null, compact = false }: { courseId?: ID | null; compact?: boolean }) {
+export function TaskForm({ courseId = null, projectId = null, compact = false }: { courseId?: ID | null; projectId?: ID | null; compact?: boolean }) {
   const { add } = useStore();
   const [title, setTitle] = useState('');
   const [course, setCourse] = useState<ID | null>(courseId);
@@ -28,7 +28,7 @@ export function TaskForm({ courseId = null, compact = false }: { courseId?: ID |
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    add('tasks', { title: title.trim(), courseId: course, due: due || null, kind, priority, status: 'offen' });
+    add('tasks', { title: title.trim(), courseId: course, projectId, due: due || null, kind, priority, status: 'offen' });
     setTitle('');
     setDue('');
   };

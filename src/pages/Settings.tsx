@@ -2,10 +2,13 @@ import { useRef, useState } from 'react';
 import { emptyData, normalize, useStore } from '../store';
 import { demoData } from '../demo';
 import { today } from '../lib/dates';
+import { spotifyEmbedUrl } from '../lib/life';
+import { ImageInput } from '../components/widgets';
 import { PageHeader, Panel } from '../components/ui';
 
 export function Settings() {
-  const { data, replaceAll } = useStore();
+  const { data, replaceAll, updateSettings } = useStore();
+  const spotify = data.settings.spotifyUrl;
   const file = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
 
@@ -30,6 +33,21 @@ export function Settings() {
   return (
     <>
       <PageHeader title="Einstellungen" />
+      <Panel title="Dashboard">
+        <div className="form-grid">
+          <label>Dein Name<input value={data.settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></label>
+          <label className="full">Titelbild<ImageInput value={data.settings.cover} onChange={(cover) => updateSettings({ cover })} /></label>
+          <label className="full">
+            Spotify-Link (Playlist, Album oder Song)
+            <input
+              placeholder="https://open.spotify.com/playlist/…"
+              value={spotify}
+              onChange={(e) => updateSettings({ spotifyUrl: e.target.value })}
+            />
+            {spotify && !spotifyEmbedUrl(spotify) && <span className="danger small">Das ist kein gültiger Spotify-Link.</span>}
+          </label>
+        </div>
+      </Panel>
       <Panel title="Daten">
         <p className="muted">
           Alle Daten werden nur lokal in diesem Browser gespeichert. Mach ab und zu ein Backup – besonders bevor du den

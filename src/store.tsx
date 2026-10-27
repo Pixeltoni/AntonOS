@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Collection, Data, ID } from './types';
-import { demoData } from './demo';
+import type { Collection, Data, ID, Settings } from './types';
+import { defaultSettings, demoData } from './demo';
 
 const STORAGE_KEY = 'antonos:v1';
 
@@ -13,6 +13,15 @@ export const emptyData = (): Data => ({
   grades: [],
   goals: [],
   sessions: [],
+  projects: [],
+  habits: [],
+  habitLogs: [],
+  transactions: [],
+  media: [],
+  workouts: [],
+  albums: [],
+  tools: [],
+  settings: defaultSettings(),
 });
 
 /** Ergänzt fehlende Sammlungen, z. B. bei Importen älterer Exporte. */
@@ -20,9 +29,10 @@ export function normalize(raw: unknown): Data {
   const base = emptyData();
   if (!raw || typeof raw !== 'object') return base;
   const obj = raw as Record<string, unknown>;
-  for (const key of Object.keys(base) as Collection[]) {
-    if (Array.isArray(obj[key])) (base[key] as unknown[]) = obj[key] as unknown[];
+  for (const key of Object.keys(base) as (keyof Data)[]) {
+    if (key !== 'settings' && Array.isArray(obj[key])) (base[key] as unknown[]) = obj[key] as unknown[];
   }
+  if (obj.settings && typeof obj.settings === 'object') base.settings = { ...base.settings, ...(obj.settings as Partial<Settings>) };
   return base;
 }
 
@@ -46,19 +56,25 @@ interface Store {
   update<C extends Collection>(collection: C, id: ID, patch: Partial<Item<C>>): void;
   remove(collection: Collection, id: ID): void;
   removeCourse(id: ID): void;
+  updateSettings(patch: Partial<Settings>): void;
   replaceAll(data: Data): void;
+  /** true, wenn das letzte Speichern fehlgeschlagen ist (z. B. Speicher voll) */
+  saveFailed: boolean;
 }
 
 const StoreContext = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Data>(load);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      setSaveFailed(false);
     } catch {
-      // z. B. privater Modus: Daten bleiben nur bis zum Neuladen erhalten
+      // z. B. Speicher voll (große Bilder) oder privater Modus
+      setSaveFailed(true);
     }
   }, [data]);
 
@@ -76,7 +92,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const remove = useCallback((collection: Collection, id: ID) => {
-    setData((d) => ({ ...d, [collection]: (d[collection] as { id: ID }[]).filter((x) => x.id !== id) }));
+    setData((d) => {
+      const next = { ...d, [collection]: (d[collection] as { id: ID }[]).filter((x) => x.id !== id) };
+      // Abhängige Einträge mitpflegen
+      if (collection === 'habits') next.habitLogs = d.habitLogs.filter((l) => l.habitId !== id);
+      if (collection === 'projects') next.tasks = d.tasks.map((t) => (t.projectId === id ? { ...t, projectId: null } : t));
+      return next;
+    });
+  }, []);
+
+  const updateSettings = useCallback((patch: Partial<Settings>) => {
+    setData((d) => ({ ...d, settings: { ...d.settings, ...patch } }));
   }, []);
 
   const removeCourse = useCallback((id: ID) => {
@@ -95,8 +121,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const replaceAll = useCallback((next: Data) => setData(next), []);
 
   const value = useMemo(
-    () => ({ data, add, update, remove, removeCourse, replaceAll }),
-    [data, add, update, remove, removeCourse, replaceAll],
+    () => ({ data, add, update, remove, removeCourse, updateSettings, replaceAll, saveFailed }),
+    [data, add, update, remove, removeCourse, updateSettings, replaceAll, saveFailed],
   );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

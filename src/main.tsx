@@ -3,13 +3,16 @@ import { createRoot } from 'react-dom/client';
 import { StoreProvider } from './store';
 import { App } from './App';
 import { SyncProvider } from './components/sync';
+import { ToastProvider } from './components/toast';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <StoreProvider>
       <SyncProvider>
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </SyncProvider>
     </StoreProvider>
   </StrictMode>,

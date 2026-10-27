@@ -430,6 +430,68 @@ button.cal-arrow { font-size: 1.6rem; color: var(--accent); padding: 0 6px; }
 .tl-now::before { content: ''; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--ios-red); }
 .tl-now span { position: absolute; right: calc(100% + 8px); top: -0.7em; font-size: 0.68rem; font-weight: 700; color: var(--ios-red); background: var(--surface); padding: 0 2px; }
 
+/* Aufgaben im Stil von Apple Erinnerungen */
+.reminders { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.rem-side { display: flex; flex-direction: column; gap: 0.75rem; }
+.rem-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rem-tile { background: var(--surface) !important; border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; color: var(--text); }
+.rem-tile.active { outline: 2px solid var(--accent); outline-offset: -1px; }
+.rem-tile:last-child { grid-column: span 2; flex-direction: row; align-items: center; justify-content: space-between; }
+.rem-tile:last-child .rem-tile-top { order: 2; gap: 10px; }
+.rem-tile-top { display: flex; justify-content: space-between; align-items: center; }
+.rem-tile-icon { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
+.rem-tile-count { font-size: 1.5rem; font-weight: 700; }
+.rem-tile-label { font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+.rem-side-title { font-size: 1.15rem; font-weight: 700; margin: 0.4rem 0.2rem 0; }
+.rem-lists { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.rem-list-btn { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: none !important; border: 0 !important; border-bottom: 1px solid var(--border) !important; border-radius: 0; text-align: left; color: var(--text); }
+.rem-list-btn:last-child { border-bottom: 0 !important; }
+.rem-list-btn.active { background: var(--accent-soft) !important; }
+.rem-list-dot { width: 26px; height: 26px; border-radius: 50%; flex: none; }
+.rem-content { gap: 0.6rem; }
+.rem-list-title { font-size: 2rem; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 0.25rem; }
+.rem-group h3 { font-size: 1rem; margin: 0.8rem 0 0.2rem; }
+
+.quick-add { display: flex; flex-direction: column; gap: 6px; }
+.quick-add-row { display: flex; align-items: center; gap: 10px; }
+.qa-plus { width: 24px; height: 24px; min-width: 24px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-size: 1.1rem; line-height: 1; background: var(--accent) !important; color: #fff; border: 0 !important; }
+.qa-plus:disabled { opacity: 0.4; }
+.quick-add input { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent !important; padding: 0.5rem 0.1rem; }
+.quick-add input:focus-visible { outline: none; border-bottom-color: var(--accent); }
+.qa-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 34px; }
+.qa-chip { font-size: 0.75rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+
+.rem-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rem-row { --c: var(--accent); display: flex; align-items: flex-start; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.rem-row:last-child { border-bottom: 0; }
+.rem-check { width: 22px; height: 22px; min-width: 22px; padding: 0; margin-top: 1px; border-radius: 50%; border: 2px solid #C7C7CC !important; background: transparent !important; display: grid; place-items: center; transition: background 0.15s, border-color 0.15s; }
+.rem-check:hover { border-color: var(--c) !important; }
+.rem-check.on { background: var(--c) !important; border-color: var(--c) !important; }
+.rem-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; background: none !important; border: 0 !important; padding: 0; text-align: left; color: var(--text); font: inherit; cursor: pointer; }
+.rem-title { font-size: 0.98rem; overflow-wrap: anywhere; }
+.rem-prio { color: var(--c); font-weight: 700; }
+.rem-row.done .rem-title { color: var(--muted); }
+.rem-note { font-size: 0.82rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+.rem-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 0.8rem; color: var(--muted); }
+.rem-meta:empty { display: none; }
+.rem-overdue { color: var(--danger); }
+.rem-doing { color: var(--warn); }
+.rem-progress { display: block; height: 3px; border-radius: 3px; background: var(--border); margin-top: 4px; max-width: 220px; }
+.rem-progress span { display: block; height: 3px; border-radius: 3px; background: var(--c); }
+.rem-flag { color: var(--border); padding: 2px 4px; }
+.rem-flag.on { color: #FF9500; }
+.rem-flag:hover { color: #FF9500; }
+.rem-row:not(:hover) .rem-flag:not(.on), .rem-row:not(:hover) .rem-delete { opacity: 0; }
+.rem-list.compact .rem-row { padding: 7px 2px; }
+.sub-row input[type='checkbox'] { flex: none; }
+@media (hover: none) { .rem-row .rem-flag, .rem-row .rem-delete { opacity: 1 !important; } }
+
+.toast { position: fixed; z-index: 60; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 14px; background: #1C1C1E; color: #fff; border-radius: 999px; padding: 10px 10px 10px 18px; box-shadow: 0 12px 30px rgb(0 0 0 / 0.3); max-width: calc(100vw - 32px); animation: toast-in 0.2s ease; }
+.toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast button { background: #3A3A3C !important; color: #fff; border: 0 !important; border-radius: 999px; padding: 6px 12px; font-weight: 600; flex: none; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
+@media (max-width: 800px) { .reminders { grid-template-columns: minmax(0, 1fr); } }
+
 /* Gewohnheiten */
 .table-wrap { overflow-x: auto; }
 .habit-table { border-collapse: collapse; width: 100%; }

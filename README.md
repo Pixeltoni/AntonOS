@@ -12,7 +12,7 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 ### Studium
 
 - **Kurse:** mit Kürzel, Semester, Dozent/in, Raum, ECTS und Farbe. Jede Kursseite bündelt Aufgaben, Prüfungen, Lernkarten, Noten und Notizen.
-- **Aufgaben:** Aufgaben, Lektüre, Projekte und Bewerbungen mit Status, Priorität, Fälligkeit und Notiz, filterbar. Abhaken und Löschen brauchen eine Bestätigung; ein Klick auf den Titel öffnet die Bearbeitung.
+- **Aufgaben:** im Stil von Apple Erinnerungen – Listen-Kacheln (Heute, Geplant, Alle, Markiert, Erledigt), Kurse als eigene Listen, runde Häkchen mit „Widerrufen“, Markieren, Unteraufgaben, Notiz und Uhrzeit. Schnelleingabe in natürlicher Sprache: „Übungsblatt morgen 10 Uhr !!! #analysis“ (! niedrig, !! mittel, !!! hoch, #Kurs).
 - **Notizen:** pro Kurs, mit Suche und automatischem Speichern
 - **Lernkarten:** Wiederholung nach dem Prinzip der verteilten Wiederholung (vereinfachter SM-2-Algorithmus wie bei Anki), bedienbar per Tastatur (Leertaste, 1–4)
 - **Prüfungen:** mit Countdown

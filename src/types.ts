@@ -28,6 +28,16 @@ export interface Task {
   priority: Priority;
   due: DateStr | null;
   note?: string;
+  /** Uhrzeit HH:MM, optional */
+  dueTime?: string;
+  flagged?: boolean;
+  subtasks?: Subtask[];
+}
+
+export interface Subtask {
+  id: ID;
+  title: string;
+  done: boolean;
 }
 
 export interface Note {

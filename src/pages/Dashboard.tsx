@@ -53,7 +53,7 @@ const TOP_NAV = [
 const pick = (v: WidgetVariant, kompakt: number, standard: number, detail: number) =>
   v === 'kompakt' ? kompakt : v === 'detail' ? detail : standard;
 
-function Banner() {
+function Banner({ editing }: { editing: boolean }) {
   const { data } = useStore();
   const cover = safeImageSrc(data.settings.cover);
   return (
@@ -63,6 +63,7 @@ function Banner() {
         <h1>{greeting()}, {data.settings.name || 'du'} 👋</h1>
         <p>{formatDate(today())}</p>
       </div>
+      {!editing && <a className="button banner-edit" href="#/dashboard/bearbeiten">✏️ Bearbeiten</a>}
     </div>
   );
 }
@@ -419,7 +420,7 @@ export function Dashboard({ editing }: { editing: boolean }) {
 
   return (
     <>
-      <Banner />
+      <Banner editing={editing} />
       {editing ? (
         <Panel
           title="🧩 Dashboard bearbeiten"
@@ -453,11 +454,7 @@ export function Dashboard({ editing }: { editing: boolean }) {
             </>
           )}
         </Panel>
-      ) : (
-        <div className="row end">
-          <a className="button" href="#/dashboard/bearbeiten">✏️ Dashboard bearbeiten</a>
-        </div>
-      )}
+      ) : null}
 
       <div ref={grid} className={`dash-grid ${editing ? 'editing' : ''}`}>
         {layout.map((w, index) => {

@@ -166,7 +166,7 @@ function Shell() {
           )}
         </nav>
       </aside>
-      <main>
+      <main className={current === 'dashboard' ? 'wide' : ''}>
         {saveFailed && (
           <p className="alert" role="alert">
             Speichern fehlgeschlagen – vermutlich ist der Browser-Speicher voll. Entferne große hochgeladene Bilder oder nutze

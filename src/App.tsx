@@ -15,6 +15,7 @@ import { Dashboard } from './pages/Dashboard';
 import { CourseDetail, Courses } from './pages/Courses';
 import { Tasks } from './pages/Tasks';
 import { Notes } from './pages/Notes';
+import { Shopping } from './pages/Shopping';
 import { Flashcards } from './pages/Flashcards';
 import { Exams } from './pages/Exams';
 import { Grades } from './pages/Grades';
@@ -76,6 +77,8 @@ function Page({ route }: { route: string[] }) {
       return <Habits />;
     case 'finanzen':
       return <Finance />;
+    case 'einkauf':
+      return <Shopping />;
     case 'schauen':
       return <MediaPage key="schauen" mode="schauen" />;
     case 'lesen':

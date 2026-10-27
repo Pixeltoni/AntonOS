@@ -14,11 +14,13 @@ import { AppearanceEditor } from '../components/appearance';
 import { RingsWidget } from '../components/rings';
 import { FocusWidget, useFocus } from '../components/focus';
 import { focusMode } from '../lib/focus';
+import { noteTitle } from '../lib/notes';
 import { CountdownWidget, SmartStack, TodayWidget, useDragReorder, WidgetGallery } from '../components/homescreen';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
 import { HabitsToday } from './Habits';
 import { ProjectCard, useProjectProgress } from './Projects';
 import { BudgetWidget, sortTx, TransactionList } from './Finance';
+import { ShoppingWidget } from './Shopping';
 import { MediaCard, READ_KINDS, WATCH_KINDS } from './Media';
 import { WorkoutList } from './Training';
 import { AlbumCard } from './Albums';
@@ -184,7 +186,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
         <ul className="list">
           {notes.slice(0, pick(v, 3, 6, 8)).map((n) => (
             <li key={n.id} className={v === 'detail' ? 'col' : ''}>
-              <a href={`#/notizen/${n.id}`}>{n.title || 'Ohne Titel'}</a>
+              <a href={`#/notizen/${n.id}`}>{noteTitle(n)}</a>
               {v === 'detail' && (
                 <>
                   <div className="meta"><CourseBadge id={n.courseId} /><span>{new Date(n.updated).toLocaleDateString('de-DE')}</span></div>
@@ -256,6 +258,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
     watching: { title: '📺 Gerade am Schauen', link: ['#/schauen', 'Alle →'], render: media(watching, 'Nichts am Laufen.') },
     reading: { title: '📖 Gerade am Lesen', link: ['#/lesen', 'Alle →'], render: media(reading, 'Kein Buch offen.') },
     habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], render: (v) => <HabitsToday variant={v} /> },
+    shopping: { title: '🛒 Einkaufsliste', link: ['#/einkauf', 'Öffnen →'], render: (v) => <ShoppingWidget variant={v} /> },
     stack: { title: null, variants: ['standard'], render: () => <SmartStack /> },
     today: { title: null, variants: ['standard'], render: () => <TodayWidget /> },
     countdown: { title: null, variants: ['standard'], render: () => <CountdownWidget /> },

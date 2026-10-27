@@ -13,7 +13,7 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 
 - **Kurse:** mit Kürzel, Semester, Dozent/in, Raum, ECTS und Farbe. Jede Kursseite bündelt Aufgaben, Prüfungen, Lernkarten, Noten und Notizen.
 - **Aufgaben:** im Stil von Apple Erinnerungen – Listen-Kacheln (Heute, Geplant, Alle, Markiert, Erledigt), Kurse als eigene Listen, runde Häkchen mit „Widerrufen“, Markieren, Unteraufgaben, Notiz und Uhrzeit. Schnelleingabe in natürlicher Sprache: „Übungsblatt morgen 10 Uhr !!! #analysis“ (! niedrig, !! mittel, !!! hoch, #Kurs).
-- **Notizen:** pro Kurs, mit Suche und automatischem Speichern
+- **Notizen:** wie Apple Notizen – Ordner pro Kurs, angeheftete Notizen, #Tags, Suche und nach Datum gruppierte Liste. Checklisten zum Abhaken, Überschriften, **fett**, [[Verknüpfungen]] zu Notizen, Aufgaben und Kursen; Kürzel ⌘B, ⇧⌘L (Checkliste), ⇧⌘H (Überschrift). Zeilen wie „Begriff: Erklärung“ werden mit 🧠 zu Lernkarten
 - **Lernkarten:** Wiederholung nach dem Prinzip der verteilten Wiederholung (vereinfachter SM-2-Algorithmus wie bei Anki), bedienbar per Tastatur (Leertaste, 1–4)
 - **Prüfungen:** mit Countdown
 - **Noten:** deutsches Notensystem (1,0–5,0). Teilnoten werden pro Kurs gewichtet, der Gesamtschnitt nach ECTS. Wie in vielen Prüfungsordnungen wird nach der ersten Nachkommastelle abgeschnitten.
@@ -25,6 +25,7 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 - **Gewohnheiten:** Aktivitätsringe wie bei Apple Fitness – Lernen (aus dem Fokus-Timer), Bewegung (aus dem Training) und Gewohnheiten – mit einstellbaren Tageszielen, Wochenleiste, Auszeichnungen und Erinnerung am Abend. Dazu Mengen-Gewohnheiten (z. B. „+ 0,25 l“), Wochenraster, Serien 🔥 und 30-Tage-Quote
 - **Ziele:** Vision Board nach Lebensbereichen mit Inspirationsbildern und Fortschritt
 - **Finanzen:** im Stil von Apple Wallet – Budget-Karte mit „Verfügbar“, Ausgaben als Kategorien-Ring, Buchungen mit Kategoriesymbolen. Monatsbudget und Budgets pro Kategorie mit Warnung ab 90 %, Daueraufträge (Miete, Abos, Gehalt) werden jeden Monat automatisch gebucht, Spartöpfe mit Ziel und CSV-Export für Excel
+- **Einkaufsliste:** mehrere Artikel auf einmal („Milch, 6 Eier, 500 g Hack“), automatisch nach Supermarkt-Abteilung sortiert, abhaken mit „Widerrufen“, „Häufig gekauft“-Vorschläge und Einkauf abschließen – auf Wunsch gleich als Ausgabe in den Finanzen
 - **Training:** geplante und erledigte Workouts mit Dauer (zählt für den Bewegungsring)
 
 ### Sammlungen

@@ -46,6 +46,8 @@ export interface Note {
   courseId: ID | null;
   content: string;
   updated: string;
+  /** Oben in der Liste angeheftet */
+  pinned?: boolean;
 }
 
 export interface Card {
@@ -61,6 +63,8 @@ export interface Card {
   reps: number;
   lapses: number;
   due: DateStr;
+  /** Aus dieser Notiz erstellt */
+  noteId?: ID;
 }
 
 export interface Exam {
@@ -174,6 +178,18 @@ export interface FinanceSettings {
   categoryBudgets: { category: string; amount: number }[];
 }
 
+/** Artikel auf der Einkaufsliste */
+export interface ShoppingItem {
+  id: ID;
+  name: string;
+  /** Menge als Text, z. B. „6“ oder „500 g“ */
+  amount: string;
+  /** Abteilung im Supermarkt (siehe lib/shopping) */
+  aisle: string;
+  done: boolean;
+  added: string;
+}
+
 export type MediaKind = 'Serie' | 'Film' | 'Buch' | 'Hörbuch';
 export type MediaStatus = 'geplant' | 'läuft' | 'fertig' | 'abgebrochen';
 
@@ -236,7 +252,7 @@ export interface Tool {
 export type WidgetId =
   | 'topnav' | 'stats' | 'clock' | 'quick' | 'notes' | 'music' | 'tools' | 'tasks' | 'projects'
   | 'transactions' | 'watching' | 'reading' | 'habits' | 'period' | 'exams' | 'trainings'
-  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus' | 'budget' | 'stack' | 'today' | 'countdown';
+  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus' | 'budget' | 'stack' | 'today' | 'countdown' | 'shopping';
 
 /** Breite im 12-Spalten-Raster: ¼, ⅓, ½, ⅔ oder ganze Breite */
 export type WidgetSize = 's' | 'm' | 'l' | 'xl' | 'full';
@@ -296,6 +312,8 @@ export interface Settings {
   /** Tagesziele der Aktivitätsringe */
   rings: RingGoals;
   finance: FinanceSettings;
+  /** Häufig gekaufte Artikel für Vorschläge */
+  shoppingFrequent: { name: string; count: number }[];
 }
 
 export interface RingGoals {
@@ -335,6 +353,7 @@ export interface Data {
   transactions: Transaction[];
   recurring: Recurring[];
   pots: SavingsPot[];
+  shopping: ShoppingItem[];
   media: Media[];
   workouts: Workout[];
   events: CalEvent[];

@@ -21,6 +21,7 @@ export const emptyData = (): Data => ({
   transactions: [],
   recurring: [],
   pots: [],
+  shopping: [],
   media: [],
   workouts: [],
   events: [],
@@ -46,7 +47,7 @@ export function normalize(raw: unknown): Data {
   }
   if (obj.settings && typeof obj.settings === 'object') {
     const stored = obj.settings as Partial<Settings>;
-    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) } };
+    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) }, shoppingFrequent: Array.isArray(stored.shoppingFrequent) ? stored.shoppingFrequent : [] };
   }
   if (typeof obj.schemaVersion === 'number') result.schemaVersion = obj.schemaVersion;
   return result;

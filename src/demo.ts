@@ -13,6 +13,7 @@ export const defaultSettings = (): Settings => ({
   appearance: defaultAppearance(),
   rings: defaultRingGoals(),
   finance: defaultFinance(),
+  shoppingFrequent: [],
 });
 
 export const defaultFinance = (): FinanceSettings => ({ budget: 0, categoryBudgets: [] });
@@ -43,8 +44,8 @@ export function demoData(): Data {
     ],
     notes: [
       {
-        id: 'demo-n1', title: 'Folgen und Grenzwerte', courseId: ana, updated: new Date().toISOString(),
-        content: 'Eine Folge (aₙ) konvergiert gegen a, wenn es zu jedem ε > 0 ein N gibt, sodass |aₙ − a| < ε für alle n ≥ N.',
+        id: 'demo-n1', title: 'Folgen und Grenzwerte', courseId: ana, updated: new Date().toISOString(), pinned: true,
+        content: '**Konvergenz**: Eine Folge (aₙ) konvergiert gegen a, wenn es zu jedem ε > 0 ein N gibt, sodass |aₙ − a| < ε für alle n ≥ N.\n\n## Zum Üben #klausur\n- [x] Beispiele aus VL 3\n- [ ] Monotoniekriterium üben\n- [ ] [[Übungsblatt 3]], Aufgabe 2',
       },
     ],
     cards: [
@@ -93,6 +94,12 @@ export function demoData(): Data {
     ],
     pots: [
       { id: 'demo-pot1', name: 'Auslandssemester', icon: '✈️', target: 3000, saved: 1150, color: '#007AFF' },
+    ],
+    shopping: [
+      { id: 'demo-sh1', name: 'Hafermilch', amount: '2', aisle: 'kuehl', done: false, added: t },
+      { id: 'demo-sh2', name: 'Bananen', amount: '', aisle: 'obst', done: false, added: t },
+      { id: 'demo-sh3', name: 'Vollkornbrot', amount: '', aisle: 'backwaren', done: false, added: t },
+      { id: 'demo-sh4', name: 'Spaghetti', amount: '500 g', aisle: 'vorrat', done: false, added: t },
     ],
     media: [
       { id: 'demo-m1', kind: 'Serie', title: 'The Office', creator: 'Netflix', cover: '', status: 'läuft', rating: 4, progress: 'S3 E7' },

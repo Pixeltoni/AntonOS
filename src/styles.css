@@ -1585,3 +1585,10 @@ button.lift-day.next { background: color-mix(in srgb, var(--c) 9%, var(--surface
 .cal-toolbar .cal-modes { width: auto; }
 .cal-toolbar button.primary { white-space: nowrap; }
 .tl-allday-label { white-space: nowrap; font-size: 0.62rem; }
+
+/* ---------- Handy: kein Zoomen, Fenster scrollen nur sich selbst ---------- */
+/* Doppeltipp-Zoom aus (Tippen bleibt schnell); Scrollen und Wischen funktionieren weiter */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* Die Seite dahinter wird in lib/mobile.ts festgehalten; hier verhindern wir, dass das Scrollen am Rand „durchrutscht“ */
+.modal-backdrop, .spotlight-backdrop { overscroll-behavior: contain; }
+.modal { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }

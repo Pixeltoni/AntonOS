@@ -6,9 +6,12 @@ import { SyncProvider } from './components/sync';
 import { ToastProvider } from './components/toast';
 import { FocusProvider } from './components/focus';
 import { setupPwa } from './lib/pwa';
+import { disableZoom, lockScrollBehindOverlays } from './lib/mobile';
 import './styles.css';
 
 setupPwa();
+disableZoom();
+lockScrollBehindOverlays();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -327,7 +327,7 @@ export function Habits() {
           </div>
         )}
       </Panel>
-      <Panel title="⭕ Ziele & Erinnerung"><RingGoalsForm /></Panel>
+      <Panel title="⭕ Ringe einstellen"><RingGoalsForm /></Panel>
     </>
   );
 }

@@ -215,11 +215,13 @@ function HabitSheet({ habit, onClose }: { habit?: Habit; onClose: () => void }) 
   const [icon, setIcon] = useState(habit?.icon ?? '✨');
   const [target, setTarget] = useState(habit?.target ? num(habit.target) : '');
   const [unit, setUnit] = useState(habit?.unit ?? '');
-  const [amounts, setAmounts] = useState(habit?.target ? formatAmounts(habitSteps(habit)) : '');
+  // Ein Feld pro Menge – am Handy hat die Zahlentastatur kein Semikolon
+  const [amounts, setAmounts] = useState<string[]>(habit?.target ? habitSteps(habit).map((n) => formatAmounts([n])) : ['']);
+  const setAmount = (i: number, value: string) => setAmounts((list) => list.map((a, j) => (j === i ? value : a)));
   const goal = Number(target.replace(',', '.'));
 
   const save = () => {
-    const steps = parseAmounts(amounts);
+    const steps = parseAmounts(amounts.join(';'));
     const fields: Partial<Habit> = {
       name: name.trim(),
       icon: icon.trim() || '✨',
@@ -249,11 +251,27 @@ function HabitSheet({ habit, onClose }: { habit?: Habit; onClose: () => void }) 
         <label>Einheit<input placeholder="z. B. l, Seiten" value={unit} onChange={(e) => setUnit(e.target.value)} /></label>
       </div>
       {goal > 0 && (
-        <label>
-          Mengen zum Hinzufügen
-          <input inputMode="decimal" placeholder="z. B. 0,2; 0,5" value={amounts} onChange={(e) => setAmounts(e.target.value)} />
-          <span className="muted small">Mehrere mit Semikolon trennen – für jede gibt es einen eigenen Knopf. Leer lassen für einen passenden Schritt.</span>
-        </label>
+        <fieldset className="amount-list">
+          <legend>Mengen zum Hinzufügen</legend>
+          {amounts.map((a, i) => (
+            <div key={i} className="row">
+              <input
+                className="grow"
+                inputMode="decimal"
+                placeholder={i === 0 ? 'z. B. 0,2' : 'z. B. 0,5'}
+                value={a}
+                onChange={(e) => setAmount(i, e.target.value)}
+                aria-label={`Menge ${i + 1}${unit ? ` in ${unit}` : ''}`}
+              />
+              {unit && <span className="muted">{unit}</span>}
+              {amounts.length > 1 && (
+                <button type="button" className="icon" onClick={() => setAmounts((list) => list.filter((_, j) => j !== i))} aria-label={`Menge ${i + 1} entfernen`} title="Entfernen">×</button>
+              )}
+            </div>
+          ))}
+          <button type="button" className="pill-btn" onClick={() => setAmounts((list) => [...list, ''])}>+ Weitere Menge</button>
+          <span className="muted small">Für jede Menge gibt es einen eigenen Knopf. Leer lassen für einen passenden Schritt.</span>
+        </fieldset>
       )}
       {habit && (
         <button type="button" className="danger" onClick={() => { if (confirm(`„${habit.name}“ mit Verlauf löschen?`)) { remove('habits', habit.id); onClose(); } }}>

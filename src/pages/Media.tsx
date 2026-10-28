@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import type { Media as MediaItem, MediaKind, MediaStatus } from '../types';
 import { Cover, ImageInput, Stars } from '../components/widgets';
 import { Empty, PageHeader, Panel } from '../components/ui';
+import { AddButton, Sheet } from '../components/sheet';
 
 const STATUSES: MediaStatus[] = ['geplant', 'läuft', 'fertig', 'abgebrochen'];
 export const WATCH_KINDS: MediaKind[] = ['Serie', 'Film'];
@@ -50,6 +51,7 @@ export function MediaPage({ mode }: { mode: 'schauen' | 'lesen' }) {
   const [creator, setCreator] = useState('');
   const [cover, setCover] = useState('');
   const [filter, setFilter] = useState<MediaStatus | ''>('');
+  const [adding, setAdding] = useState(false);
 
   const items = data.media.filter((m) => kinds.includes(m.kind) && (!filter || m.status === filter));
   const groups = STATUSES.map((s) => ({ status: s, items: items.filter((m) => m.status === s) })).filter((g) => g.items.length);
@@ -59,39 +61,39 @@ export function MediaPage({ mode }: { mode: 'schauen' | 'lesen' }) {
       <PageHeader
         title={mode === 'schauen' ? 'Watchlist' : 'Leseliste'}
         subtitle={mode === 'schauen' ? 'Serien und Filme' : 'Bücher und Hörbücher'}
-        actions={
-          <select value={filter} onChange={(e) => setFilter(e.target.value as MediaStatus | '')} aria-label="Status filtern">
-            <option value="">Alle</option>
-            {STATUSES.map((s) => <option key={s}>{s}</option>)}
-          </select>
-        }
+        actions={<AddButton label={mode === 'schauen' ? 'Serie oder Film hinzufügen' : 'Buch hinzufügen'} onClick={() => setAdding(true)} />}
       />
-      <Panel title="Hinzufügen">
-        <form
-          className="col"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!title.trim()) return;
+      <div className="segmented filter-chips" role="radiogroup" aria-label="Status filtern">
+        {(['', ...STATUSES] as (MediaStatus | '')[]).map((s) => (
+          <button key={s || 'alle'} type="button" role="radio" aria-checked={filter === s} className={filter === s ? 'selected' : ''} onClick={() => setFilter(s)}>
+            {s ? `${s[0].toUpperCase()}${s.slice(1)}` : 'Alle'}
+          </button>
+        ))}
+      </div>
+      {adding && (
+        <Sheet
+          title={mode === 'schauen' ? 'Serie oder Film' : 'Buch oder Hörbuch'}
+          onClose={() => setAdding(false)}
+          submitDisabled={!title.trim()}
+          onSubmit={() => {
             add('media', { kind, title: title.trim(), creator: creator.trim(), cover, status: 'geplant', rating: 0, progress: '' });
             setTitle('');
             setCreator('');
             setCover('');
+            setAdding(false);
           }}
         >
-          <div className="inline-form">
-            <select value={kind} onChange={(e) => setKind(e.target.value as MediaKind)} aria-label="Art">
-              {kinds.map((k) => <option key={k}>{k}</option>)}
-            </select>
-            <input className="grow" placeholder="Titel" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Titel" />
-            <input placeholder={mode === 'schauen' ? 'Plattform, z. B. Netflix' : 'Autor/in'} value={creator} onChange={(e) => setCreator(e.target.value)} aria-label="Plattform oder Autor" />
+          <div className="segmented" role="radiogroup" aria-label="Art">
+            {kinds.map((k) => (
+              <button key={k} type="button" role="radio" aria-checked={kind === k} className={kind === k ? 'selected' : ''} onClick={() => setKind(k)}>{EMOJI[k]} {k}</button>
+            ))}
           </div>
-          <div className="inline-form">
-            <div className="grow"><ImageInput value={cover} onChange={setCover} label="Cover" /></div>
-            <button className="primary" type="submit">Hinzufügen</button>
-          </div>
-        </form>
-      </Panel>
-      {groups.length === 0 && <Empty>Noch nichts eingetragen.</Empty>}
+          <label>Titel<input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} /></label>
+          <label>{mode === 'schauen' ? 'Plattform' : 'Autor/in'}<input placeholder={mode === 'schauen' ? 'z. B. Netflix' : 'z. B. James Clear'} value={creator} onChange={(e) => setCreator(e.target.value)} /></label>
+          <ImageInput value={cover} onChange={setCover} label="Cover" />
+        </Sheet>
+      )}
+      {groups.length === 0 && <Empty>Noch nichts eingetragen. Tippe auf +.</Empty>}
       {groups.map((g) => (
         <Panel key={g.status} title={`${g.status[0].toUpperCase()}${g.status.slice(1)} (${g.items.length})`}>
           <div className="gallery posters">{g.items.map((m) => <MediaCard key={m.id} item={m} />)}</div>

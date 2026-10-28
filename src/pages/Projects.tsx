@@ -5,6 +5,7 @@ import { formatDate, relativeLabel, today } from '../lib/dates';
 import { TaskForm, TaskList } from '../components/TaskList';
 import { Cover, ImageInput } from '../components/widgets';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
+import { AddButton } from '../components/sheet';
 
 export const PROJECT_STATUSES: ProjectStatus[] = ['geplant', 'aktiv', 'pausiert', 'abgeschlossen'];
 const AREAS = ['Studium', 'Privat', 'Arbeit', 'Finanzen', 'Reisen'];
@@ -85,7 +86,7 @@ export function Projects() {
               <option value="">Alle</option>
               {PROJECT_STATUSES.map((s) => <option key={s}>{s}</option>)}
             </select>
-            {!adding && <button className="primary" onClick={() => setAdding(true)}>+ Projekt</button>}
+            {!adding && <AddButton label="Neues Projekt" onClick={() => setAdding(true)} />}
           </>
         }
       />

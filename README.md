@@ -16,9 +16,9 @@ Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von 
 - **Kurse:** mit Kürzel, Semester, Dozent/in, Raum, ECTS und Farbe. Jede Kursseite bündelt Aufgaben, Prüfungen, Lernkarten, Noten und Notizen.
 - **Aufgaben:** im Stil von Apple Erinnerungen – Listen-Kacheln (Heute, Geplant, Alle, Markiert, Erledigt), Kurse als eigene Listen, runde Häkchen mit „Widerrufen“, Markieren, Unteraufgaben, Notiz und Uhrzeit. Schnelleingabe in natürlicher Sprache: „Übungsblatt morgen 10 Uhr !!! #analysis“ (! niedrig, !! mittel, !!! hoch, #Kurs).
 - **Notizen:** wie Apple Notizen – Ordner pro Kurs, angeheftete Notizen, #Tags, Suche und nach Datum gruppierte Liste. Checklisten zum Abhaken, Überschriften, **fett**, [[Verknüpfungen]] zu Notizen, Aufgaben und Kursen; Kürzel ⌘B, ⇧⌘L (Checkliste), ⇧⌘H (Überschrift). Zeilen wie „Begriff: Erklärung“ werden mit 🧠 zu Lernkarten
-- **Lernkarten:** Wiederholung nach dem Prinzip der verteilten Wiederholung (vereinfachter SM-2-Algorithmus wie bei Anki), bedienbar per Tastatur (Leertaste, 1–4)
-- **Prüfungen:** mit Countdown
-- **Noten:** deutsches Notensystem (1,0–5,0). Teilnoten werden pro Kurs gewichtet, der Gesamtschnitt nach ECTS. Wie in vielen Prüfungsordnungen wird nach der ersten Nachkommastelle abgeschnitten.
+- **Lernkarten:** Stapel pro Kurs mit fällig/neu/lerne ich/sitzt, Lernen mit umdrehbarer Karte und Vorschau des nächsten Abstands je Bewertung (Spaced Repetition, SM-2), Suche, neue Karten über „+“
+- **Prüfungen:** Countdown-Karten in Kursfarbe mit fälligen Lernkarten und offenen Aufgaben des Kurses, vergangene Prüfungen eingeklappt
+- **Noten:** deutsches Notensystem (1,0–5,0). Teilnoten werden pro Kurs gewichtet, der Gesamtschnitt nach ECTS. Wie in vielen Prüfungsordnungen wird nach der ersten Nachkommastelle abgeschnitten. – Übersicht im Health-Stil mit ECTS-Ring, Schnellauswahl der Noten und verständlichen Fehlermeldungen
 - **Fokus:** Fokus-Modi (Lernen, Arbeiten, Lesen) mit großem Ring-Timer, Pomodoro-Runden und automatischen Pausen. Der Timer läuft auf allen Seiten als schwebende Live-Aktivität weiter (auch nach dem Neuladen), blendet im Fokus unpassende Dashboard-Kästen aus und zeigt die Woche als gestapelte Balken pro Kurs. Lernzeit fließt in den Lernen-Ring und auf die Kursseite
 
 ### Leben

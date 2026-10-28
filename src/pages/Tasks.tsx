@@ -46,7 +46,14 @@ function groupByDay(tasks: Task[], t: string): { label: string; tasks: Task[] }[
 
 export function Tasks() {
   const { data } = useStore();
-  const [listId, setListId] = useState<ListId>('heute');
+  const [listId, setListIdState] = useState<ListId>('heute');
+  // Am Handy: erst die Übersicht, nach dem Antippen die Liste (wie in Erinnerungen)
+  const [showList, setShowList] = useState(false);
+  const setListId = (id: ListId) => {
+    setListIdState(id);
+    setShowList(true);
+    window.scrollTo({ top: 0 });
+  };
   const t = today();
 
   const courseLists = [
@@ -63,8 +70,9 @@ export function Tasks() {
   const count = (fn: (task: Task) => boolean) => data.tasks.filter(fn).length;
 
   return (
-    <div className="reminders">
+    <div className={`reminders ${showList ? 'show-list' : ''}`}>
       <aside className="rem-side">
+        <h1 className="rem-overview-title">Aufgaben</h1>
         <div className="rem-tiles">
           {SMART_LISTS.map((l) => (
             <button key={l.id} type="button" className={`rem-tile ${listId === l.id ? 'active' : ''}`} onClick={() => setListId(l.id)} aria-pressed={listId === l.id}>
@@ -89,6 +97,7 @@ export function Tasks() {
       </aside>
 
       <section className="rem-content panel">
+        <button type="button" className="rem-back" onClick={() => setShowList(false)}>‹ Listen</button>
         <h1 className="rem-list-title" style={{ color }}>{title}</h1>
         {listId !== 'erledigt' && (
           <TaskForm

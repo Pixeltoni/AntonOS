@@ -3,7 +3,8 @@ import { useStore } from '../store';
 import type { GoalArea, WidgetVariant } from '../types';
 import { formatDate, relativeLabel, today } from '../lib/dates';
 import { Cover, ImageInput } from '../components/widgets';
-import { Empty, PageHeader, Panel, Progress } from '../components/ui';
+import { Empty, PageHeader, Progress } from '../components/ui';
+import { AddButton, Sheet } from '../components/sheet';
 
 const AREAS: { area: GoalArea; icon: string }[] = [
   { area: 'Studium', icon: '🎓' },
@@ -41,38 +42,40 @@ export function Goals() {
   const [why, setWhy] = useState('');
   const [deadline, setDeadline] = useState('');
   const [image, setImage] = useState('');
+  const [adding, setAdding] = useState(false);
   const t = today();
 
   return (
     <>
-      <PageHeader title="Ziele" subtitle="Dein Vision Board – wofür du das alles machst" />
-      <Panel title="Neues Ziel">
-        <form
-          className="col"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!title.trim()) return;
+      <PageHeader title="Ziele" subtitle="Dein Vision Board – wofür du das alles machst" actions={<AddButton label="Neues Ziel" onClick={() => setAdding(true)} />} />
+      {adding && (
+        <Sheet
+          title="Neues Ziel"
+          onClose={() => setAdding(false)}
+          submitDisabled={!title.trim()}
+          onSubmit={() => {
             add('goals', { title: title.trim(), area, why: why.trim(), deadline: deadline || null, progress: 0, image });
             setTitle('');
             setWhy('');
             setDeadline('');
             setImage('');
+            setAdding(false);
           }}
         >
-          <div className="inline-form">
-            <input className="grow" placeholder="Ziel" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Ziel" />
-            <input className="grow" placeholder="Warum ist dir das wichtig?" value={why} onChange={(e) => setWhy(e.target.value)} aria-label="Warum" />
-            <select value={area} onChange={(e) => setArea(e.target.value as GoalArea)} aria-label="Bereich">
-              {AREAS.map((a) => <option key={a.area}>{a.area}</option>)}
-            </select>
-            <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} aria-label="Bis wann" />
+          <label>Ziel<input autoFocus value={title} placeholder="z. B. Analysis-Klausur mit 2,0" onChange={(e) => setTitle(e.target.value)} /></label>
+          <label>Warum ist dir das wichtig?<input value={why} onChange={(e) => setWhy(e.target.value)} /></label>
+          <div className="modal-grid">
+            <label>
+              Bereich
+              <select value={area} onChange={(e) => setArea(e.target.value as GoalArea)}>
+                {AREAS.map((a) => <option key={a.area}>{a.area}</option>)}
+              </select>
+            </label>
+            <label>Bis wann<input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></label>
           </div>
-          <div className="inline-form">
-            <div className="grow"><ImageInput value={image} onChange={setImage} label="Inspirationsbild" /></div>
-            <button className="primary" type="submit">Hinzufügen</button>
-          </div>
-        </form>
-      </Panel>
+          <ImageInput value={image} onChange={setImage} label="Inspirationsbild" />
+        </Sheet>
+      )}
       {data.goals.length === 0 && <Empty>Noch keine Ziele. Was willst du dieses Semester erreichen?</Empty>}
       <div className="board">
         {AREAS.map(({ area: a, icon }) => {

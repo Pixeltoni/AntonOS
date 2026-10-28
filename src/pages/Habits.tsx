@@ -7,6 +7,7 @@ import { awards, defaultRingGoals, RING_COLORS } from '../lib/rings';
 import { MiniRing, RingsCard } from '../components/rings';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
 import { useToast } from '../components/toast';
+import { AddButton, Sheet } from '../components/sheet';
 
 /** Abhaken bzw. wieder öffnen. Mengen-Gewohnheiten werden beim Abhaken auf das Tagesziel gesetzt. */
 export function useToggleHabit() {
@@ -175,12 +176,13 @@ export function Habits() {
   const [icon, setIcon] = useState('✨');
   const [target, setTarget] = useState('');
   const [unit, setUnit] = useState('');
+  const [adding, setAdding] = useState(false);
   const t = today();
   const week = Array.from({ length: 7 }, (_, i) => addDays(t, i - 6));
 
   return (
     <>
-      <PageHeader title="Gewohnheiten" subtitle="Schließ jeden Tag deine Ringe" />
+      <PageHeader title="Gewohnheiten" subtitle="Schließ jeden Tag deine Ringe" actions={<AddButton label="Neue Gewohnheit" onClick={() => setAdding(true)} />} />
       <RingsCard />
       <div className="grid-2">
         <Panel title="Heute">
@@ -190,12 +192,12 @@ export function Habits() {
         </Panel>
         <Panel title="Auszeichnungen"><Awards /></Panel>
       </div>
-      <Panel title="Neue Gewohnheit">
-        <form
-          className="inline-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!name.trim()) return;
+      {adding && (
+        <Sheet
+          title="Neue Gewohnheit"
+          onClose={() => setAdding(false)}
+          submitDisabled={!name.trim()}
+          onSubmit={() => {
             const goal = Number(target.replace(',', '.'));
             add('habits', {
               name: name.trim(),
@@ -205,15 +207,25 @@ export function Habits() {
             setName('');
             setTarget('');
             setUnit('');
+            setAdding(false);
           }}
         >
-          <input className="narrow" value={icon} onChange={(e) => setIcon(e.target.value)} aria-label="Emoji" maxLength={4} />
-          <input className="grow" placeholder="z. B. 10 Minuten meditieren" value={name} onChange={(e) => setName(e.target.value)} aria-label="Gewohnheit" />
-          <input className="narrow" inputMode="decimal" placeholder="Ziel" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Tagesziel (optional, z. B. 2)" title="Optional: Tagesziel als Menge, z. B. 2" />
-          <input className="narrow" placeholder="Einheit" value={unit} onChange={(e) => setUnit(e.target.value)} aria-label="Einheit (z. B. l)" title="Optional: Einheit, z. B. l oder Seiten" />
-          <button className="primary" type="submit">Hinzufügen</button>
-        </form>
-      </Panel>
+          <div className="row">
+            <label className="narrow-label">Symbol<input className="narrow" value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={4} /></label>
+            <label className="grow">Gewohnheit<input autoFocus placeholder="z. B. 10 Minuten meditieren" value={name} onChange={(e) => setName(e.target.value)} /></label>
+          </div>
+          <div className="emoji-picks" role="group" aria-label="Symbol wählen">
+            {['✨', '🧘', '📖', '💧', '🏃', '🥗', '😴', '📝', '🎸', '🧹', '💊', '🚭'].map((x) => (
+              <button key={x} type="button" className={icon === x ? 'on' : ''} onClick={() => setIcon(x)}>{x}</button>
+            ))}
+          </div>
+          <p className="muted small">Optional als Menge mit Tagesziel – dann gibt es einen „+“-Knopf (z. B. 2 l Wasser, 20 Seiten).</p>
+          <div className="modal-grid">
+            <label>Tagesziel<input inputMode="decimal" placeholder="z. B. 2" value={target} onChange={(e) => setTarget(e.target.value)} /></label>
+            <label>Einheit<input placeholder="z. B. l, Seiten" value={unit} onChange={(e) => setUnit(e.target.value)} /></label>
+          </div>
+        </Sheet>
+      )}
       <Panel title="Letzte 7 Tage">
         {data.habits.length === 0 ? <Empty>Noch keine Gewohnheiten.</Empty> : (
           <div className="table-wrap">

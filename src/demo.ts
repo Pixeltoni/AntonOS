@@ -130,9 +130,9 @@ export function demoData(): Data {
     ],
     trainingPlan: PUSH_PULL_TEMPLATE.map((d, i) => ({ id: `demo-tp${i}`, name: d.name, exercises: d.exercises.map((e, k) => ({ id: `demo-tp${i}-${k}`, ...e })) })),
     events: [
-      { id: 'demo-ev1', title: 'Lerngruppe Analysis', note: 'Bibliothek, Raum 2.14', start: addDays(t, 1), end: null, startTime: '14:00', endTime: '16:00', priority: 'mittel', repeat: { freq: 'woechentlich', until: null, except: [] }, remind: 15 },
+      { id: 'demo-ev1', title: 'Lerngruppe Analysis', note: '', location: 'Bibliothek, Raum 2.14', start: addDays(t, 1), end: null, startTime: '14:00', endTime: '16:00', priority: 'mittel', repeat: { freq: 'woechentlich', until: null, except: [] }, remind: 15, color: 'lila' },
       { id: 'demo-ev2', title: 'Zahnarzt', note: '', start: addDays(t, 3), end: null, startTime: '09:30', endTime: '', priority: 'hoch' },
-      { id: 'demo-ev3', title: 'Wochenende in Hamburg', note: 'Zug um 8:12', start: addDays(t, 11), end: addDays(t, 13), startTime: '', endTime: '', priority: 'niedrig' },
+      { id: 'demo-ev3', title: 'Wochenende in Hamburg', note: 'Zug um 8:12', start: addDays(t, 11), end: addDays(t, 13), startTime: '', endTime: '', priority: 'niedrig', color: 'gruen' },
     ],
     albums: [
       { id: 'demo-a1', title: 'Ersti-Woche', date: addDays(t, -30), cover: '', tags: 'Uni, Freunde', description: '' },

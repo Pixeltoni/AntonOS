@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseQuickAdd } from './quickadd';
+import { parseEventQuickAdd, parseQuickAdd } from './quickadd';
 
 // Dienstag, 27.10.2026
 const T = '2026-10-27';
@@ -60,5 +60,23 @@ describe('Things-Wörter', () => {
     expect(parseQuickAdd('Lea anrufen heute abend', T)).toMatchObject({ title: 'Lea anrufen', evening: true, due: null });
     expect(parseQuickAdd('Spanisch lernen irgendwann', T)).toMatchObject({ title: 'Spanisch lernen', someday: true, due: null });
     expect(parseQuickAdd('Abendessen heute', T)).toMatchObject({ due: T, evening: false });
+  });
+});
+
+describe('Schnelleingabe für Termine', () => {
+  const t = '2026-10-28'; // Mittwoch
+  it('erkennt Zeitraum, Tag und Ort', () => {
+    expect(parseEventQuickAdd('Lerngruppe morgen 14-16 Uhr @Bibliothek', t)).toMatchObject({
+      title: 'Lerngruppe', start: '2026-10-29', startTime: '14:00', endTime: '16:00', location: 'Bibliothek', repeat: null, end: null,
+    });
+    expect(parseEventQuickAdd('Sprechstunde von 9 bis 11:30 freitag', t)).toMatchObject({ title: 'Sprechstunde', start: '2026-10-30', startTime: '09:00', endTime: '11:30' });
+  });
+  it('erkennt Wiederholungen', () => {
+    expect(parseEventQuickAdd('Chor jeden Mittwoch 19 Uhr', t)).toMatchObject({ title: 'Chor', start: '2026-10-28', startTime: '19:00', repeat: 'woechentlich' });
+    expect(parseEventQuickAdd('Miete monatlich 1.11.', t)).toMatchObject({ title: 'Miete', start: '2026-11-01', repeat: 'monatlich' });
+  });
+  it('erkennt mehrtägige Zeiträume und nimmt sonst den gewählten Tag', () => {
+    expect(parseEventQuickAdd('Skiurlaub 27.12.-2.1.', t)).toMatchObject({ title: 'Skiurlaub', start: '2026-12-27', end: '2027-01-02', startTime: '' });
+    expect(parseEventQuickAdd('Blatt 3-4 abgeben !!!', t, '2026-11-02')).toMatchObject({ title: 'Blatt 3-4 abgeben', start: '2026-11-02', startTime: '', priority: 'hoch' });
   });
 });

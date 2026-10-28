@@ -1,4 +1,4 @@
-import type { Course, DateStr, ID, Priority } from '../types';
+import type { Course, DateStr, ID, Priority, RepeatFreq } from '../types';
 import { addDays, parseDate, toDateStr } from './dates';
 
 export interface QuickAdd {
@@ -122,4 +122,99 @@ export function parseQuickAdd(input: string, today: DateStr, courses: Pick<Cours
 
   const title = text.replace(/\s+/g, ' ').trim();
   return { title, due, dueTime, priority, courseId, evening, someday };
+}
+
+export interface EventQuickAdd {
+  title: string;
+  start: DateStr;
+  end: DateStr | null;
+  startTime: string;
+  endTime: string;
+  priority: Priority | null;
+  repeat: RepeatFreq | null;
+  location: string;
+}
+
+const REPEAT_WORDS: [RegExp, RepeatFreq][] = [
+  [/\s(täglich|taeglich|jeden\s+tag)(?=\s)/i, 'taeglich'],
+  [/\s(alle\s+(?:2|zwei)\s+wochen|zweiwöchentlich|zweiwoechentlich)(?=\s)/i, 'zweiwoechentlich'],
+  [/\s(wöchentlich|woechentlich|jede\s+woche)(?=\s)/i, 'woechentlich'],
+  [/\s(monatlich|jeden\s+monat)(?=\s)/i, 'monatlich'],
+  [/\s(jährlich|jaehrlich|jedes\s+jahr)(?=\s)/i, 'jaehrlich'],
+];
+
+const hm = (h: string, m?: string) => {
+  const hh = Number(h);
+  const mm = Number(m ?? 0);
+  return hh > 24 || mm > 59 ? null : `${pad(hh === 24 ? 0 : hh)}:${pad(mm)}`;
+};
+
+/**
+ * Schnelleingabe für Termine, z. B. „Lerngruppe morgen 14-16 Uhr @Bibliothek“:
+ * versteht alles von `parseQuickAdd` plus Zeiträume („14-16 Uhr“, „von 9 bis 11:30“),
+ * Datumsbereiche („5.11.-7.11.“), Wiederholungen („jeden Mittwoch“, „wöchentlich“)
+ * und den Ort per @Wort. Ohne Datum gilt `fallbackDay`.
+ */
+export function parseEventQuickAdd(input: string, today: DateStr, fallbackDay: DateStr = today): EventQuickAdd {
+  let text = ` ${input} `;
+  let startTime = '';
+  let endTime = '';
+  // Werden in Callbacks gesetzt – ohne „as“ engt TypeScript sie auf null ein
+  let end = null as DateStr | null;
+  let repeat = null as RepeatFreq | null;
+  let location = '';
+  let forced = null as DateStr | null;
+
+  const take = (re: RegExp, fn: (m: RegExpMatchArray) => boolean | void) => {
+    const m = text.match(re);
+    if (m && fn(m) !== false) text = text.replace(m[0], ' ');
+  };
+
+  // Ort: @Bibliothek
+  take(/\s@([^\s]+)(?=\s)/, (m) => {
+    location = m[1];
+  });
+
+  // Datumsbereich: 5.11.-7.11. oder 5.11. bis 7.11.2026 → mehrtägig
+  take(/\s(?:vom\s+)?(\d{1,2}\.\d{1,2}\.(?:\d{2,4})?)\s*(?:-|–|bis)\s*(\d{1,2}\.\d{1,2}\.(?:\d{2,4})?)(?=\s)/i, (m) => {
+    const from = parseQuickAdd(m[1], today).due;
+    const to = parseQuickAdd(m[2], today).due;
+    if (!from || !to) return false;
+    forced = from;
+    end = to < from ? toDateStr(new Date(parseDate(to).getFullYear() + 1, parseDate(to).getMonth(), parseDate(to).getDate())) : to;
+  });
+
+  // Zeitraum: 14-16 Uhr, 14:00–15:30, von 9 bis 11 Uhr
+  take(/\s(von\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(?:uhr\s*)?(?:-|–|bis)\s*(\d{1,2})(?:[:.](\d{2}))?(\s*uhr)?(?=\s)/i, (m) => {
+    const explicit = !!m[1] || !!m[3] || !!m[5] || !!m[6];
+    const a = hm(m[2], m[3]);
+    const b = hm(m[4], m[5]);
+    if (!explicit || !a || !b) return false;
+    startTime = a;
+    endTime = b;
+  });
+
+  // Wiederholung: „jeden Mittwoch“ = wöchentlich ab dem nächsten (oder heutigen) Mittwoch
+  take(/\sjeden\s+(sonntag|montag|dienstag|mittwoch|donnerstag|freitag|samstag)(?=\s)/i, (m) => {
+    const target = WEEKDAYS.indexOf(m[1].toLowerCase());
+    forced = addDays(today, (target - parseDate(today).getDay() + 7) % 7);
+    repeat = 'woechentlich';
+  });
+  for (const [re, freq] of REPEAT_WORDS) {
+    if (!repeat) take(re, () => { repeat = freq; });
+  }
+
+  const base = parseQuickAdd(text, today);
+  const start = forced ?? base.due ?? fallbackDay;
+  if (!startTime) startTime = base.dueTime;
+  return {
+    title: base.title,
+    start,
+    end: end && end > start ? end : null,
+    startTime,
+    endTime,
+    priority: base.priority,
+    repeat,
+    location,
+  };
 }

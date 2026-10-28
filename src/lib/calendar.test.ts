@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutTimed, onDay, rangeLabel, shiftAnchor, sortEntries, validateEvent, weekDays, type CalendarEntry } from './calendar';
+import { detachOccurrence, editWholeSeries, layoutTimed, moveEvent, occurrenceDraft, onDay, rangeLabel, resizeEvent, shiftAnchor, sortEntries, spanLanes, validateEvent, weekDays, type CalendarEntry } from './calendar';
 import { isoWeek } from './dates';
 
 const entry = (patch: Partial<CalendarEntry>): CalendarEntry => ({
@@ -69,5 +69,46 @@ describe('Zeitleiste', () => {
   });
   it('zeigt mehrtägige Termine nicht in der Zeitleiste', () => {
     expect(layoutTimed([entry({ time: '10:00', end: '2026-10-29' })], '2026-10-27')).toEqual([]);
+  });
+});
+
+describe('Kalender: Balken, Ziehen und Serien', () => {
+  const week = weekDays('2026-10-28');
+  it('legt mehrtägige Einträge als Balken in freie Zeilen', () => {
+    const a = entry({ key: 'a', start: '2026-10-25', end: '2026-10-28' });
+    const b = entry({ key: 'b', start: '2026-10-29', end: '2026-11-03' });
+    const c = entry({ key: 'c', start: '2026-10-27', end: '2026-10-30' });
+    const { segments, lanes } = spanLanes([a, b, c, entry({ key: 'd' })], week);
+    expect(lanes).toBe(2);
+    expect(segments.map((s) => [s.entry.key, s.col, s.span, s.lane, s.before, s.after])).toEqual([
+      ['a', 0, 3, 0, true, false],
+      ['c', 1, 4, 1, false, false],
+      ['b', 3, 4, 0, false, true],
+    ]);
+  });
+
+  it('verschiebt Termine und behält die Dauer', () => {
+    const e = { start: '2026-10-28', end: null, startTime: '14:00', endTime: '15:30' };
+    expect(moveEvent(e, 2, 45)).toEqual({ start: '2026-10-30', end: null, startTime: '14:45', endTime: '16:15' });
+    expect(moveEvent(e, 0, 9 * 60)).toEqual({ start: '2026-10-28', end: '2026-10-29', startTime: '23:00', endTime: '00:30' });
+    expect(moveEvent({ start: '2026-10-28', end: '2026-10-30', startTime: '', endTime: '' }, -1)).toEqual({ start: '2026-10-27', end: '2026-10-29', startTime: '', endTime: '' });
+  });
+
+  it('ändert die Dauer, mindestens 15 Minuten', () => {
+    const e = { start: '2026-10-28', end: null, startTime: '14:00', endTime: '15:00' };
+    expect(resizeEvent(e, 30).endTime).toBe('15:30');
+    expect(resizeEvent(e, -120).endTime).toBe('14:15');
+    expect(resizeEvent({ ...e, endTime: '' }, 0).endTime).toBe('15:00');
+  });
+
+  it('ändert nur ein Vorkommen oder die ganze Serie', () => {
+    const series = { title: 'Chor', note: '', start: '2026-10-07', end: null, startTime: '19:00', endTime: '21:00', priority: 'mittel' as const, repeat: { freq: 'woechentlich' as const, until: null, except: [] } };
+    const occ = occurrenceDraft(series, '2026-10-28');
+    expect(occ.start).toBe('2026-10-28');
+    const { seriesPatch, single } = detachOccurrence(series, '2026-10-28', { ...occ, startTime: '18:00' });
+    expect(seriesPatch.repeat?.except).toEqual(['2026-10-28']);
+    expect(single).toMatchObject({ start: '2026-10-28', startTime: '18:00', repeat: null });
+    // Vorkommen um einen Tag verschoben → ganze Serie ab Donnerstag
+    expect(editWholeSeries(series, '2026-10-28', { ...occ, start: '2026-10-29' }).start).toBe('2026-10-08');
   });
 });

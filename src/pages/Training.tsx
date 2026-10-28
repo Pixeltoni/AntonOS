@@ -5,6 +5,8 @@ import { addDays, formatDate, parseDate, relativeLabel, today } from '../lib/dat
 import { DEFAULT_WORKOUT_MINUTES, weekOf } from '../lib/rings';
 import { Empty, PageHeader } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
+import { LogSheet, TrainingPlanPanel } from '../components/lifting';
+import { formatNumber, volume } from '../lib/training';
 
 const TYPES = ['Laufen', 'Krafttraining', 'Radfahren', 'Schwimmen', 'Yoga', 'Dehnen', 'Mannschaftssport', 'Sonstiges'];
 const ICONS: Record<string, string> = { Laufen: '🏃', Krafttraining: '🏋️', Radfahren: '🚴', Schwimmen: '🏊', Yoga: '🧘', Dehnen: '🤸', Mannschaftssport: '⚽' };
@@ -27,6 +29,7 @@ export function WorkoutList({ workouts, onOpen }: { workouts: Workout[]; onOpen?
             <span className="muted small">
               {w.type} · <span title={formatDate(w.date)}>{relativeLabel(w.date, t)}</span>
               {w.minutes ? ` · ${w.minutes} Min.` : ''}
+              {w.exercises?.length ? ` · ${w.exercises.length} Übungen · ${formatNumber(w.exercises.reduce((s, e) => s + volume(e.sets), 0))} kg` : ''}
               {w.notes && ` · ${w.notes}`}
             </span>
           </button>
@@ -89,6 +92,7 @@ export function Training() {
   const { data } = useStore();
   const t = today();
   const [sheet, setSheet] = useState<{ initial: Draft; id?: string } | null>(null);
+  const [logged, setLogged] = useState<Workout | null>(null);
 
   const sorted = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date));
   const planned = sorted.filter((w) => !w.done).reverse();
@@ -97,7 +101,8 @@ export function Training() {
   const week = weekOf(t).map((d) => ({ d, minutes: done.filter((w) => w.date === d).reduce((s, w) => s + minutesOf(w), 0) }));
   const weekMinutes = week.reduce((s, x) => s + x.minutes, 0);
   const max = Math.max(30, ...week.map((x) => x.minutes));
-  const open = (w: Workout) => setSheet({ initial: { ...w }, id: w.id });
+  // Trainings aus dem Plan öffnen die Eintragsansicht mit Gewicht und Wiederholungen
+  const open = (w: Workout) => (w.planDayId || w.exercises?.length ? setLogged(w) : setSheet({ initial: { ...w }, id: w.id }));
 
   return (
     <>
@@ -125,6 +130,7 @@ export function Training() {
           <span className="muted small">{planned[0] ? `Nächstes: ${planned[0].title} ${relativeLabel(planned[0].date, t)}` : 'Nichts geplant'}</span>
         </section>
       </div>
+      <TrainingPlanPanel />
       <div className="grid-2">
         <section className="panel">
           <div className="panel-head"><h2>Geplant</h2></div>
@@ -135,6 +141,7 @@ export function Training() {
           <WorkoutList workouts={done.slice(0, 30)} onOpen={open} />
         </section>
       </div>
+      {logged && <LogSheet workout={logged} day={data.trainingPlan.find((d) => d.id === logged.planDayId)} onClose={() => setLogged(null)} />}
       {sheet && <WorkoutSheet initial={sheet.initial} id={sheet.id} onClose={() => setSheet(null)} />}
     </>
   );

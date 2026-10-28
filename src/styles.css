@@ -1595,3 +1595,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adj
 /* Die Seite dahinter wird in lib/mobile.ts festgehalten; hier verhindern wir, dass das Scrollen am Rand „durchrutscht“ */
 .modal-backdrop, .spotlight-backdrop { overscroll-behavior: contain; }
 .modal { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* Blättern mit Übergang: die Ansicht gleitet, ohne die Seite seitlich scrollen zu lassen */
+.calendar { overflow-x: clip; }
+.cal-body { display: flex; flex-direction: column; gap: 0.6rem; touch-action: pan-y; }

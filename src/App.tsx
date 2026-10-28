@@ -10,6 +10,7 @@ import { useStore } from './store';
 import type { NavItem } from './types';
 import { today } from './lib/dates';
 import { isDue } from './lib/srs';
+import { isHabitDone } from './lib/life';
 import { DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem } from './lib/layout';
 import { MiniPlayer, SpotifyProvider } from './components/spotify';
 import { AppearanceLayer } from './components/appearance';
@@ -167,7 +168,7 @@ function Shell() {
   const counts: Record<string, number> = {
     aufgaben: data.tasks.filter((x) => x.status !== 'erledigt' && x.due !== null && x.due <= t).length,
     lernen: data.cards.filter((c) => isDue(c, t)).length,
-    gewohnheiten: data.habits.filter((h) => !data.habitLogs.some((l) => l.habitId === h.id && l.date === t)).length,
+    gewohnheiten: data.habits.filter((h) => !isHabitDone(data.habitLogs, h, t)).length,
   };
   const items = mergeWithDefaults(data.settings.sidebar, DEFAULT_SIDEBAR, 'path', 'group');
 

@@ -100,4 +100,18 @@ export default defineConfig({
   base: './',
   define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [react(), versionFile(), serviceWorker()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Bibliotheken in eigene Dateien: Sie ändern sich selten, darum muss nach einem
+        // Update meist nur der App-Code neu geladen werden statt des ganzen Pakets.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('@supabase') || id.includes('iceberg-js') || id.includes('tslib')) return 'supabase';
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
+          return 'vendor';
+        },
+      },
+    },
+  },
 });

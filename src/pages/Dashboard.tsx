@@ -21,6 +21,7 @@ import { HabitsToday } from './Habits';
 import { ProjectCard, useProjectProgress } from './Projects';
 import { BudgetWidget, sortTx, TransactionList } from './Finance';
 import { ShoppingWidget } from './Shopping';
+import { ReviewWidget } from './Review';
 import { MediaCard, READ_KINDS, WATCH_KINDS } from './Media';
 import { WorkoutList } from './Training';
 import { AlbumCard } from './Albums';
@@ -258,6 +259,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
     watching: { title: '📺 Gerade am Schauen', link: ['#/schauen', 'Alle →'], render: media(watching, 'Nichts am Laufen.') },
     reading: { title: '📖 Gerade am Lesen', link: ['#/lesen', 'Alle →'], render: media(reading, 'Kein Buch offen.') },
     habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], render: (v) => <HabitsToday variant={v} /> },
+    review: { title: '🌟 Wie geht\'s dir?', link: ['#/rueckblick', 'Rückblick →'], render: (v) => <ReviewWidget variant={v} /> },
     shopping: { title: '🛒 Einkaufsliste', link: ['#/einkauf', 'Öffnen →'], render: (v) => <ShoppingWidget variant={v} /> },
     stack: { title: null, variants: ['standard'], render: () => <SmartStack /> },
     today: { title: null, variants: ['standard'], render: () => <TodayWidget /> },

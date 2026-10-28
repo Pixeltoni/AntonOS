@@ -19,6 +19,7 @@ import { CourseDetail, Courses } from './pages/Courses';
 import { Tasks } from './pages/Tasks';
 import { Notes } from './pages/Notes';
 import { Shopping } from './pages/Shopping';
+import { Review, useWeeklyReviewReminder } from './pages/Review';
 import { Flashcards } from './pages/Flashcards';
 import { Exams } from './pages/Exams';
 import { Grades } from './pages/Grades';
@@ -82,6 +83,8 @@ function Page({ route }: { route: string[] }) {
       return <Finance />;
     case 'einkauf':
       return <Shopping />;
+    case 'rueckblick':
+      return <Review />;
     case 'schauen':
       return <MediaPage key="schauen" mode="schauen" />;
     case 'lesen':
@@ -141,6 +144,7 @@ function Shell() {
   useRecurringBookings();
   useEventReminders();
   useAppBadge();
+  useWeeklyReviewReminder();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);

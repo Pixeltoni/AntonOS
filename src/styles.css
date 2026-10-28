@@ -1206,3 +1206,54 @@ main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
 @media (display-mode: standalone) {
   main { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); }
 }
+
+/* ---------- Wochenrückblick & Stimmung (Vorschlag 15) ---------- */
+.review-layout > .col { min-width: 0; }
+.review-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.story { position: relative; }
+.story-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 26px; outline: none; overscroll-behavior-x: contain; }
+.story-track::-webkit-scrollbar { display: none; }
+.story-track:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.story-card {
+  flex: 0 0 100%; min-width: 0; width: 100%; scroll-snap-align: start; scroll-snap-stop: always; box-sizing: border-box; min-height: 440px; overflow: hidden;
+  padding: 1.6rem; color: #fff; display: flex; flex-direction: column; gap: 0.9rem; border-radius: 26px;
+}
+.story-1 { background: linear-gradient(160deg, #5856D6, #AF52DE 55%, #FF2D55); }
+.story-2 { background: linear-gradient(160deg, #1E3A8A, #3B82F6 60%, #06B6D4); }
+.story-3 { background: linear-gradient(160deg, #065F46, #10B981 60%, #A3E635); }
+.story-4 { background: linear-gradient(160deg, #7C2D12, #F97316 60%, #FACC15); }
+.story-5 { background: linear-gradient(160deg, #9D174D, #EC4899 55%, #F59E0B); }
+.story-kicker { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.85; }
+.story-card h2 { margin: 0; font-size: 2rem; line-height: 1.15; letter-spacing: -0.02em; }
+.story-card p { margin: 0; opacity: 0.95; }
+.story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+.story-stat { background: rgb(255 255 255 / 0.16); border-radius: 16px; padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.story-stat span { font-size: 0.8rem; opacity: 0.85; }
+.story-stat strong { font-size: 1.45rem; }
+.story-stat small { opacity: 0.8; }
+.story-delta { font-weight: 600; opacity: 0.9; }
+.story-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.story-bars li { display: grid; grid-template-columns: minmax(0, 1fr) 2fr auto; gap: 0.6rem; align-items: center; font-size: 0.9rem; }
+.story-bars li > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.story-bar { height: 10px; border-radius: 999px; background: rgb(255 255 255 / 0.2); overflow: hidden; }
+.story-bar span { display: block; height: 100%; border-radius: 999px; background: #fff; }
+.story-rings, .story-moods { display: flex; justify-content: space-between; gap: 0.3rem; background: rgb(0 0 0 / 0.25); border-radius: 16px; padding: 0.7rem; }
+.story-rings > div, .story-moods > div { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.75rem; }
+.story-moods span { font-size: 1.6rem; line-height: 1.2; }
+.story-dots { padding-top: 10px; }
+.story-share { align-self: center; border-radius: 999px; padding: 0.5rem 1.1rem; font-weight: 600; }
+
+.mood-checkin { display: flex; flex-direction: column; gap: 0.7rem; }
+.mood-faces { display: flex; justify-content: space-between; gap: 0.3rem; }
+.mood-faces button { width: 52px; height: 52px; border-radius: 50%; font-size: 1.7rem; padding: 0; display: grid; place-items: center; border: 2px solid transparent !important; background: var(--bg) !important; transition: transform 0.15s; }
+.mood-faces button:hover { transform: scale(1.08); }
+.mood-faces button.on { border-color: var(--m) !important; background: color-mix(in srgb, var(--m) 22%, var(--surface)) !important; transform: scale(1.1); }
+.mood-extra { display: flex; flex-direction: column; gap: 0.5rem; }
+.mood-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; max-width: 380px; }
+.mood-head { text-align: center; font-size: 0.72rem; color: var(--muted); font-weight: 600; }
+.mood-cell { aspect-ratio: 1; border-radius: 8px; background: var(--bg); display: grid; place-items: center; font-size: 0.8rem; color: var(--muted); }
+.mood-cell.today { outline: 2px solid var(--accent); outline-offset: 1px; }
+.insights li { line-height: 1.45; }
+.review-teaser { display: flex; flex-direction: column; text-decoration: none; color: inherit; background: linear-gradient(135deg, color-mix(in srgb, #AF52DE 14%, var(--surface)), color-mix(in srgb, #FF2D55 10%, var(--surface))); border-radius: 12px; padding: 0.6rem 0.8rem; }
+@media (max-width: 900px) { .review-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 420px) { .mood-faces button { width: 46px; height: 46px; font-size: 1.5rem; } .story-card h2 { font-size: 1.6rem; } }

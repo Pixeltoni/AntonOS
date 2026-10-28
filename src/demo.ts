@@ -105,6 +105,11 @@ export function demoData(): Data {
     pots: [
       { id: 'demo-pot1', name: 'Auslandssemester', icon: '✈️', target: 3000, saved: 1150, color: '#007AFF' },
     ],
+    moods: [
+      { id: 'demo-mo1', date: addDays(t, -3), mood: 3, note: '', sleep: 6.5 },
+      { id: 'demo-mo2', date: addDays(t, -2), mood: 4, note: 'Lauf am Morgen 🏃', sleep: 7.5 },
+      { id: 'demo-mo3', date: addDays(t, -1), mood: 5, note: 'Übungsblatt geschafft', sleep: 8 },
+    ],
     shopping: [
       { id: 'demo-sh1', name: 'Hafermilch', amount: '2', aisle: 'kuehl', done: false, added: t },
       { id: 'demo-sh2', name: 'Bananen', amount: '', aisle: 'obst', done: false, added: t },

@@ -62,6 +62,8 @@ export interface Task {
   dueTime?: string;
   flagged?: boolean;
   subtasks?: Subtask[];
+  /** Tag, an dem die Aufgabe erledigt wurde (für den Rückblick) */
+  completedAt?: DateStr;
 }
 
 export interface Subtask {
@@ -220,6 +222,16 @@ export interface ShoppingItem {
   added: string;
 }
 
+/** Stimmung eines Tages (1 = schlecht … 5 = super) */
+export interface MoodEntry {
+  id: ID;
+  date: DateStr;
+  mood: number;
+  note: string;
+  /** Schlaf in Stunden, optional */
+  sleep?: number | null;
+}
+
 export type MediaKind = 'Serie' | 'Film' | 'Buch' | 'Hörbuch';
 export type MediaStatus = 'geplant' | 'läuft' | 'fertig' | 'abgebrochen';
 
@@ -286,7 +298,7 @@ export interface Tool {
 export type WidgetId =
   | 'topnav' | 'stats' | 'clock' | 'quick' | 'notes' | 'music' | 'tools' | 'tasks' | 'projects'
   | 'transactions' | 'watching' | 'reading' | 'habits' | 'period' | 'exams' | 'trainings'
-  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus' | 'budget' | 'stack' | 'today' | 'countdown' | 'shopping';
+  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus' | 'budget' | 'stack' | 'today' | 'countdown' | 'shopping' | 'review';
 
 /** Breite im 12-Spalten-Raster: ¼, ⅓, ½, ⅔ oder ganze Breite */
 export type WidgetSize = 's' | 'm' | 'l' | 'xl' | 'full';
@@ -398,6 +410,7 @@ export interface Data {
   recurring: Recurring[];
   pots: SavingsPot[];
   shopping: ShoppingItem[];
+  moods: MoodEntry[];
   media: Media[];
   workouts: Workout[];
   events: CalEvent[];

@@ -3,6 +3,7 @@ import type { Collection, Data, ID, Settings } from './types';
 import { defaultAppearance, defaultFinance, defaultSemester, defaultSettings, demoData } from './demo';
 import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
+import { today } from './lib/dates';
 
 const STORAGE_KEY = 'antonos:v1';
 
@@ -22,6 +23,7 @@ export const emptyData = (): Data => ({
   recurring: [],
   pots: [],
   shopping: [],
+  moods: [],
   media: [],
   workouts: [],
   events: [],
@@ -65,6 +67,16 @@ function load(): Data {
 
 export const newId = (): ID => crypto.randomUUID();
 
+/** Merkt sich bei Aufgaben, wann sie erledigt wurden (für den Wochenrückblick). */
+function withCompletion<T extends { id: ID }>(collection: Collection, item: T, patch: Partial<T>): T {
+  const next = { ...item, ...patch } as T & { status?: string; completedAt?: string };
+  if (collection !== 'tasks' || !('status' in patch)) return next;
+  const was = (item as { status?: string }).status;
+  if (next.status === 'erledigt' && was !== 'erledigt') next.completedAt = today();
+  else if (next.status !== 'erledigt') delete next.completedAt;
+  return next;
+}
+
 type Item<C extends Collection> = Data[C][number];
 
 interface Store {
@@ -106,7 +118,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const update = useCallback(<C extends Collection>(collection: C, id: ID, patch: Partial<Item<C>>) => {
     setData((d) => ({
       ...d,
-      [collection]: (d[collection] as Item<C>[]).map((x) => (x.id === id ? { ...x, ...patch } : x)),
+      [collection]: (d[collection] as Item<C>[]).map((x) => (x.id === id ? withCompletion(collection, x, patch) : x)),
     }));
   }, []);
 

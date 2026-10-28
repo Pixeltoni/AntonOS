@@ -124,10 +124,11 @@ export const DEFAULT_SIDEBAR: NavItem[] = (
 ).map(([path, label, icon, group]) => ({ path, label, icon, group, hidden: false }));
 
 /**
- * Übernimmt die gespeicherte Anpassung, verwirft unbekannte Einträge und hängt
- * neue Standard-Einträge (z. B. nach einem Update) hinten an.
+ * Übernimmt die gespeicherte Anpassung, verwirft unbekannte Einträge und fügt
+ * neue Standard-Einträge (z. B. nach einem Update) hinter ihrem Vorgänger ein –
+ * so landet „Einkaufsliste“ hinter „Finanzen“ statt ganz unten.
  */
-export function mergeWithDefaults<T, K extends keyof T>(stored: T[] | undefined, defaults: T[], key: K): T[] {
+export function mergeWithDefaults<T, K extends keyof T>(stored: T[] | undefined, defaults: T[], key: K, group?: keyof T): T[] {
   if (!Array.isArray(stored) || stored.length === 0) return defaults;
   const known = new Set(defaults.map((d) => d[key]));
   const seen = new Set<T[K]>();
@@ -136,7 +137,30 @@ export function mergeWithDefaults<T, K extends keyof T>(stored: T[] | undefined,
     seen.add(s[key]);
     return true;
   });
-  return [...kept, ...defaults.filter((d) => !seen.has(d[key]))];
+  const result = [...kept];
+  defaults.forEach((d, i) => {
+    if (seen.has(d[key])) return;
+    // Nächsten Vorgänger aus dem Standard suchen, der schon in der Liste steht –
+    // bei Gruppen (Sidebar) bevorzugt einen aus derselben Gruppe
+    const sameGroup = (r: T) => !group || r[group] === d[group];
+    let at = -1;
+    for (const strict of group ? [true, false] : [false]) {
+      for (let j = i - 1; j >= 0 && at < 0; j--) {
+        const idx = result.findIndex((r) => r[key] === defaults[j][key] && (!strict || sameGroup(r)));
+        if (idx >= 0) at = idx + 1;
+      }
+      if (at < 0 && strict) {
+        // Kein Vorgänger der Gruppe da: vor den ersten Eintrag der Gruppe
+        const first = result.findIndex((r) => sameGroup(r) && defaults.some((x) => x[key] === r[key]));
+        if (first >= 0) at = first;
+      }
+      if (at >= 0) break;
+    }
+    if (at < 0) at = 0;
+    result.splice(at, 0, d);
+    seen.add(d[key]);
+  });
+  return result;
 }
 
 /** Verschiebt einen Eintrag um eine Position nach vorn (-1) oder hinten (+1). */

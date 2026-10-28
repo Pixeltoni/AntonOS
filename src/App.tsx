@@ -167,7 +167,7 @@ function Shell() {
     lernen: data.cards.filter((c) => isDue(c, t)).length,
     gewohnheiten: data.habits.filter((h) => !data.habitLogs.some((l) => l.habitId === h.id && l.date === t)).length,
   };
-  const items = mergeWithDefaults(data.settings.sidebar, DEFAULT_SIDEBAR, 'path');
+  const items = mergeWithDefaults(data.settings.sidebar, DEFAULT_SIDEBAR, 'path', 'group');
 
   return (
     <div className="layout">

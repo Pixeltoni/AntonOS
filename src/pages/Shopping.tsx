@@ -43,14 +43,14 @@ function ItemRow({ item, compact }: { item: ShoppingItem; compact?: boolean }) {
       <button type="button" className="shop-check" role="checkbox" aria-checked={item.done} aria-label={item.name} onClick={() => toggle(item)} />
       {editing && !compact ? (
         <form
-          className="row grow"
+          className="shop-edit grow"
           onSubmit={(e) => {
             e.preventDefault();
             setEditing(false);
           }}
         >
+          <input className="shop-edit-name" autoFocus value={item.name} onChange={(e) => update('shopping', item.id, { name: e.target.value })} aria-label="Artikel" />
           <input className="narrow" value={item.amount} placeholder="Menge" onChange={(e) => update('shopping', item.id, { amount: e.target.value })} aria-label="Menge" />
-          <input className="grow" autoFocus value={item.name} onChange={(e) => update('shopping', item.id, { name: e.target.value })} aria-label="Artikel" />
           <select value={item.aisle} onChange={(e) => update('shopping', item.id, { aisle: e.target.value })} aria-label="Abteilung">
             {AISLES.map((a) => <option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
           </select>

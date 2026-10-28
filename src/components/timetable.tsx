@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useStore, newId } from '../store';
 import type { Course, CourseSlot } from '../types';
 import { defaultSemester } from '../demo';
-import { nextOccurrence, slotSeries, WEEKDAY_NAMES } from '../lib/recurrence';
+import { guessSemesterStart, nextOccurrence, slotSeries, WEEKDAY_NAMES } from '../lib/recurrence';
 import { parseDate, today } from '../lib/dates';
-import { weekDays } from '../lib/calendar';
 import { Empty } from './ui';
 import { askNotifications } from '../lib/notify';
 
@@ -20,7 +19,7 @@ const minutes = (hhmm: string) => {
 export function CourseSlots({ course }: { course: Course }) {
   const { data, update } = useStore();
   const t = today();
-  const series = slotSeries([course], data.settings.semester ?? defaultSemester(), weekDays(t)[0]);
+  const series = slotSeries([course], data.settings.semester ?? defaultSemester(), guessSemesterStart(t));
   const next = (s: CourseSlot) => {
     const x = series.find((y) => y.slot.id === s.id);
     return x ? nextOccurrence(x.rule, x.start, t) : null;
@@ -171,7 +170,7 @@ export function SemesterSettingsForm() {
           <option value={60}>1 Stunde vorher</option>
         </select>
       </label>
-      <p className="muted small full">Ohne Datum erscheinen die Kurszeiten ab dieser Woche ohne Ende im Kalender.</p>
+      <p className="muted small full">Ohne Datum nimmt AntonOS den üblichen Semesterbeginn an (1. Oktober bzw. 1. April) und zeigt die Kurszeiten ohne Ende.</p>
     </div>
   );
 }

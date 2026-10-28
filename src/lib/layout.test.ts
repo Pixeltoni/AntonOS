@@ -16,10 +16,13 @@ describe('Dashboard-Layout', () => {
       { id: 'clock', size: 's' },
     ]);
     const merged = mergeWithDefaults(stored, DEFAULT_DASHBOARD, 'id');
-    expect(merged.slice(0, 2)).toEqual([
+    const own = merged.filter((w) => w.id === 'vision' || w.id === 'clock');
+    expect(own).toEqual([
       { id: 'vision', size: 's', height: 'm', variant: 'kompakt', hidden: false },
       { id: 'clock', size: 'full', height: 'auto', variant: 'standard', hidden: true },
     ]);
+    // Neue Widgets stehen hinter ihrem Vorgänger aus dem Standard (Smart Stack hinter der Uhr)
+    expect(merged[merged.findIndex((w) => w.id === 'clock') + 1].id).toBe('stack');
     expect(merged).toHaveLength(DEFAULT_DASHBOARD.length);
   });
 
@@ -57,7 +60,28 @@ describe('Sidebar', () => {
     const stored = DEFAULT_SIDEBAR.filter((i) => i.path !== 'musik').map((i) => ({ ...i, label: i.label.toUpperCase() }));
     const merged = mergeWithDefaults(stored, DEFAULT_SIDEBAR, 'path');
     expect(merged[0].label).toBe('DASHBOARD');
-    expect(merged[merged.length - 1].path).toBe('musik');
+    // „Musik“ steht im Standard hinter „Kalender“ und kommt wieder dorthin
+    expect(merged.map((m) => m.path).slice(0, 3)).toEqual(['dashboard', 'kalender', 'musik']);
+  });
+
+  it('fügt neue Seiten hinter ihrem Vorgänger ein, auch bei eigener Reihenfolge', () => {
+    const own = ['einstellungen', 'finanzen', 'dashboard'].map((p) => DEFAULT_SIDEBAR.find((d) => d.path === p)!);
+    const merged = mergeWithDefaults(own, DEFAULT_SIDEBAR, 'path').map((m) => m.path);
+    expect(merged.indexOf('einkauf')).toBe(merged.indexOf('finanzen') + 1);
+    expect(merged.slice(0, 3)).toEqual(['einstellungen', 'finanzen', 'einkauf']);
+    expect(merged).toHaveLength(DEFAULT_SIDEBAR.length);
+  });
+
+  it('hält Gruppen zusammen', () => {
+    const own = ['dashboard', 'kalender', 'aufgaben', 'kurse', 'gewohnheiten', 'finanzen', 'einstellungen'].map((p) => DEFAULT_SIDEBAR.find((d) => d.path === p)!);
+    const merged = mergeWithDefaults(own, DEFAULT_SIDEBAR, 'path', 'group');
+    const groups = groupNav(merged).map((g) => g.group);
+    // Jede Gruppe kommt genau einmal vor (leere Gruppe oben und unten ist erlaubt)
+    const named = groups.filter(Boolean);
+    expect(new Set(named).size).toBe(named.length);
+    const paths = merged.map((m) => m.path);
+    expect(paths.indexOf('projekte')).toBe(paths.indexOf('gewohnheiten') - 1);
+    expect(paths.indexOf('kurse')).toBeLessThan(paths.indexOf('projekte'));
   });
 });
 

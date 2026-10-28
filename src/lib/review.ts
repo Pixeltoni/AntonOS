@@ -58,7 +58,8 @@ export function weekReview(data: Data, day: DateStr, until: DateStr): WeekReview
     days,
     learnMinutes: courses.reduce((s, c) => s + c.minutes, 0),
     courses,
-    tasksDone: data.tasks.filter((t) => t.status === 'erledigt' && inWeek(t.completedAt)).length,
+    // Ältere Aufgaben ohne Erledigt-Datum zählen am Fälligkeitstag
+    tasksDone: data.tasks.filter((t) => t.status === 'erledigt' && inWeek(t.completedAt ?? t.due)).length,
     ringsClosed: rings.filter((r) => r.closed).length,
     habitChecks: rings.reduce((s, r) => s + r.habitsDone, 0),
     bestStreak: streaks[0] && streaks[0].days > 0 ? streaks[0] : null,

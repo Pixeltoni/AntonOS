@@ -74,7 +74,7 @@ export function describeRepeat(rule: Recurrence, start: DateStr): string {
 
 export interface SlotSeries {
   slot: CourseSlot;
-  course: Pick<Course, 'id' | 'name' | 'color'>;
+  course: Pick<Course, 'id' | 'name' | 'color' | 'code'>;
   start: DateStr;
   rule: Recurrence;
 }
@@ -83,7 +83,7 @@ export interface SlotSeries {
  * Macht aus den Kurszeiten Serien für den Kalender: ab Semesterbeginn (bzw. dem
  * Startdatum der Zeit) wöchentlich oder alle 2 Wochen bis zum Semesterende.
  */
-export function slotSeries(courses: Pick<Course, 'id' | 'name' | 'color' | 'slots'>[], semester: { start: DateStr; end: DateStr }, fallbackStart: DateStr): SlotSeries[] {
+export function slotSeries(courses: Pick<Course, 'id' | 'name' | 'color' | 'code' | 'slots'>[], semester: { start: DateStr; end: DateStr }, fallbackStart: DateStr): SlotSeries[] {
   const out: SlotSeries[] = [];
   for (const course of courses) {
     for (const slot of course.slots ?? []) {
@@ -97,4 +97,16 @@ export function slotSeries(courses: Pick<Course, 'id' | 'name' | 'color' | 'slot
     }
   }
   return out;
+}
+
+/**
+ * Geschätzter Beginn des laufenden Semesters, falls keiner eingetragen ist:
+ * Wintersemester ab 1. Oktober, Sommersemester ab 1. April.
+ */
+export function guessSemesterStart(day: DateStr): DateStr {
+  const y = Number(day.slice(0, 4));
+  const m = Number(day.slice(5, 7));
+  if (m >= 10) return `${y}-10-01`;
+  if (m <= 3) return `${y - 1}-10-01`;
+  return `${y}-04-01`;
 }

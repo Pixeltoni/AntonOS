@@ -1257,3 +1257,58 @@ main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
 .review-teaser { display: flex; flex-direction: column; text-decoration: none; color: inherit; background: linear-gradient(135deg, color-mix(in srgb, #AF52DE 14%, var(--surface)), color-mix(in srgb, #FF2D55 10%, var(--surface))); border-radius: 12px; padding: 0.6rem 0.8rem; }
 @media (max-width: 900px) { .review-layout { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 420px) { .mood-faces button { width: 46px; height: 46px; font-size: 1.5rem; } .story-card h2 { font-size: 1.6rem; } }
+
+/* ---------- Korrekturen aus dem Nutzertest ---------- */
+/* Handy: Kopfzeile nicht mitwachsen lassen, wenn die Seite wenig Inhalt hat */
+@media (max-width: 800px) {
+  .layout { align-content: start; }
+  .sidebar { align-self: start; }
+}
+
+/* Einkaufsliste: Bearbeiten-Formular bricht am Handy sauber um */
+.shop-edit { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; min-width: 0; }
+.shop-edit-name { flex: 1 1 160px; min-width: 0; }
+.shop-edit select { flex: 1 1 140px; min-width: 0; }
+
+/* Spartöpfe: Art der Buchung */
+.pot-form { display: flex; flex-direction: column; gap: 0.4rem; }
+.pot-form .row input { min-width: 0; }
+.pot-modes { display: flex; flex-wrap: wrap; width: 100%; }
+.pot-modes button { flex: 1 1 auto; font-size: 0.78rem; padding: 0.3rem 0.4rem; }
+
+/* Notizen: Auswahl im dunklen Design nicht grell, im Glas-Modus ohne Kästen */
+:root { --note-sel: #FFF4C2; --note-sel-text: #1C1C1E; --note-folder: #FFE9A8; }
+:root[data-theme='dark'] { --note-sel: rgb(255 204 0 / 0.18); --note-sel-text: var(--text); --note-folder: rgb(255 204 0 / 0.22); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --note-sel: rgb(255 204 0 / 0.18); --note-sel-text: var(--text); --note-folder: rgb(255 204 0 / 0.22); } }
+.note-row.active { background: var(--note-sel); }
+.note-row.active strong, .note-row.active > span, .note-row.active .note-row-time { color: var(--note-sel-text); }
+.notes-folders li button.on, .note-tools button.on { background: var(--note-folder); color: var(--note-sel-text); }
+.notes-folders li button.on .muted { color: var(--note-sel-text); opacity: 0.7; }
+.glass .note-tools button:not(.on), .glass .note-back, .glass .note-tag { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+
+/* Schwebende Fokus-Anzeige bzw. Mini-Player verdecken den Seitenschluss nicht */
+@media (max-width: 800px) {
+  body:has(.focus-pill) main, body:has(.mini-player) main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  body:has(.focus-pill):has(.mini-player) main { padding-bottom: calc(180px + env(safe-area-inset-bottom)); }
+}
+
+/* Größere Tippflächen auf Touch-Geräten (Apple empfiehlt 44 px) */
+@media (pointer: coarse) {
+  button.icon, .rem-flag, .rem-delete, .shop-delete, .tx-delete { min-width: 40px; min-height: 40px; }
+  .rem-delete, .shop-delete, .tx-delete { opacity: 0.55 !important; }
+  .rem-check, .shop-check, .note-check-box { width: 26px; height: 26px; }
+  .habit-table input[type='checkbox'], .list input[type='checkbox'], .task > input[type='checkbox'] { width: 26px; height: 26px; }
+  .habit-table td { padding: 0.35rem 0.25rem; }
+  .stars button, .star { min-width: 36px; min-height: 36px; font-size: 1.2rem; }
+  .smart-stack-dots button, .story-dots button { position: relative; }
+  .smart-stack-dots button::after, .story-dots button::after { content: ''; position: absolute; inset: -12px -6px; }
+  .smart-stack-dots, .story-dots { gap: 12px; }
+  .page-header .row button, .page-header .row .button { min-height: 40px; min-width: 40px; }
+  .note-tools button { min-height: 40px; min-width: 36px; }
+  .edit-bar button, .edit-bar select { min-height: 38px; }
+  .edit-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+  .edit-controls select { flex: 1 1 130px; }
+  .drag-handle { min-width: 40px; }
+  .course-badge, .tag { padding-top: 0.2rem; padding-bottom: 0.2rem; }
+  a.link, button.link { display: inline-block; padding: 0.45rem 0; }
+}

@@ -83,7 +83,7 @@ export function Spotlight() {
     else location.hash = href;
   };
 
-  const pages = mergeWithDefaults(data.settings.sidebar, DEFAULT_SIDEBAR, 'path').filter((p) => !p.hidden);
+  const pages = mergeWithDefaults(data.settings.sidebar, DEFAULT_SIDEBAR, 'path', 'group').filter((p) => !p.hidden);
   const q = query.trim();
 
   const rows = useMemo<Row[]>(() => {

@@ -2,9 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { CalEvent, DateStr, EventPriority, RepeatFreq } from '../types';
-import { formatDate, isoWeek, parseDate, today } from '../lib/dates';
+import { addDays, formatDate, isoWeek, parseDate, today } from '../lib/dates';
 import { monthGrid, monthKey } from '../lib/life';
-import { describeRepeat, REPEAT_LABELS, slotSeries } from '../lib/recurrence';
+import { describeRepeat, guessSemesterStart, REPEAT_LABELS, slotSeries } from '../lib/recurrence';
 import { defaultSemester } from '../demo';
 import { askNotifications, notify } from '../lib/notify';
 import { useToast } from './toast';
@@ -36,14 +36,15 @@ export function useCalendarEntries(): (CalendarEntry & { remind?: number | null 
       remind: e.remind ?? null,
     })),
     // Stundenplan: Kurszeiten als wöchentliche Serien
-    ...slotSeries(data.courses, data.settings.semester ?? defaultSemester(), weekDays(today())[0]).map((s) => ({
+    ...slotSeries(data.courses, data.settings.semester ?? defaultSemester(), guessSemesterStart(today())).map((s) => ({
       key: `l-${s.slot.id}`,
       start: s.start,
       end: s.start,
       time: s.slot.start,
       endTime: s.slot.end,
-      label: s.course.name,
-      note: [s.slot.kind, s.slot.room].filter(Boolean).join(' · '),
+      // Lange Kursnamen als Kürzel, damit sie in Monats- und Wochenansicht lesbar bleiben
+      label: s.course.name.length > 16 && s.course.code ? s.course.code : s.course.name,
+      note: [s.course.name.length > 16 && s.course.code ? s.course.name : '', s.slot.kind, s.slot.room].filter(Boolean).join(' · '),
       kind: 'lecture' as const,
       href: `#/kurse/${s.course.id}`,
       recur: s.rule,
@@ -125,11 +126,13 @@ export function EventModal({ initial, eventId, occurrence, onClose }: { initial:
 
   const save = (ev: React.FormEvent) => {
     ev.preventDefault();
+    // „22:00 bis 02:00“ an einem Tag heißt: endet am nächsten Tag
+    const overnight = !multiDay && !allDay && !!e.startTime && !!e.endTime && e.endTime < e.startTime;
     const final: Draft = {
       ...e,
       title: e.title.trim(),
       note: e.note.trim(),
-      end: multiDay && e.end && e.end !== e.start ? e.end : null,
+      end: overnight ? addDays(e.start, 1) : multiDay && e.end && e.end !== e.start ? e.end : null,
       startTime: allDay ? '' : e.startTime,
       endTime: allDay ? '' : e.endTime,
       repeat: e.repeat ? { ...e.repeat, until: e.repeat.until || null } : null,
@@ -193,6 +196,9 @@ export function EventModal({ initial, eventId, occurrence, onClose }: { initial:
               <input type="time" value={e.endTime} onChange={(x) => set('endTime', x.target.value)} />
             </label>
           </div>
+        )}
+        {!allDay && !multiDay && e.startTime && e.endTime && e.endTime < e.startTime && (
+          <p className="small muted">🌙 Endet am nächsten Tag um {e.endTime}.</p>
         )}
 
         <div className="modal-grid">

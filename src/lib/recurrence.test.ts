@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeRepeat, firstWeekday, nextOccurrence, occursOn, slotSeries, startsOn, weekdayOf } from './recurrence';
+import { describeRepeat, firstWeekday, guessSemesterStart, nextOccurrence, occursOn, slotSeries, startsOn, weekdayOf } from './recurrence';
 import { dueReminders, isTimedOn, onDay, type CalendarEntry } from './calendar';
 
 // Mittwoch, 28.10.2026
@@ -38,7 +38,7 @@ describe('Wiederholungen', () => {
   });
   it('Stundenplan aus Kurszeiten', () => {
     const series = slotSeries(
-      [{ id: 'ana', name: 'Analysis I', color: '#f00', slots: [{ id: 's', day: 1, start: '08:15', end: '09:45', room: 'H1', kind: 'Vorlesung', every: 1 }, { id: 'u', day: 4, start: '12:00', end: '14:00', room: '', kind: 'Übung', every: 2, from: '2026-10-29' }] }],
+      [{ id: 'ana', name: 'Analysis I', code: 'MA-101', color: '#f00', slots: [{ id: 's', day: 1, start: '08:15', end: '09:45', room: 'H1', kind: 'Vorlesung', every: 1 }, { id: 'u', day: 4, start: '12:00', end: '14:00', room: '', kind: 'Übung', every: 2, from: '2026-10-29' }] }],
       { start: '2026-10-19', end: '2027-02-12' },
       W,
     );
@@ -62,5 +62,13 @@ describe('Erinnerungen', () => {
   });
   it('einen Tag vorher', () => {
     expect(dueReminders([{ ...e, remind: 1440 }], new Date(2026, 9, 27, 14, 30)).map((r) => r.id)).toEqual(['ev@2026-10-28']);
+  });
+});
+
+describe('Semester', () => {
+  it('schätzt den Semesterbeginn', () => {
+    expect(guessSemesterStart('2026-10-28')).toBe('2026-10-01');
+    expect(guessSemesterStart('2027-02-10')).toBe('2026-10-01');
+    expect(guessSemesterStart('2027-05-02')).toBe('2027-04-01');
   });
 });

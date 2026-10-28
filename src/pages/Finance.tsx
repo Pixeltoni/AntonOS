@@ -241,9 +241,19 @@ function RecurringList() {
   );
 }
 
+type PotMode = 'konto' | 'einnahme' | 'ohne' | 'raus';
+const POT_MODES: { id: PotMode; label: string; hint: string }[] = [
+  { id: 'konto', label: 'Vom Konto', hint: 'Wird als Ausgabe „Sparen“ gebucht und zählt zum Budget.' },
+  { id: 'einnahme', label: 'Einnahme', hint: 'Geld von außen (z. B. Geschenk) – als Einnahme gebucht, belastet dein Budget nicht.' },
+  { id: 'ohne', label: 'Ohne Buchung', hint: 'Ändert nur den Stand des Spartopfs.' },
+  { id: 'raus', label: 'Entnehmen', hint: 'Geld zurück aufs Konto – wird als Einnahme gebucht.' },
+];
+
 function PotCard({ pot }: { pot: SavingsPot }) {
   const { update, remove, add } = useStore();
   const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [mode, setMode] = useState<PotMode>('konto');
   const share = pot.target > 0 ? Math.min(1, pot.saved / pot.target) : 0;
   return (
     <div className="pot" style={{ ['--pot' as string]: pot.color }}>
@@ -256,21 +266,36 @@ function PotCard({ pot }: { pot: SavingsPot }) {
       </div>
       <span className="pot-bar" aria-hidden><span style={{ width: `${share * 100}%` }} /></span>
       <form
-        className="row"
+        className="pot-form"
         onSubmit={(e) => {
           e.preventDefault();
           const v = parseAmount(amount);
           if (!v) return;
-          update('pots', pot.id, { saved: Math.max(0, Math.round((pot.saved + v) * 100) / 100) });
-          // Einzahlungen erscheinen als Ausgabe „Sparen“, Entnahmen als Einnahme
-          add('transactions', {
-            type: v > 0 ? 'Ausgabe' : 'Einnahme', description: `Spartopf: ${pot.name}`, amount: Math.abs(v), category: 'Sparen', account: 'Sparkonto', date: today(),
-          });
+          const withdraw = mode === 'raus';
+          const value = withdraw ? -Math.abs(v) : Math.abs(v);
+          update('pots', pot.id, { saved: Math.max(0, Math.round((pot.saved + value) * 100) / 100) });
+          const base = { amount: Math.abs(v), category: 'Sparen', account: 'Sparkonto', date: today() };
+          // vom Konto = Ausgabe (zählt zum Budget), Einnahme = Geld kommt von außen (z. B. Geschenk), Entnehmen = zurück aufs Konto
+          if (mode === 'konto') add('transactions', { ...base, type: 'Ausgabe', description: `Spartopf: ${pot.name}` });
+          else if (mode === 'einnahme') add('transactions', { ...base, type: 'Einnahme', description: `${note.trim() || 'Einnahme'} → Spartopf ${pot.name}` });
+          else if (mode === 'raus') add('transactions', { ...base, type: 'Einnahme', description: `Aus Spartopf: ${pot.name}` });
           setAmount('');
+          setNote('');
         }}
       >
-        <input className="grow" inputMode="decimal" placeholder="Betrag €" title="Negativer Betrag = Entnehmen" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label={`Betrag für ${pot.name}`} />
-        <button type="submit">Einzahlen</button>
+        <div className="segmented pot-modes" role="radiogroup" aria-label={`Art der Buchung für ${pot.name}`}>
+          {POT_MODES.map((m) => (
+            <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} className={mode === m.id ? 'selected' : ''} title={m.hint} onClick={() => setMode(m.id)}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <div className="row">
+          {mode === 'einnahme' && <input className="grow" placeholder="Woher? z. B. Geschenk" value={note} onChange={(e) => setNote(e.target.value)} aria-label="Woher kommt das Geld?" />}
+          <input className="grow" inputMode="decimal" placeholder="Betrag €" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label={`Betrag für ${pot.name}`} />
+          <button type="submit">{mode === 'raus' ? 'Entnehmen' : 'Einzahlen'}</button>
+        </div>
+        <span className="muted small">{POT_MODES.find((m) => m.id === mode)!.hint}</span>
       </form>
       {share >= 1 && <p className="small">🎉 Ziel erreicht!</p>}
     </div>

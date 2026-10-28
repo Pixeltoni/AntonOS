@@ -63,6 +63,7 @@ export function ShareSheet() {
     { icon: '✅', label: 'Als Aufgabe', run: () => { add('tasks', { title: name, courseId: null, kind: 'Aufgabe', status: 'offen', priority: 'mittel', due: null, note: body }); done('Aufgaben', '#/aufgaben'); } },
     { icon: '📺', label: 'Zur Watchlist', run: () => { add('media', { kind: 'Serie', title: name, creator: host, cover: '', status: 'geplant', rating: 0, progress: '' }); done('der Watchlist', '#/schauen'); } },
     { icon: '📖', label: 'Zur Leseliste', run: () => { add('media', { kind: 'Buch', title: name, creator: host, cover: '', status: 'geplant', rating: 0, progress: '' }); done('der Leseliste', '#/lesen'); } },
+    { icon: '🍽️', label: 'Als Rezept', run: () => { const id = add('recipes', { title: name, minutes: 0, servings: 2, ingredients: '', steps: shared.text, image: '', url: shared.url, tags: '' }); done('den Rezepten', `#/essen/${id}`); } },
     ...(shared.url ? [{ icon: '🧰', label: 'Zu den Tools', run: () => { add('tools', { name, url: shared.url, category: 'Geteilt' }); done('den Tools', '#/tools'); } }] : []),
   ];
 

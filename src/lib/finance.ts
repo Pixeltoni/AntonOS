@@ -42,9 +42,24 @@ export function bookingDate(r: Pick<Recurring, 'day'>, key: string): DateStr {
 /** Feste ID, damit dieselbe Buchung auf zwei Geräten nicht doppelt entsteht. */
 export const recurringTxId = (r: Pick<Recurring, 'id'>, key: string) => `rec-${r.id}-${key}`;
 
+/** Monate von `from` bis `to` (beide YYYY-MM) */
+export function monthsBetween(from: string, to: string): number {
+  const [fy, fm] = from.split('-').map(Number);
+  const [ty, tm] = to.split('-').map(Number);
+  return (ty - fy) * 12 + (tm - fm);
+}
+
+/** Wird die Zahlung im Monat `key` gebucht? (bei „alle 3/6/12 Monate“ nicht jeden Monat) */
+export function booksIn(r: Pick<Recurring, 'start' | 'every'>, key: string): boolean {
+  const every = Math.max(1, Math.round(r.every ?? 1));
+  const diff = monthsBetween(r.start, key);
+  return diff >= 0 && diff % every === 0;
+}
+
 /**
  * Welche Buchungen aus wiederkehrenden Zahlungen fällig sind: jeder Monat ab dem Start
- * (bzw. nach dem zuletzt gebuchten), dessen Buchungstag erreicht ist.
+ * (bzw. nach dem zuletzt gebuchten), dessen Buchungstag erreicht ist – bei längerem
+ * Abstand nur jeder 3./6./12. Monat und nach „gekündigt zum“ gar nicht mehr.
  */
 export function dueRecurring(
   recurring: Recurring[],
@@ -62,9 +77,9 @@ export function dueRecurring(
     // Sicherheitsgrenze: höchstens 24 Monate nachholen
     for (let i = 0; i < 24 && key <= current; i++, key = shiftMonth(key, 1)) {
       const date = bookingDate(r, key);
-      if (date > on) break;
+      if (date > on || (r.endsOn && date > r.endsOn)) break;
       const id = recurringTxId(r, key);
-      if (!existing.has(id)) {
+      if (booksIn(r, key) && !existing.has(id)) {
         out.push({ id, type: r.type, description: r.description, amount: r.amount, category: r.category, account: r.account, date });
       }
       last = key;
@@ -74,11 +89,13 @@ export function dueRecurring(
   return { transactions: out, booked };
 }
 
-/** Nächster Buchungstermin einer wiederkehrenden Zahlung */
-export function nextBooking(r: Recurring, on: DateStr): DateStr {
+/** Nächster Buchungstermin einer wiederkehrenden Zahlung (null, wenn sie vorher endet) */
+export function nextBooking(r: Recurring, on: DateStr): DateStr | null {
   let key = r.lastBooked && r.lastBooked >= r.start ? shiftMonth(r.lastBooked, 1) : r.start;
   if (key < on.slice(0, 7)) key = on.slice(0, 7);
-  return bookingDate(r, key);
+  for (let i = 0; i < 12 && !booksIn(r, key); i++) key = shiftMonth(key, 1);
+  const date = bookingDate(r, key);
+  return r.endsOn && date > r.endsOn ? null : date;
 }
 
 export interface BudgetStatus {

@@ -37,6 +37,11 @@ import { Albums } from './pages/Albums';
 import { Tools } from './pages/Tools';
 import { Calendar } from './pages/Calendar';
 import { Music } from './pages/Music';
+import { Meals, RecipeDetail } from './pages/Meals';
+import { Subscriptions } from './pages/Subscriptions';
+import { People, PersonDetail } from './pages/People';
+import { TripDetail, Trips } from './pages/Trips';
+import { useLifeReminders } from './components/reminders';
 
 function useRoute(): string[] {
   const read = () => location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -97,6 +102,14 @@ function Page({ route }: { route: string[] }) {
       return <Albums />;
     case 'tools':
       return <Tools />;
+    case 'essen':
+      return param ? <RecipeDetail key={param} id={param} /> : <Meals />;
+    case 'abos':
+      return <Subscriptions />;
+    case 'menschen':
+      return param ? <PersonDetail key={param} id={param} /> : <People />;
+    case 'reisen':
+      return param ? <TripDetail key={param} id={param} /> : <Trips />;
     default:
       return <Dashboard editing={param === 'bearbeiten'} />;
   }
@@ -148,6 +161,7 @@ function Shell() {
   useEventReminders();
   useAppBadge();
   useWeeklyReviewReminder();
+  useLifeReminders();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);

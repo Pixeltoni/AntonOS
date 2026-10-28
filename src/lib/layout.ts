@@ -50,6 +50,9 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   courses: '📚 Kurse',
   albums: '📸 Letzte Alben',
   vision: '🌄 Vision Board',
+  birthdays: '🎂 Geburtstage',
+  meals: '🍽️ Essen heute',
+  trip: '✈️ Nächste Reise',
 };
 
 const w = (id: WidgetId, size: WidgetSize, variant: WidgetVariant = 'standard', hidden = false): WidgetConfig => ({
@@ -77,6 +80,9 @@ export const DEFAULT_DASHBOARD: WidgetConfig[] = [
   w('budget', 's'),
   w('transactions', 'l'),
   w('shopping', 's'),
+  w('meals', 's', 'standard', true),
+  w('birthdays', 's', 'standard', true),
+  w('trip', 's', 'standard', true),
   w('trainings', 's'),
   w('music', 's'),
   w('watching', 'm'),
@@ -117,11 +123,11 @@ export const DEFAULT_SIDEBAR: NavItem[] = (
   [
     ['dashboard', 'Übersicht', 'Start'], ['kalender', 'Kalender', 'Start'], ['aufgaben', 'Aufgaben', 'Start'], ['notizen', 'Notizen', 'Start'],
     ['gewohnheiten', 'Gewohnheiten', 'Leben'], ['rueckblick', 'Rückblick', 'Leben'], ['ziele', 'Ziele', 'Leben'], ['projekte', 'Projekte', 'Leben'],
-    ['training', 'Training', 'Leben'],
-    ['finanzen', 'Finanzen', 'Geld'], ['einkauf', 'Einkaufsliste', 'Geld'],
+    ['training', 'Training', 'Leben'], ['essen', 'Essen', 'Leben'], ['menschen', 'Menschen', 'Leben'],
+    ['finanzen', 'Finanzen', 'Geld'], ['einkauf', 'Einkaufsliste', 'Geld'], ['abos', 'Abos & Verträge', 'Geld'],
     ['kurse', 'Kurse', 'Studium'], ['lernen', 'Lernkarten', 'Studium'], ['pruefungen', 'Prüfungen', 'Studium'], ['noten', 'Noten', 'Studium'],
     ['fokus', 'Fokus', 'Studium'],
-    ['musik', 'Musik', 'Freizeit'], ['schauen', 'Watchlist', 'Freizeit'], ['lesen', 'Leseliste', 'Freizeit'], ['alben', 'Alben', 'Freizeit'],
+    ['musik', 'Musik', 'Freizeit'], ['schauen', 'Watchlist', 'Freizeit'], ['lesen', 'Leseliste', 'Freizeit'], ['alben', 'Alben', 'Freizeit'], ['reisen', 'Reisen', 'Freizeit'],
     ['tools', 'Tools', ''], ['einstellungen', 'Einstellungen', ''],
   ] as [string, string, string][]
 ).map(([path, label, group]) => ({ path, label, icon: '', group, hidden: false }));

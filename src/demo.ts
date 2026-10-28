@@ -103,6 +103,7 @@ export function demoData(): Data {
     recurring: [
       { id: 'demo-r1', type: 'Ausgabe', description: 'WG-Zimmer', amount: 390, category: 'Miete', account: 'Girokonto', day: 1, start: t.slice(0, 7), lastBooked: t.slice(0, 7) },
       { id: 'demo-r2', type: 'Ausgabe', description: 'Spotify', amount: 6.99, category: 'Abos', account: 'Kreditkarte', day: 15, start: t.slice(0, 7), lastBooked: null },
+      { id: 'demo-r3', type: 'Ausgabe', description: 'Fitnessstudio', amount: 19.9, category: 'Sport', account: 'Girokonto', day: 1, start: t.slice(0, 7), lastBooked: t.slice(0, 7), termEnd: addDays(t, 45), noticeDays: 30, renewMonths: 12 },
     ],
     pots: [
       { id: 'demo-pot1', name: 'Auslandssemester', icon: '✈️', target: 3000, saved: 1150, color: '#007AFF' },
@@ -118,6 +119,43 @@ export function demoData(): Data {
       { id: 'demo-sh3', name: 'Vollkornbrot', amount: '', aisle: 'backwaren', done: false, added: t },
       { id: 'demo-sh4', name: 'Spaghetti', amount: '500 g', aisle: 'vorrat', done: false, added: t },
     ],
+    recipes: [
+      {
+        id: 'demo-rz1', title: 'Ofengemüse mit Feta', minutes: 40, servings: 2, image: '', url: '', tags: 'vegetarisch', favorite: true,
+        ingredients: '2 Paprika\n1 Zucchini\n400 g Kartoffeln\n200 g Feta\n2 EL Olivenöl\nSalz und Pfeffer',
+        steps: 'Ofen auf 200 °C vorheizen.\nGemüse und Kartoffeln in Stücke schneiden, mit Öl, Salz und Pfeffer mischen.\nAuf dem Blech 25 Minuten backen.\nFeta darüberbröseln und weitere 10 Minuten backen.',
+      },
+      {
+        id: 'demo-rz2', title: 'Pasta Arrabbiata', minutes: 20, servings: 2, image: '', url: '', tags: 'schnell',
+        ingredients: '250 g Spaghetti\n1 Dose Tomaten\n2 Knoblauchzehen\n1 Chili\n2 EL Olivenöl',
+        steps: 'Nudeln in Salzwasser kochen.\nKnoblauch und Chili im Öl anbraten, Tomaten dazu und 10 Minuten köcheln.\nNudeln untermischen.',
+      },
+    ],
+    meals: [
+      { id: 'demo-me1', date: t, slot: 'abend', recipeId: 'demo-rz1', title: '' },
+      { id: 'demo-me2', date: addDays(t, 1), slot: 'mittag', recipeId: null, title: 'Mensa' },
+      { id: 'demo-me3', date: addDays(t, 2), slot: 'abend', recipeId: 'demo-rz2', title: '' },
+    ],
+    people: [
+      { id: 'demo-pe1', name: 'Lea Meier', birthday: addDays(t, 5).slice(5), birthYear: Number(addDays(t, 5).slice(0, 4)) - 22, group: 'Freunde', note: 'Mag keinen Kuchen mit Nüssen', color: '#FF2D55', gifts: [{ id: 'demo-gi1', title: 'Kletterkurs-Gutschein', done: false, added: addDays(t, -90) }], contactEvery: 28, lastContact: addDays(t, -16), meetings: [{ id: 'demo-mt1', date: addDays(t, -16), note: 'Kaffee in der Mensa' }] },
+      { id: 'demo-pe2', name: 'Max Huber', birthday: addDays(t, 60).slice(5), birthYear: null, group: 'Uni', note: '', color: '#AF52DE', gifts: [], contactEvery: 28, lastContact: addDays(t, -42), meetings: [] },
+    ],
+    trips: [
+      {
+        id: 'demo-tr1', title: 'Hamburg', start: addDays(t, 11), end: addDays(t, 13), cover: '', budget: 200, note: '',
+        legs: [
+          { id: 'demo-lg1', kind: 'zug', title: 'ICE nach Hamburg', date: addDays(t, 11), time: '08:12', detail: 'Wagen 7, Platz 42' },
+          { id: 'demo-lg2', kind: 'unterkunft', title: 'Hostel St. Pauli', date: addDays(t, 11), time: '15:00', detail: '2 Nächte' },
+          { id: 'demo-lg3', kind: 'zug', title: 'ICE zurück', date: addDays(t, 13), time: '17:46', detail: '' },
+        ],
+        packing: [
+          { id: 'demo-pk1', title: 'Personalausweis', section: 'Dokumente', done: true },
+          { id: 'demo-pk2', title: 'Tickets aufs Handy', section: 'Dokumente', done: false },
+          { id: 'demo-pk3', title: 'Regenjacke', section: 'Kleidung', done: false },
+          { id: 'demo-pk4', title: 'Ladekabel', section: 'Technik', done: false },
+        ],
+      },
+    ],
     media: [
       { id: 'demo-m1', kind: 'Serie', title: 'The Office', creator: 'Netflix', cover: '', status: 'läuft', rating: 4, progress: 'S3 E7' },
       { id: 'demo-m2', kind: 'Buch', title: 'Die 1%-Methode', creator: 'James Clear', cover: '', status: 'läuft', rating: 5, progress: 'S. 120' },
@@ -132,7 +170,6 @@ export function demoData(): Data {
     events: [
       { id: 'demo-ev1', title: 'Lerngruppe Analysis', note: '', location: 'Bibliothek, Raum 2.14', start: addDays(t, 1), end: null, startTime: '14:00', endTime: '16:00', priority: 'mittel', repeat: { freq: 'woechentlich', until: null, except: [] }, remind: 15, color: 'lila' },
       { id: 'demo-ev2', title: 'Zahnarzt', note: '', start: addDays(t, 3), end: null, startTime: '09:30', endTime: '', priority: 'hoch' },
-      { id: 'demo-ev3', title: 'Wochenende in Hamburg', note: 'Zug um 8:12', start: addDays(t, 11), end: addDays(t, 13), startTime: '', endTime: '', priority: 'niedrig', color: 'gruen' },
     ],
     albums: [
       { id: 'demo-a1', title: 'Ersti-Woche', date: addDays(t, -30), cover: '', tags: 'Uni, Freunde', description: '' },

@@ -186,6 +186,8 @@ export interface Transaction {
   category: string;
   account: string;
   date: DateStr;
+  /** Gehört zu dieser Reise (Reisebudget) */
+  tripId?: ID;
 }
 
 /** Wiederkehrende Zahlung (Miete, Abos, Gehalt), wird jeden Monat automatisch gebucht */
@@ -203,6 +205,16 @@ export interface Recurring {
   /** Zuletzt automatisch gebuchter Monat (YYYY-MM) */
   lastBooked: string | null;
   paused?: boolean;
+  /** Alle wie viele Monate gebucht wird: 1 = monatlich (Standard), 3, 6 oder 12 = jährlich */
+  every?: number;
+  /** Ende der aktuellen Vertragslaufzeit (leer = jederzeit kündbar) */
+  termEnd?: DateStr | null;
+  /** Kündigungsfrist in Tagen vor Laufzeitende */
+  noticeDays?: number;
+  /** Ohne Kündigung verlängert sich der Vertrag um so viele Monate (0 = endet von selbst) */
+  renewMonths?: number;
+  /** Gekündigt zum: danach wird nicht mehr gebucht */
+  endsOn?: DateStr | null;
 }
 
 /** Spartopf mit Ziel, z. B. „Auslandssemester“ */
@@ -232,6 +244,109 @@ export interface ShoppingItem {
   aisle: string;
   done: boolean;
   added: string;
+}
+
+/** Rezept mit Zutaten und Schritten */
+export interface Recipe {
+  id: ID;
+  title: string;
+  /** Zubereitungszeit in Minuten */
+  minutes: number;
+  /** Portionen, für die die Mengen gelten */
+  servings: number;
+  /** Eine Zutat pro Zeile, z. B. „200 g Feta“ */
+  ingredients: string;
+  /** Ein Schritt pro Zeile */
+  steps: string;
+  image: string;
+  /** Link zum Original-Rezept */
+  url: string;
+  tags: string;
+  favorite?: boolean;
+}
+
+export type MealSlot = 'mittag' | 'abend';
+
+/** Eintrag im Essensplan: ein Rezept oder freier Text (z. B. „Mensa“) */
+export interface Meal {
+  id: ID;
+  date: DateStr;
+  slot: MealSlot;
+  recipeId: ID | null;
+  title: string;
+  /** Portionen (leer = wie im Rezept) */
+  servings?: number;
+}
+
+/** Ein Mensch, der dir wichtig ist */
+export interface Person {
+  id: ID;
+  name: string;
+  /** Geburtstag als MM-TT (leer = unbekannt) */
+  birthday: string;
+  /** Geburtsjahr, falls bekannt (für das Alter) */
+  birthYear: number | null;
+  /** Familie, Freunde, Uni, WG … */
+  group: string;
+  note: string;
+  color: string;
+  gifts: Gift[];
+  /** Erinnern, wenn du dich so viele Tage nicht gemeldet hast (0 = nie) */
+  contactEvery: number;
+  lastContact: DateStr | null;
+  meetings: Meeting[];
+}
+
+export interface Gift {
+  id: ID;
+  title: string;
+  done: boolean;
+  added: DateStr;
+}
+
+export interface Meeting {
+  id: ID;
+  date: DateStr;
+  note: string;
+}
+
+export type TripLegKind = 'flug' | 'zug' | 'bus' | 'auto' | 'unterkunft' | 'sonstiges';
+
+/** Etappe einer Reise: Flug, Zug, Unterkunft … */
+export interface TripLeg {
+  id: ID;
+  kind: TripLegKind;
+  title: string;
+  date: DateStr;
+  time: string;
+  /** z. B. Gleis, Platz, Buchungsnummer, Adresse */
+  detail: string;
+}
+
+export interface PackItem {
+  id: ID;
+  title: string;
+  section: string;
+  done: boolean;
+}
+
+export interface Trip {
+  id: ID;
+  title: string;
+  start: DateStr;
+  end: DateStr;
+  cover: string;
+  /** Reisebudget in Euro (0 = keins) */
+  budget: number;
+  legs: TripLeg[];
+  packing: PackItem[];
+  note: string;
+}
+
+/** Eigene Packlisten-Vorlage */
+export interface PackTemplate {
+  name: string;
+  items: { title: string; section: string }[];
 }
 
 /** Stimmung eines Tages (1 = schlecht … 5 = super) */
@@ -349,7 +464,8 @@ export interface Tool {
 export type WidgetId =
   | 'topnav' | 'stats' | 'clock' | 'quick' | 'notes' | 'music' | 'tools' | 'tasks' | 'projects'
   | 'transactions' | 'watching' | 'reading' | 'habits' | 'period' | 'exams' | 'trainings'
-  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus' | 'budget' | 'stack' | 'today' | 'countdown' | 'shopping' | 'review';
+  | 'calendar' | 'courses' | 'albums' | 'vision' | 'rings' | 'focus' | 'budget' | 'stack' | 'today' | 'countdown' | 'shopping' | 'review'
+  | 'birthdays' | 'meals' | 'trip';
 
 /** Breite im 12-Spalten-Raster: ¼, ⅓, ½, ⅔ oder ganze Breite */
 export type WidgetSize = 's' | 'm' | 'l' | 'xl' | 'full';
@@ -400,6 +516,8 @@ export interface Settings {
   shoppingFrequent: { name: string; count: number }[];
   /** Vorlesungszeit für den Stundenplan und Erinnerung vor Vorlesungen */
   semester: SemesterSettings;
+  /** Eigene Packlisten-Vorlagen */
+  packTemplates?: PackTemplate[];
 }
 
 export interface SemesterSettings {
@@ -462,6 +580,10 @@ export interface Data {
   recurring: Recurring[];
   pots: SavingsPot[];
   shopping: ShoppingItem[];
+  recipes: Recipe[];
+  meals: Meal[];
+  people: Person[];
+  trips: Trip[];
   moods: MoodEntry[];
   media: Media[];
   workouts: Workout[];

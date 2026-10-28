@@ -28,6 +28,22 @@ describe('Wiederkehrende Zahlungen', () => {
   });
 });
 
+describe('Abos mit längerem Abstand und Kündigung', () => {
+  it('bucht jährliche Abos nur einmal im Jahr', () => {
+    const yearly = { ...rent, id: 'y', every: 12, start: '2025-11', day: 3, lastBooked: '2025-11' };
+    expect(dueRecurring([yearly], [], '2026-10-27').transactions).toEqual([]);
+    expect(dueRecurring([yearly], [], '2026-11-05').transactions.map((t) => t.date)).toEqual(['2026-11-03']);
+    expect(nextBooking(yearly, '2026-01-10')).toBe('2026-11-03');
+    expect(dueRecurring([{ ...rent, every: 3, start: '2026-08' }], [], '2026-12-02').transactions.map((t) => t.date)).toEqual(['2026-08-01', '2026-11-01']);
+  });
+
+  it('bucht nach „gekündigt zum“ nicht mehr', () => {
+    const cancelled = { ...rent, endsOn: '2026-09-30' };
+    expect(dueRecurring([cancelled], [], '2026-12-02').transactions.map((t) => t.date)).toEqual(['2026-08-01', '2026-09-01']);
+    expect(nextBooking({ ...cancelled, lastBooked: '2026-09' }, '2026-09-10')).toBeNull();
+  });
+});
+
 describe('Automatisch buchen', () => {
   it('ändert nur, wenn etwas fällig ist', () => {
     const data = { recurring: [rent], transactions: [] } as unknown as Parameters<typeof applyRecurring>[0];

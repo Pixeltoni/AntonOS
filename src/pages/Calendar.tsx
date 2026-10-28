@@ -55,7 +55,7 @@ function IcsTools() {
 export function Calendar() {
   return (
     <>
-      <PageHeader title="Kalender" subtitle="Eigene Termine, Stundenplan, Aufgaben, Prüfungen, Projekte und Trainings" />
+      <PageHeader title="Kalender" subtitle="Eigene Termine, Stundenplan, Aufgaben, Prüfungen, Projekte, Trainings, Geburtstage und Reisen" />
       <Panel>
         <CalendarView remember />
       </Panel>

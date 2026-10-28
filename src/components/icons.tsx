@@ -1,5 +1,5 @@
 import {
-  BookOpen, Calendar, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
+  BookOpen, Cake, Calendar, CreditCard, Plane, Users, UtensilsCrossed, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
   LayoutGrid, ListChecks, MessageCircleHeart, Music, NotebookPen, Pencil, Receipt, Repeat, Rocket, Search, Settings, ShoppingCart,
   Smile, Sparkles, Target, Timer, Tv, Wallet, Zap, type LucideIcon,
 } from 'lucide-react';
@@ -18,6 +18,10 @@ export const PAGE_ICONS: Record<string, LucideIcon> = {
   training: Dumbbell,
   finanzen: Wallet,
   einkauf: ShoppingCart,
+  abos: CreditCard,
+  essen: UtensilsCrossed,
+  menschen: Users,
+  reisen: Plane,
   kurse: GraduationCap,
   lernen: Layers,
   pruefungen: ClipboardCheck,
@@ -59,6 +63,9 @@ export const WIDGET_ICONS: Partial<Record<WidgetId, LucideIcon>> = {
   budget: Wallet,
   shopping: ShoppingCart,
   review: MessageCircleHeart,
+  birthdays: Cake,
+  meals: UtensilsCrossed,
+  trip: Plane,
 };
 
 export function Icon({ icon: Glyph, size = 18 }: { icon: LucideIcon; size?: number }) {

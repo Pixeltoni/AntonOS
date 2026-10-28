@@ -13,6 +13,7 @@ import {
   rangeLabel, resizeEvent, shiftAnchor, sortEntries, spanLanes, timeRange, validateEvent, weekDays, type CalendarEntry, type CalendarMode, type EntryKind,
 } from '../lib/calendar';
 import { parseEventQuickAdd } from '../lib/quickadd';
+import { ageOn, birthdayIn } from '../lib/people';
 
 export const PRIORITIES: { value: EventPriority; label: string }[] = [
   { value: 'niedrig', label: 'Niedrig' },
@@ -61,6 +62,16 @@ export function useCalendarEntries(): (CalendarEntry & { remind?: number | null 
     ...data.exams.map((e) => ({ key: `x-${e.id}`, ...single(e.date), time: e.time, label: e.title, kind: 'exam' as const, href: '#/pruefungen' })),
     ...data.projects.filter((p) => p.due).map((p) => ({ key: `p-${p.id}`, ...single(p.due!), time: '', label: p.title, kind: 'project' as const, href: `#/projekte/${p.id}`, done: p.status === 'abgeschlossen' })),
     ...data.workouts.map((w) => ({ key: `w-${w.id}`, ...single(w.date), time: '', label: w.title, kind: 'workout' as const, href: '#/training', done: w.done })),
+    // Geburtstage im letzten, diesem und den nächsten beiden Jahren
+    ...(data.people ?? []).filter((p) => p.birthday).flatMap((p) => {
+      const year = Number(today().slice(0, 4));
+      return [year - 1, year, year + 1, year + 2].map((y) => {
+        const date = birthdayIn(p.birthday, y);
+        const age = ageOn(p, date);
+        return { key: `b-${p.id}-${y}`, ...single(date), time: '', label: `${p.name}${age && age > 0 ? ` (${age})` : ''}`, note: 'Geburtstag', kind: 'birthday' as const, href: `#/menschen/${p.id}`, color: p.color || undefined };
+      });
+    }),
+    ...(data.trips ?? []).map((tr) => ({ key: `r-${tr.id}`, start: tr.start, end: tr.end >= tr.start ? tr.end : tr.start, time: '', endTime: '', label: tr.title, note: 'Reise', kind: 'trip' as const, href: `#/reisen/${tr.id}` })),
   ];
 }
 

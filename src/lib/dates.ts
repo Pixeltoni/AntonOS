@@ -56,3 +56,10 @@ export function isoWeek(d: Date): number {
   const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
   return Math.ceil(((t.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
 }
+
+/** Gleicher Tag `months` Monate später; gibt es den Tag dort nicht (31.), dann der Monatsletzte. */
+export function addMonths(s: DateStr, months: number): DateStr {
+  const [y, m, d] = s.split('-').map(Number);
+  const last = new Date(y, m - 1 + months + 1, 0).getDate();
+  return toDateStr(new Date(y, m - 1 + months, Math.min(d, last)));
+}

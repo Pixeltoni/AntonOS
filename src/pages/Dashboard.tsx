@@ -22,6 +22,9 @@ import { HabitsToday } from './Habits';
 import { ProjectCard, useProjectProgress } from './Projects';
 import { BudgetWidget, sortTx, TransactionList } from './Finance';
 import { ShoppingWidget } from './Shopping';
+import { MealsWidget } from './Meals';
+import { BirthdaysWidget } from './People';
+import { TripWidget } from './Trips';
 import { ReviewWidget } from './Review';
 import { MediaCard, READ_KINDS, WATCH_KINDS } from './Media';
 import { WorkoutList } from './Training';
@@ -262,6 +265,9 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
     habits: { title: '✨ Gewohnheiten heute', link: ['#/gewohnheiten', 'Alle →'], render: (v) => <HabitsToday variant={v} /> },
     review: { title: '🌟 Wie geht\'s dir?', link: ['#/rueckblick', 'Rückblick →'], render: (v) => <ReviewWidget variant={v} /> },
     shopping: { title: '🛒 Einkaufsliste', link: ['#/einkauf', 'Öffnen →'], render: (v) => <ShoppingWidget variant={v} /> },
+    meals: { title: '🍽️ Essen', link: ['#/essen', 'Plan →'], render: (v) => <MealsWidget variant={v} /> },
+    birthdays: { title: '🎂 Geburtstage', link: ['#/menschen', 'Alle →'], render: (v) => <BirthdaysWidget variant={v} /> },
+    trip: { title: '✈️ Nächste Reise', link: ['#/reisen', 'Reisen →'], variants: ['standard'], render: () => <TripWidget /> },
     stack: { title: null, variants: ['standard'], render: () => <SmartStack /> },
     today: { title: null, variants: ['standard'], render: () => <TodayWidget /> },
     countdown: { title: null, variants: ['standard'], render: () => <CountdownWidget /> },

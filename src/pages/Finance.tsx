@@ -5,6 +5,14 @@ import { formatDate, relativeLabel, today } from '../lib/dates';
 import { formatMoney, monthKey, monthLabel, shiftMonth } from '../lib/life';
 import { applyRecurring, budgetStatus, categoryStyle, donutSegments, nextBooking, toCsv, type BudgetStatus } from '../lib/finance';
 import { defaultFinance } from '../demo';
+import { everyLabel, isRunning, perMonth } from '../lib/subscriptions';
+
+/** „nächste: Mi., 12.11.2026“ bzw. „endet am …“ */
+export function nextLabel(r: Recurring, on: string): string {
+  const next = nextBooking(r, on);
+  if (next) return `nächste: ${formatDate(next)}`;
+  return r.endsOn && r.endsOn < on ? `beendet am ${formatDate(r.endsOn)}` : `gekündigt zum ${formatDate(r.endsOn!)}`;
+}
 import { Empty, PageHeader, Panel } from '../components/ui';
 
 const CATEGORIES = ['Lebensmittel', 'Miete', 'Mobilität', 'Freizeit', 'Studium', 'Abos', 'Kleidung', 'Gesundheit', 'Sparen', 'Gehalt', 'BAföG', 'Sonstiges'];
@@ -213,7 +221,7 @@ function RecurringList() {
   const { data, update, remove } = useStore();
   const t = today();
   const list = [...data.recurring].sort((a, b) => a.day - b.day);
-  const monthly = list.filter((r) => !r.paused).reduce((s, r) => s + (r.type === 'Ausgabe' ? -r.amount : r.amount), 0);
+  const monthly = list.filter((r) => isRunning(r, t)).reduce((s, r) => s + (r.type === 'Ausgabe' ? -perMonth(r) : perMonth(r)), 0);
   if (list.length === 0) return <Empty>Noch keine Daueraufträge. Setz beim Erfassen den Haken „Monatlich“.</Empty>;
   return (
     <>
@@ -224,8 +232,8 @@ function RecurringList() {
             <div className="grow">
               <div className="task-title">{r.description || r.category}</div>
               <div className="meta">
-                <span>am {r.day}. jedes Monats</span>
-                <span>{r.paused ? 'pausiert' : `nächste: ${formatDate(nextBooking(r, t))}`}</span>
+                <span>{everyLabel(r)}</span>
+                <span>{r.paused ? 'pausiert' : nextLabel(r, t)}</span>
               </div>
             </div>
             <strong className={`tx-amount ${r.type === 'Einnahme' ? 'positive' : ''}`}>{r.type === 'Einnahme' ? '+' : '−'}{formatMoney(r.amount)}</strong>
@@ -236,7 +244,7 @@ function RecurringList() {
           </li>
         ))}
       </ul>
-      <p className="muted small">Pro Monat: <strong>{monthly >= 0 ? '+' : '−'}{formatMoney(Math.abs(monthly))}</strong></p>
+      <p className="muted small"><a href="#/abos">Abos &amp; Verträge →</a> · Pro Monat: <strong>{monthly >= 0 ? '+' : '−'}{formatMoney(Math.abs(monthly))}</strong></p>
     </>
   );
 }

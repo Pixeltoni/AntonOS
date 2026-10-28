@@ -21,6 +21,7 @@ describe('Einkaufsliste', () => {
       { name: 'Äpfel', amount: '3' },
     ]);
     expect(parseShopping(' , ')).toEqual([]);
+    expect(parseShopping('1,5 l Milch, Brot')).toEqual([{ name: 'Milch', amount: '1,5 l' }, { name: 'Brot', amount: '' }]);
   });
   it('merkt sich häufige Artikel', () => {
     const f = rememberBought([{ name: 'Milch', count: 2 }], ['milch', 'Brot', 'Brot']);

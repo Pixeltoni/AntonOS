@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRingReminder } from './components/rings';
 import { FocusPill } from './components/focus';
+import { openSpotlight, SHORTCUT, Spotlight } from './components/spotlight';
 import { useRecurringBookings } from './pages/Finance';
 import { useStore } from './store';
 import type { NavItem } from './types';
@@ -169,6 +170,7 @@ function Shell() {
             <span className="nav-icon" aria-hidden>🎓</span>
             <span className="nav-text">AntonOS</span>
           </span>
+          <button className="icon search-toggle" onClick={openSpotlight} aria-label="Suchen">🔍</button>
           <button className="icon menu-toggle" onClick={() => setMenuOpen((o) => !o)} aria-label={menuOpen ? 'Menü schließen' : 'Menü öffnen'} aria-expanded={menuOpen}>
             {menuOpen ? '✕' : '☰'}
           </button>
@@ -197,6 +199,11 @@ function Shell() {
           )}
           {!editingSidebar && (
             <div className="nav-group nav-footer">
+              <button className="nav-button" onClick={() => { setMenuOpen(false); openSpotlight(); }} title={`Suchen (${SHORTCUT})`}>
+                <span className="nav-icon" aria-hidden>🔍</span>
+                <span className="nav-text grow">Suchen</span>
+                <kbd className="nav-kbd nav-text">{SHORTCUT}</kbd>
+              </button>
               <SyncBadge />
               <button className="nav-button" onClick={() => setEditingSidebar(true)} title="Sidebar bearbeiten">
                 <span className="nav-icon" aria-hidden>✏️</span>
@@ -223,6 +230,7 @@ function Shell() {
       </main>
       <MiniPlayer hidden={current === 'musik' || current === 'dashboard'} />
       <FocusPill hidden={current === 'fokus'} />
+      <Spotlight />
     </div>
   );
 }

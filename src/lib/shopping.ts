@@ -52,7 +52,8 @@ export interface ParsedItem {
  */
 export function parseShopping(input: string): ParsedItem[] {
   return input
-    .split(/[,;\n]/)
+    // Komma trennt Artikel – außer zwischen Ziffern („1,5 l Milch“)
+    .split(/[;\n]|,(?!\d)/)
     .map((s) => s.trim())
     .filter(Boolean)
     .map((s) => {

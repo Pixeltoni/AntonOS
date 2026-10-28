@@ -1508,3 +1508,27 @@ main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
 .spotlight-row.on .lucide-icon { color: #fff; }
 .search-toggle { display: none; place-items: center; }
 @media (max-width: 800px) { .search-toggle { display: grid; } }
+
+/* ---------- Handy: Seite lässt sich nicht seitlich verschieben ---------- */
+html, body { overflow-x: clip; max-width: 100%; overscroll-behavior-x: none; }
+main { min-width: 0; overflow-wrap: break-word; }
+img, video, iframe, svg { max-width: 100%; }
+.panel-head { flex-wrap: wrap; row-gap: 0.4rem; }
+.panel-head > .row { flex-wrap: wrap; }
+.panel-head h2 { min-width: 0; }
+.cal-toolbar-compact .row.between { flex-wrap: nowrap; min-width: 0; }
+.cal-toolbar-compact .row.between > .row:first-child { min-width: 0; flex: 1 1 auto; }
+.cal-big-title { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 360px) {
+  .cal-big-title { font-size: 1rem; }
+  button.cal-arrow { padding: 0 2px; }
+  .cal-today { padding: 4px 2px; }
+}
+.grid-2 > *, .stack > *, .stack, .grid-2 { min-width: 0; }
+.tx-list li > .grow, .ios-list li > .grow { min-width: 0; }
+.tx-list .task-title, .tx-list .meta { overflow-wrap: anywhere; }
+@media (max-width: 360px) {
+  .tx-list li { gap: 0.5rem; }
+  .tx-list .cat-icon { width: 30px; height: 30px; }
+  .tx-amount { font-size: 0.9rem; }
+}

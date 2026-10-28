@@ -8,7 +8,7 @@ export async function notify(title: string, body: string, tag?: string): Promise
   try {
     const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
     if (reg) {
-      await reg.showNotification(title, { body, tag, icon: `${import.meta.env.BASE_URL}icons/icon-192.png`, badge: `${import.meta.env.BASE_URL}icons/icon-192.png` });
+      await reg.showNotification(title, { body, tag, icon: `${import.meta.env.BASE_URL}icons/a-192.png`, badge: `${import.meta.env.BASE_URL}icons/a-192.png` });
       return true;
     }
     new Notification(title, { body, tag });

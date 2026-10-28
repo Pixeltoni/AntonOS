@@ -97,3 +97,18 @@ export function Stat({ label, value, hint, href }: { label: string; value: React
     <div className="stat">{body}</div>
   );
 }
+
+/** Kleiner Kuchen für den Projektfortschritt wie in Things */
+export function ProgressPie({ share, color = '#007AFF', size = 16 }: { share: number; color?: string; size?: number }) {
+  const r = size / 2 - 1;
+  const c = size / 2;
+  const a = Math.min(0.9999, Math.max(0, share)) * 2 * Math.PI;
+  const x = c + (r - 1.5) * Math.sin(a);
+  const y = c - (r - 1.5) * Math.cos(a);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true" className="pie">
+      <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth="1.5" />
+      {share > 0 && <path d={`M${c} ${c} L${c} ${c - r + 1.5} A${r - 1.5} ${r - 1.5} 0 ${a > Math.PI ? 1 : 0} 1 ${x} ${y} Z`} fill={color} />}
+    </svg>
+  );
+}

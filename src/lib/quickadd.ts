@@ -7,6 +7,10 @@ export interface QuickAdd {
   dueTime: string;
   priority: Priority | null;
   courseId: ID | null;
+  /** „heute abend“ → Heute Abend (wie in Things) */
+  evening: boolean;
+  /** „irgendwann“ → Irgendwann */
+  someday: boolean;
 }
 
 const WEEKDAYS = ['sonntag', 'montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'samstag'];
@@ -67,6 +71,16 @@ export function parseQuickAdd(input: string, today: DateStr, courses: Pick<Cours
     });
   }
 
+  // „heute abend“ und „irgendwann“ wie in Things
+  let evening = false;
+  let someday = false;
+  take(/\s(heute\s+abend)(?=\s)/i, () => {
+    evening = true;
+  });
+  take(/\s(irgendwann)(?=\s)/i, () => {
+    someday = true;
+  });
+
   // Datum
   take(/\s(übermorgen|uebermorgen)(?=\s)/i, () => {
     due = addDays(today, 2);
@@ -104,8 +118,8 @@ export function parseQuickAdd(input: string, today: DateStr, courses: Pick<Cours
     });
   }
   // Uhrzeit ohne Datum: heute (bzw. morgen, wenn die Uhrzeit heute schon vorbei wäre, ist nicht ermittelbar) → heute
-  if (dueTime && !due) due = today;
+  if (dueTime && !due && !evening) due = today;
 
   const title = text.replace(/\s+/g, ' ').trim();
-  return { title, due, dueTime, priority, courseId };
+  return { title, due, dueTime, priority, courseId, evening, someday };
 }

@@ -16,6 +16,8 @@ describe('Schnelleingabe', () => {
       dueTime: '10:00',
       priority: 'hoch',
       courseId: 'ana',
+      evening: false,
+      someday: false,
     });
   });
 
@@ -47,8 +49,16 @@ describe('Schnelleingabe', () => {
 
   it('lässt normalen Text und unbekannte Kurse unverändert', () => {
     expect(parseQuickAdd('Version 2.0 testen #unbekannt', T, courses)).toEqual({
-      title: 'Version 2.0 testen #unbekannt', due: null, dueTime: '', priority: null, courseId: null,
+      title: 'Version 2.0 testen #unbekannt', due: null, dueTime: '', priority: null, courseId: null, evening: false, someday: false,
     });
     expect(parseQuickAdd('Programm #MA-101', T, courses).courseId).toBe('ana');
+  });
+});
+
+describe('Things-Wörter', () => {
+  it('versteht „heute abend“ und „irgendwann“', () => {
+    expect(parseQuickAdd('Lea anrufen heute abend', T)).toMatchObject({ title: 'Lea anrufen', evening: true, due: null });
+    expect(parseQuickAdd('Spanisch lernen irgendwann', T)).toMatchObject({ title: 'Spanisch lernen', someday: true, due: null });
+    expect(parseQuickAdd('Abendessen heute', T)).toMatchObject({ due: T, evening: false });
   });
 });

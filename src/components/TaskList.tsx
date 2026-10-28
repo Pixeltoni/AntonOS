@@ -4,6 +4,7 @@ import { newId, useStore } from '../store';
 import type { ID, Priority, Subtask, Task, TaskKind, TaskStatus } from '../types';
 import { formatDate, relativeLabel, today } from '../lib/dates';
 import { parseQuickAdd } from '../lib/quickadd';
+import { setWhen, whenOf, type When } from '../lib/things';
 import { useToast } from './toast';
 import { CourseBadge, CourseSelect, Empty } from './ui';
 
@@ -11,6 +12,12 @@ export const KINDS: TaskKind[] = ['Aufgabe', 'Lektüre', 'Projekt', 'Bewerbung']
 export const STATUSES: TaskStatus[] = ['offen', 'in Arbeit', 'erledigt'];
 const PRIORITIES: Priority[] = ['niedrig', 'mittel', 'hoch'];
 const PRIO_RANK: Record<Priority, number> = { hoch: 0, mittel: 1, niedrig: 2 };
+const WHEN_OPTIONS: { id: When; label: string }[] = [
+  { id: '', label: 'Ohne' },
+  { id: 'heute', label: '★ Heute' },
+  { id: 'abends', label: '🌙 Abends' },
+  { id: 'irgendwann', label: '📦 Irgendwann' },
+];
 /** Ausrufezeichen vor dem Titel wie in Apple Erinnerungen */
 const PRIO_MARKS: Record<Priority, string> = { niedrig: '', mittel: '!! ', hoch: '!!! ' };
 
@@ -43,11 +50,13 @@ export function TaskForm({
   projectId = null,
   defaults = {},
   compact = false,
+  placeholder,
 }: {
   courseId?: ID | null;
   projectId?: ID | null;
-  defaults?: Partial<Pick<Task, 'flagged' | 'due'>>;
+  defaults?: Partial<Pick<Task, 'flagged' | 'due' | 'plannedFor' | 'evening' | 'someday' | 'section'>>;
   compact?: boolean;
+  placeholder?: string;
 }) {
   const { data, add } = useStore();
   const [text, setText] = useState('');
@@ -70,12 +79,19 @@ export function TaskForm({
       note: '',
       flagged: defaults.flagged ?? false,
       subtasks: [],
+      // „heute abend“ / „irgendwann“ aus dem Text haben Vorrang vor der Liste
+      plannedFor: parsed.evening ? t : parsed.someday ? null : defaults.plannedFor ?? null,
+      evening: parsed.evening || (!parsed.someday && !!defaults.evening),
+      someday: parsed.someday || (!parsed.evening && !!defaults.someday),
+      ...(defaults.section ? { section: defaults.section } : {}),
     });
     setText('');
   };
 
   const chips = [
     parsed.due && `${relativeLabel(parsed.due, t).replace(/^./, (c) => c.toUpperCase())}${parsed.dueTime ? `, ${parsed.dueTime}` : ''}`,
+    parsed.evening && '🌙 Heute Abend',
+    parsed.someday && '📦 Irgendwann',
     parsed.priority && `Priorität ${parsed.priority}`,
     parsed.courseId && course?.name,
   ].filter(Boolean) as string[];
@@ -86,7 +102,7 @@ export function TaskForm({
         <button type="submit" className="qa-plus" aria-label="Aufgabe hinzufügen" disabled={!parsed.title}>+</button>
         <input
           className="grow"
-          placeholder={compact ? 'Neue Aufgabe …' : 'Neue Aufgabe, z. B. „Übungsblatt morgen 10 Uhr !!! #analysis“'}
+          placeholder={placeholder ?? (compact ? 'Neue Aufgabe …' : 'Neue Aufgabe, z. B. „Übungsblatt morgen 10 Uhr !!! #analysis“')}
           value={text}
           onChange={(e) => setText(e.target.value)}
           aria-label="Titel der Aufgabe"
@@ -186,6 +202,24 @@ export function TaskModal({ task, onClose }: { task: Task; onClose: () => void }
           </div>
         </div>
 
+        <div className="col">
+          <span className="small muted">Wann?</span>
+          <div className="segmented when-picker" role="radiogroup" aria-label="Wann">
+            {WHEN_OPTIONS.map((w) => (
+              <button
+                key={w.id || 'ohne'}
+                type="button"
+                role="radio"
+                aria-checked={whenOf(draft, today()) === w.id}
+                className={whenOf(draft, today()) === w.id ? 'selected' : ''}
+                onClick={() => setDraft((x) => ({ ...x, ...setWhen(w.id, today()) }))}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="modal-grid">
           <label>
             Fällig am
@@ -218,6 +252,15 @@ export function TaskModal({ task, onClose }: { task: Task; onClose: () => void }
               {data.projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
           </label>
+          {(data.projects.find((p) => p.id === draft.projectId)?.sections?.length ?? 0) > 0 && (
+            <label>
+              Abschnitt
+              <select value={draft.section ?? ''} onChange={(e) => set('section', e.target.value || undefined)}>
+                <option value="">Ohne Abschnitt</option>
+                {data.projects.find((p) => p.id === draft.projectId)!.sections!.map((s) => <option key={s}>{s}</option>)}
+              </select>
+            </label>
+          )}
           <label>
             Art
             <select value={draft.kind} onChange={(e) => set('kind', e.target.value as TaskKind)}>
@@ -306,6 +349,8 @@ export function TaskList({ tasks, showCourse = true, compact = false }: { tasks:
                   {!compact && task.kind !== 'Aufgabe' && <span>{task.kind}</span>}
                   {!compact && task.status === 'in Arbeit' && <span className="rem-doing">in Arbeit</span>}
                   {subs.length > 0 && <span>{subsDone} von {subs.length}</span>}
+                  {!compact && !done && task.someday && <span className="rem-when">📦 Irgendwann</span>}
+                  {!compact && !done && task.evening && whenOf(task, t) === 'abends' && <span className="rem-when">🌙 Abends</span>}
                 </span>
                 {subs.length > 0 && !compact && (
                   <span className="rem-progress"><span style={{ width: `${(subsDone / subs.length) * 100}%` }} /></span>

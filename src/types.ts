@@ -64,6 +64,14 @@ export interface Task {
   subtasks?: Subtask[];
   /** Tag, an dem die Aufgabe erledigt wurde (für den Rückblick) */
   completedAt?: DateStr;
+  /** Wie in Things: ab diesem Tag in „Heute“ (ohne Frist) */
+  plannedFor?: DateStr | null;
+  /** In „Heute“ unter „Heute Abend“ */
+  evening?: boolean;
+  /** „Irgendwann“ – ohne Datum, taucht nicht im Alltag auf */
+  someday?: boolean;
+  /** Abschnitt innerhalb eines Projekts */
+  section?: string;
 }
 
 export interface Subtask {
@@ -141,6 +149,8 @@ export interface Project {
   due: DateStr | null;
   cover: string;
   description: string;
+  /** Abschnitte wie in Things, z. B. „Bewerbung“, „Wohnung“ */
+  sections?: string[];
 }
 
 export interface Habit {

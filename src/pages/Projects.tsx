@@ -4,8 +4,9 @@ import type { ID, Project, ProjectStatus } from '../types';
 import { formatDate, relativeLabel, today } from '../lib/dates';
 import { TaskForm, TaskList } from '../components/TaskList';
 import { Cover, ImageInput } from '../components/widgets';
-import { Empty, PageHeader, Panel, Progress } from '../components/ui';
+import { Empty, PageHeader, Panel, Progress, ProgressPie } from '../components/ui';
 import { AddButton } from '../components/sheet';
+import { deadlineLabel } from '../lib/things';
 
 export const PROJECT_STATUSES: ProjectStatus[] = ['geplant', 'aktiv', 'pausiert', 'abgeschlossen'];
 const AREAS = ['Studium', 'Privat', 'Arbeit', 'Finanzen', 'Reisen'];
@@ -103,10 +104,12 @@ export function Projects() {
 }
 
 export function ProjectDetail({ id }: { id: ID }) {
-  const { data, update, remove } = useStore();
+  const { data, update, remove, mutate } = useStore();
   const [editing, setEditing] = useState(false);
   const project = data.projects.find((p) => p.id === id);
   const progress = useProjectProgress(id);
+  const sections = project?.sections ?? [];
+  const tasks = data.tasks.filter((t) => t.projectId === id);
   if (!project) return <Empty>Projekt nicht gefunden. <a href="#/projekte">Zurück</a></Empty>;
 
   return (
@@ -128,10 +131,48 @@ export function ProjectDetail({ id }: { id: ID }) {
         </Panel>
       )}
       {project.description && <Panel><p>{project.description}</p></Panel>}
-      <Panel title={progress === null ? 'Aufgaben' : `Aufgaben · ${Math.round(progress)} % erledigt`}>
-        {progress !== null && <Progress value={progress} />}
+      <Panel
+        title={progress === null ? 'Aufgaben' : `Aufgaben · ${Math.round(progress)} % erledigt`}
+        actions={<button type="button" onClick={() => { const name = prompt('Name des Abschnitts', 'z. B. Recherche')?.trim(); if (name && !sections.includes(name)) update('projects', id, { sections: [...sections, name] }); }}>+ Abschnitt</button>}
+      >
+        <div className="row project-meta">
+          {progress !== null && <ProgressPie share={progress / 100} size={22} />}
+          {progress !== null && <Progress value={progress} />}
+          {project.due && project.status !== 'abgeschlossen' && (
+            <span className={`deadline-chip ${project.due < today() ? 'over' : ''}`}>⚑ {deadlineLabel(project.due, today())}</span>
+          )}
+        </div>
         <TaskForm projectId={id} />
-        <TaskList tasks={data.tasks.filter((t) => t.projectId === id)} />
+        <TaskList tasks={tasks.filter((t) => !t.section || !sections.includes(t.section))} />
+        {sections.map((sec, i) => (
+          <div key={sec} className="project-section">
+            <div className="row between project-section-head">
+              <h3>{sec}</h3>
+              <span className="row">
+                {i > 0 && <button type="button" className="icon" aria-label={`${sec} nach oben`} onClick={() => { const next = [...sections]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; update('projects', id, { sections: next }); }}>↑</button>}
+                <button type="button" className="icon" aria-label={`${sec} umbenennen`} onClick={() => {
+                  const name = prompt('Neuer Name', sec)?.trim();
+                  if (!name || name === sec || sections.includes(name)) return;
+                  mutate((d) => ({
+                    ...d,
+                    projects: d.projects.map((p) => (p.id === id ? { ...p, sections: sections.map((s) => (s === sec ? name : s)) } : p)),
+                    tasks: d.tasks.map((t) => (t.projectId === id && t.section === sec ? { ...t, section: name } : t)),
+                  }));
+                }}>✎</button>
+                <button type="button" className="icon" aria-label={`${sec} löschen`} onClick={() => {
+                  if (!confirm(`Abschnitt „${sec}“ löschen? Die Aufgaben bleiben im Projekt.`)) return;
+                  mutate((d) => ({
+                    ...d,
+                    projects: d.projects.map((p) => (p.id === id ? { ...p, sections: sections.filter((s) => s !== sec) } : p)),
+                    tasks: d.tasks.map((t) => (t.projectId === id && t.section === sec ? { ...t, section: undefined } : t)),
+                  }));
+                }}>×</button>
+              </span>
+            </div>
+            <TaskForm projectId={id} defaults={{ section: sec }} placeholder={`Aufgabe in „${sec}“`} />
+            <TaskList tasks={tasks.filter((t) => t.section === sec)} />
+          </div>
+        ))}
       </Panel>
     </>
   );

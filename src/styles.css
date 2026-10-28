@@ -436,8 +436,6 @@ button.cal-arrow { font-size: 1.6rem; color: var(--accent); padding: 0 6px; }
 .rem-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .rem-tile { background: var(--surface) !important; border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; color: var(--text); }
 .rem-tile.active { outline: 2px solid var(--accent); outline-offset: -1px; }
-.rem-tile:last-child { grid-column: span 2; flex-direction: row; align-items: center; justify-content: space-between; }
-.rem-tile:last-child .rem-tile-top { order: 2; gap: 10px; }
 .rem-tile-top { display: flex; justify-content: space-between; align-items: center; }
 .rem-tile-icon { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
 .rem-tile-count { font-size: 1.5rem; font-weight: 700; }
@@ -1532,3 +1530,18 @@ img, video, iframe, svg { max-width: 100%; }
   .tx-list .cat-icon { width: 30px; height: 30px; }
   .tx-amount { font-size: 0.9rem; }
 }
+
+/* ---------- Things-Stil: Heute / Abends / Irgendwann / Logbuch / Abschnitte ---------- */
+.pie { flex: none; vertical-align: -2px; }
+.when-picker { flex-wrap: wrap; }
+.rem-when { color: var(--muted); }
+.rem-evening h3 { color: #5856D6; }
+.rem-project-meta { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; margin: 0 0 0.6rem; }
+.project-meta { align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.project-meta .progress { flex: 1; min-width: 120px; }
+.deadline-chip { font-size: 0.82rem; font-weight: 600; color: #FF9500; background: color-mix(in srgb, #FF9500 14%, transparent); padding: 0.15rem 0.55rem; border-radius: 999px; }
+.deadline-chip.over { color: #FF3B30; background: color-mix(in srgb, #FF3B30 14%, transparent); }
+.project-section { margin-top: 1.1rem; }
+.project-section-head { border-bottom: 1px solid color-mix(in srgb, #007AFF 40%, transparent); padding-bottom: 0.2rem; margin-bottom: 0.4rem; }
+.project-section-head h3 { margin: 0; font-size: 1rem; color: #007AFF; }
+.project-section-head .icon { min-width: 30px; min-height: 30px; }

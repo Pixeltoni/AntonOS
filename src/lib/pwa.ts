@@ -20,9 +20,10 @@ export function setupPwa() {
     listeners.forEach((l) => l());
   });
   if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => undefined);
-    });
+    const register = () => navigator.serviceWorker.register('./sw.js').catch(() => undefined);
+    // Falls „load“ schon vorbei ist, sofort anmelden – sonst gäbe es nie einen Service Worker
+    if (document.readyState === 'complete') void register();
+    else window.addEventListener('load', () => void register());
   }
 }
 

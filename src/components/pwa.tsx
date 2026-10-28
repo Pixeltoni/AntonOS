@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { today } from '../lib/dates';
-import { askNotifications, notify } from '../lib/notify';
+import { askNotifications, notifyProblemText, showNotice } from '../lib/notify';
 import { canPromptInstall, isIOS, isStandalone, onInstallChange, parseShared, promptInstall, setBadge, type SharedContent } from '../lib/pwa';
 import { useToast } from './toast';
 
@@ -105,11 +105,18 @@ export function AppPanel() {
     const result = await askNotifications();
     setPermission(result);
     if (result === 'granted') {
-      const ok = await notify('AntonOS', 'Mitteilungen sind eingeschaltet 🎉');
-      if (!ok) show('Mitteilungen sind eingeschaltet.');
+      const result = await showNotice('AntonOS', 'Mitteilungen sind eingeschaltet 🎉');
+      if (result !== 'ok') show(`Mitteilungen sind erlaubt, die erste kam aber nicht an. ${notifyProblemText(result)}`, undefined, 8000);
     } else if (result === 'denied') {
       show('Mitteilungen sind blockiert – du kannst sie in den Einstellungen des Geräts erlauben.', undefined, 7000);
     }
+  };
+
+  const test = async () => {
+    const result = await showNotice('AntonOS', 'So sieht eine Mitteilung aus.', 'test');
+    if (result === 'ok') show('Test-Mitteilung gesendet. Nichts zu sehen? Dann sind Mitteilungen in den Geräte-Einstellungen aus.', undefined, 6000);
+    else show(`Test fehlgeschlagen. ${notifyProblemText(result)}`, undefined, 8000);
+    if (typeof Notification !== 'undefined') setPermission(Notification.permission);
   };
 
   return (
@@ -147,7 +154,7 @@ export function AppPanel() {
           </span>
         </span>
         {permission === 'default' && <button type="button" onClick={allow}>Erlauben</button>}
-        {permission === 'granted' && <button type="button" onClick={() => notify('AntonOS', 'So sieht eine Mitteilung aus.').then((ok) => !ok && show('Test fehlgeschlagen.'))}>Testen</button>}
+        {permission === 'granted' && <button type="button" onClick={test}>Testen</button>}
       </div>
       <p className="muted small">
         Mitteilungen kommen, solange AntonOS geöffnet ist oder als App im Hintergrund läuft. Für Mitteilungen bei ganz geschlossener App bräuchte es einen eigenen Server – das kann ich bei Bedarf über Supabase ergänzen.

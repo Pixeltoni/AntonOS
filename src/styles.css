@@ -1711,3 +1711,15 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adj
 .trip-widget-title { font-size: 1.2rem; }
 .trip-widget-count { font-size: 1.8rem; font-weight: 700; color: #0A84A8; line-height: 1.15; }
 @media (max-width: 520px) { .trip-stats { grid-template-columns: minmax(0, 1fr); } }
+
+/* Blättern mit Übergang: die Ansicht gleitet, ohne die Seite seitlich scrollen zu lassen */
+.calendar { overflow-x: clip; }
+.cal-body { display: flex; flex-direction: column; gap: 0.6rem; touch-action: pan-y; }
+
+/* Training planen: Wiederholung und Wochentage */
+.workout-repeat { display: flex; width: 100%; }
+.workout-repeat button { flex: 1; padding: 0.45rem 0.3rem; }
+.weekday-picks { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.3rem; }
+.weekday-picks button { border-radius: 999px; padding: 0.45rem 0; font-size: 0.85rem; font-weight: 600; }
+.weekday-picks button.on { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff; }
+.workout-series-hint { margin: -0.3rem 0 0; }

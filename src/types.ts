@@ -267,6 +267,38 @@ export interface Workout {
   notes: string;
   /** Dauer in Minuten (für den Bewegungsring) */
   minutes?: number;
+  /** Trainingstag aus dem Trainingsplan (z. B. Push) */
+  planDayId?: ID;
+  /** Eingetragene Übungen mit Gewicht und Wiederholungen */
+  exercises?: ExerciseLog[];
+}
+
+/** Ein Satz: Gewicht in kg (0 = Körpergewicht) und Wiederholungen */
+export interface SetLog {
+  weight: number;
+  reps: number;
+}
+
+export interface ExerciseLog {
+  exerciseId: ID;
+  name: string;
+  sets: SetLog[];
+}
+
+export interface PlanExercise {
+  id: ID;
+  name: string;
+  /** Geplante Anzahl Sätze */
+  sets: number;
+  /** Ziel-Wiederholungen als Text, z. B. „8–12“ */
+  reps?: string;
+}
+
+/** Ein Tag im Trainingsplan, z. B. Push oder Pull */
+export interface TrainingDay {
+  id: ID;
+  name: string;
+  exercises: PlanExercise[];
 }
 
 export interface Album {
@@ -425,6 +457,7 @@ export interface Data {
   moods: MoodEntry[];
   media: Media[];
   workouts: Workout[];
+  trainingPlan: TrainingDay[];
   events: CalEvent[];
   /** Datenformat-Version der AntonOS-Version, die zuletzt gespeichert hat */
   schemaVersion?: number;

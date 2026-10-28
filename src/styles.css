@@ -1545,3 +1545,36 @@ img, video, iframe, svg { max-width: 100%; }
 .project-section-head { border-bottom: 1px solid color-mix(in srgb, #007AFF 40%, transparent); padding-bottom: 0.2rem; margin-bottom: 0.4rem; }
 .project-section-head h3 { margin: 0; font-size: 1rem; color: #007AFF; }
 .project-section-head .icon { min-width: 30px; min-height: 30px; }
+
+/* Trainingsplan (Push/Pull) mit Gewicht und Wiederholungen */
+.lift-panel { margin-bottom: 1rem; }
+.lift-actions { display: flex; gap: 1rem; }
+.lift-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; margin-top: 0.4rem; }
+.lift-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-top: 0.6rem; }
+button.lift-day { --c: var(--accent); display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; text-align: left; padding: 0.9rem 1rem; border-radius: 16px; border: 1px solid var(--border); border-left: 5px solid var(--c); background: var(--surface); color: var(--text); font: inherit; }
+button.lift-day.next { background: color-mix(in srgb, var(--c) 9%, var(--surface)); border-color: color-mix(in srgb, var(--c) 45%, var(--border)); border-left-color: var(--c); }
+.lift-day-top { display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; }
+.lift-badge { font-size: 0.72rem; font-weight: 700; color: #fff; background: var(--c); border-radius: 999px; padding: 0.1rem 0.5rem; }
+.lift-day-list { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lift-start { margin-top: 0.3rem; font-weight: 600; color: var(--c); }
+.lift-hint { margin: 0; }
+.lift-ex { --c: var(--accent); border: 1px solid var(--border); border-radius: 14px; padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: 0.4rem; background: var(--surface); }
+.lift-ex-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+.lift-ex-head strong { font-size: 1rem; }
+.lift-ex-head .lift-trend { margin-left: auto; }
+.lift-last { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; }
+.lift-last b { color: var(--text); font-weight: 600; }
+.lift-sets { display: flex; flex-direction: column; gap: 0.35rem; }
+.lift-set { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: center; gap: 0.45rem; }
+.lift-set-no { width: 1.4rem; height: 1.4rem; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 0.75rem; display: grid; place-items: center; }
+.lift-set input { width: 100%; min-width: 0; text-align: center; font-size: 1.05rem; padding: 0.45rem 0.3rem; }
+.lift-set .muted { font-size: 0.85rem; white-space: nowrap; }
+.lift-add-set { align-self: flex-start; font-size: 0.9rem; }
+.lift-trend { font-size: 0.78rem; font-weight: 700; border-radius: 999px; padding: 0.1rem 0.5rem; white-space: nowrap; background: var(--surface-2); color: var(--muted); }
+.lift-trend.besser { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.lift-trend.schlechter { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+.lift-plan-day { display: flex; align-items: center; gap: 0.4rem; }
+.lift-day-name { flex: 1; font-weight: 700; font-size: 1rem; border-left: 4px solid var(--c) !important; }
+.lift-plan-ex { display: grid; grid-template-columns: minmax(0, 1fr) 2.8rem auto 4.2rem auto auto; align-items: center; gap: 0.35rem; }
+.lift-plan-ex input { min-width: 0; width: 100%; }
+.lift-hist { display: flex; flex-direction: column; min-width: 0; }

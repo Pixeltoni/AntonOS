@@ -60,6 +60,8 @@ export interface Task {
   note?: string;
   /** Uhrzeit HH:MM, optional */
   dueTime?: string;
+  /** Zur Uhrzeit mit einer Mitteilung erinnern (von der Assistentin) */
+  remind?: boolean;
   flagged?: boolean;
   subtasks?: Subtask[];
   /** Tag, an dem die Aufgabe erledigt wurde (für den Rückblick) */

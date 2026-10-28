@@ -1,7 +1,7 @@
 import {
   BookOpen, Cake, Calendar, CreditCard, Plane, Users, UtensilsCrossed, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
   LayoutGrid, ListChecks, MessageCircleHeart, Music, NotebookPen, Pencil, Receipt, Repeat, Rocket, Search, Settings, ShoppingCart,
-  Smile, Sparkles, Target, Timer, Tv, Wallet, Zap, type LucideIcon,
+  Smile, Sparkles, Target, Timer, Tv, Wallet, WandSparkles, Zap, type LucideIcon,
 } from 'lucide-react';
 import type { NavItem, WidgetId } from '../types';
 
@@ -34,6 +34,7 @@ export const PAGE_ICONS: Record<string, LucideIcon> = {
   tools: LayoutGrid,
   einstellungen: Settings,
   suche: Search,
+  assistentin: WandSparkles,
   bearbeiten: Pencil,
   'dashboard-bearbeiten': LayoutDashboard,
 };

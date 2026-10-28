@@ -273,6 +273,8 @@ export interface Workout {
   planDayId?: ID;
   /** Eingetragene Übungen mit Gewicht und Wiederholungen */
   exercises?: ExerciseLog[];
+  /** Gemeinsame Kennung, wenn das Training als Serie (z. B. jeden Mo + Do) geplant wurde */
+  seriesId?: ID;
 }
 
 /** Ein Satz: Gewicht in kg (0 = Körpergewicht) und Wiederholungen */

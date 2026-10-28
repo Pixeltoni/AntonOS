@@ -1,4 +1,6 @@
 import type { DateStr, ExerciseLog, ID, SetLog, TrainingDay, Workout } from '../types';
+import { addDays } from './dates';
+import { weekdayOf } from './recurrence';
 
 /** Vorlage für einen Push/Pull-Split (ohne IDs, die vergibt der Aufrufer) */
 export const PUSH_PULL_TEMPLATE: { name: string; exercises: { name: string; sets: number; reps: string }[] }[] = [
@@ -146,4 +148,40 @@ export function prefillSets(planned: number, previous: SetLog[] | undefined): Se
   const prev = previous ? validSets(previous) : [];
   if (prev.length) return prev.map((s) => ({ ...s }));
   return Array.from({ length: Math.max(1, planned) }, () => ({ weight: 0, reps: 0 }));
+}
+
+export type WorkoutRepeat = 'einmal' | 'woechentlich' | 'monatlich';
+
+/** Höchstzahl an Terminen, die eine Serie auf einmal anlegt */
+export const MAX_SERIES = 120;
+
+/**
+ * Alle Termine einer Trainings-Serie:
+ * - einmal: nur `start`
+ * - wöchentlich: an jedem gewählten Wochentag (1 = Mo … 7 = So) von `start` bis `until`
+ * - monatlich: jeden Monat am Tag von `start` (in kürzeren Monaten am letzten Tag)
+ */
+export function seriesDates(repeat: WorkoutRepeat, start: DateStr, until: DateStr, weekdays: number[] = []): DateStr[] {
+  if (repeat === 'einmal' || until < start) return [start];
+  const out: DateStr[] = [];
+  if (repeat === 'woechentlich') {
+    const days = new Set(weekdays.length ? weekdays : [weekdayOf(start)]);
+    for (let d = start; d <= until && out.length < MAX_SERIES; d = addDays(d, 1)) if (days.has(weekdayOf(d))) out.push(d);
+    return out;
+  }
+  const [y, m, day] = start.split('-').map(Number);
+  for (let i = 0; out.length < MAX_SERIES; i++) {
+    const year = y + Math.floor((m - 1 + i) / 12);
+    const month = ((m - 1 + i) % 12) + 1;
+    const last = new Date(year, month, 0).getDate();
+    const d = `${year}-${String(month).padStart(2, '0')}-${String(Math.min(day, last)).padStart(2, '0')}`;
+    if (d > until) break;
+    out.push(d);
+  }
+  return out;
+}
+
+/** Entfernt die noch offenen Termine einer Serie ab `from` (erledigte Trainings bleiben). */
+export function removeSeriesFrom(workouts: Workout[], seriesId: ID, from: DateStr): Workout[] {
+  return workouts.filter((w) => !(w.seriesId === seriesId && !w.done && w.date >= from));
 }

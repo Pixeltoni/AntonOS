@@ -4,7 +4,7 @@ import type { DateStr, ExerciseLog, ID, PlanExercise, SetLog, TrainingDay, Worko
 import { formatDate, relativeLabel, today } from '../lib/dates';
 import {
   bestSet, buildPlan, compareSets, describeComparison, exerciseHistory, formatNumber, formatSets,
-  lastSessionOf, nextTrainingDay, parseNumber, previousEntry, volume, type ExerciseEntry,
+  lastSessionOf, nextTrainingDay, parseNumber, previousEntry, removeSeriesFrom, volume, type ExerciseEntry,
 } from '../lib/training';
 import { Empty } from './ui';
 import { Sheet } from './sheet';
@@ -126,7 +126,23 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
       </div>
       <label>Notiz<input value={notes} placeholder="z. B. Schulter gezwickt" onChange={(e) => setNotes(e.target.value)} /></label>
       {workout && <button type="button" className="danger" onClick={() => { if (confirm('Training löschen?')) { remove('workouts', workout.id); onClose(); } }}>Training löschen</button>}
+      {workout && <DeleteSeriesButton workout={workout} onDone={onClose} />}
     </Sheet>
+  );
+}
+
+/** Knopf „Alle künftigen Termine dieser Serie löschen“ */
+export function DeleteSeriesButton({ workout, onDone }: { workout: Workout; onDone: () => void }) {
+  const { data, mutate } = useStore();
+  if (!workout.seriesId) return null;
+  const count = data.workouts.length - removeSeriesFrom(data.workouts, workout.seriesId, workout.date).length;
+  if (count < 2) return null;
+  return (
+    <button type="button" className="danger" onClick={() => {
+      if (!confirm(`${count} offene Termine dieser Serie ab ${formatDate(workout.date)} löschen?`)) return;
+      mutate((d) => ({ ...d, workouts: removeSeriesFrom(d.workouts, workout.seriesId!, workout.date) }));
+      onDone();
+    }}>Diesen und alle folgenden Termine löschen ({count})</button>
   );
 }
 

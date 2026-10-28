@@ -724,7 +724,10 @@ h3 { font-size: 0.95rem; margin: 0.5rem 0 0; }
 .rings-widget-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .rings-widget.kompakt { display: grid; place-items: center; text-decoration: none; }
 
-.habit-rows .habit-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0; }
+.habit-rows .habit-row { display: flex; align-items: center; gap: 0.5rem 0.75rem; padding: 0.55rem 0; flex-wrap: wrap; }
+.habit-row-main { background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; min-width: 8rem; cursor: pointer; }
+.habit-row-main:hover .task-title { text-decoration: underline; }
+.ring-slot { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
 .habit-row.done .task-title { color: var(--muted); }
 .pill-btn { border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.85rem; white-space: nowrap; }
 .pill-btn.accent { background: #00B8D4; border-color: #00B8D4; color: #fff; }

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import type { DateStr, Habit, ID, RingGoals, WidgetVariant } from '../types';
+import type { DateStr, Habit, ID, RingGoals, RingSlot, RingSource, WidgetVariant } from '../types';
 import { addDays, parseDate, today } from '../lib/dates';
-import { completionRate, habitAmount, isHabitDone, streak } from '../lib/life';
-import { awards, defaultRingGoals, RING_COLORS } from '../lib/rings';
+import { completionRate, formatAmounts, habitAmount, habitSteps, isHabitDone, parseAmounts, streak } from '../lib/life';
+import { awards, DEFAULT_SLOT_GOAL, defaultRingGoals, ringSlots, SLOT_COLORS, SOURCE_LABELS, sourceHasGoal } from '../lib/rings';
 import { MiniRing, RingsCard } from '../components/rings';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
 import { useToast } from '../components/toast';
@@ -21,11 +21,10 @@ export function useToggleHabit() {
   };
 }
 
-/** „+ 0,25 l“ bei Mengen-Gewohnheiten */
+/** „+ 0,2 l“ bei Mengen-Gewohnheiten */
 export function useAddAmount() {
   const { data, add, update } = useStore();
-  return (habit: Habit, date: DateStr) => {
-    const step = habit.step && habit.step > 0 ? habit.step : 1;
+  return (habit: Habit, date: DateStr, step: number) => {
     const log = data.habitLogs.find((l) => l.habitId === habit.id && l.date === date);
     const round = (n: number) => Math.round(n * 1000) / 1000;
     if (log) update('habitLogs', log.id, { amount: round((log.amount ?? 0) + step) });
@@ -86,7 +85,7 @@ export function HabitsToday({ variant = 'standard' }: { variant?: WidgetVariant 
   );
 }
 
-function HabitRow({ habit }: { habit: Habit }) {
+function HabitRow({ habit, onEdit }: { habit: Habit; onEdit: () => void }) {
   const { data } = useStore();
   const toggle = useToggleHabit();
   const addAmount = useAddAmount();
@@ -98,16 +97,16 @@ function HabitRow({ habit }: { habit: Habit }) {
   return (
     <li className={`habit-row ${done ? 'done' : ''}`}>
       <MiniRing share={share} track="rgb(0 184 212 / 0.2)" />
-      <div className="grow">
+      <button type="button" className="grow habit-row-main" onClick={onEdit} title="Bearbeiten">
         <div className="task-title">{habit.icon} {habit.name}</div>
         <div className="meta">
           {habit.target ? <span>{num(done ? Math.max(amount, habit.target) : amount)} von {num(habit.target)} {habit.unit}</span> : <span>{done ? 'Erledigt' : 'Noch offen'}</span>}
           {s > 0 && <span>Serie: {s} {s === 1 ? 'Tag' : 'Tage'}</span>}
         </div>
-      </div>
-      {habit.target && !done && (
-        <button type="button" className="pill-btn" onClick={() => addAmount(habit, t)}>+ {num(habit.step && habit.step > 0 ? habit.step : 1)} {habit.unit}</button>
-      )}
+      </button>
+      {habit.target && !done && habitSteps(habit).map((step) => (
+        <button key={step} type="button" className="pill-btn" onClick={() => addAmount(habit, t, step)}>+ {num(step)} {habit.unit}</button>
+      ))}
       <button type="button" className={`pill-btn ${done ? 'on' : 'accent'}`} onClick={() => toggle(habit.id, t)} aria-pressed={done}>
         {done ? 'Erledigt ✓' : 'Abhaken'}
       </button>
@@ -115,11 +114,30 @@ function HabitRow({ habit }: { habit: Habit }) {
   );
 }
 
+const RING_NAMES = ['Äußerer Ring', 'Mittlerer Ring', 'Innerer Ring'];
+const SOURCE_HINTS = {
+  learn: 'Fokus-Timer (Lernen)',
+  focus: 'Fokus-Timer (alle Modi)',
+  move: 'Training',
+  habits: 'alle Gewohnheiten',
+  tasks: 'heute erledigt',
+} as const;
+
 function RingGoalsForm() {
   const { data, updateSettings } = useStore();
   const { show } = useToast();
   const goals: RingGoals = data.settings.rings ?? defaultRingGoals();
   const set = (patch: Partial<RingGoals>) => updateSettings({ rings: { ...goals, ...patch } });
+  const slots = ringSlots(goals);
+  const setSlot = (i: number, slot: RingSlot) => {
+    const next = slots.map((s, j) => (j === i ? slot : s));
+    // Die alten Felder mitführen, damit ältere Versionen (z. B. auf einem anderen Gerät) sinnvolle Ziele sehen
+    const learn = next.find((s) => s.source === 'learn');
+    const move = next.find((s) => s.source === 'move');
+    set({ slots: next, ...(learn ? { learnMinutes: learn.goal } : {}), ...(move ? { moveMinutes: move.goal } : {}) });
+  };
+  const setSource = (i: number, source: RingSource) =>
+    setSlot(i, { source, goal: sourceHasGoal(source) ? (slots[i].source === source ? slots[i].goal : DEFAULT_SLOT_GOAL[source]) : 0 });
   const toggleReminder = async (on: boolean) => {
     set({ reminder: on });
     if (on && typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -129,14 +147,35 @@ function RingGoalsForm() {
   };
   return (
     <div className="form-grid">
-      <label>
-        <span><span className="ring-dot" style={{ background: RING_COLORS.learn }} /> Lernen pro Tag (Minuten)</span>
-        <input type="number" min={5} step={5} value={goals.learnMinutes} onChange={(e) => set({ learnMinutes: Math.max(5, Number(e.target.value) || 0) })} />
-      </label>
-      <label>
-        <span><span className="ring-dot" style={{ background: RING_COLORS.move }} /> Bewegung pro Tag (Minuten)</span>
-        <input type="number" min={5} step={5} value={goals.moveMinutes} onChange={(e) => set({ moveMinutes: Math.max(5, Number(e.target.value) || 0) })} />
-      </label>
+      {slots.map((slot, i) => (
+        <div key={i} className="ring-slot full">
+          <label>
+            <span><span className="ring-dot" style={{ background: SLOT_COLORS[i] }} /> {RING_NAMES[i]}</span>
+            <select value={slot.source} onChange={(e) => setSource(i, e.target.value as RingSource)}>
+              {(['learn', 'focus', 'move', 'habits', 'tasks'] as const).map((src) => <option key={src} value={src}>{SOURCE_LABELS[src]} – {SOURCE_HINTS[src]}</option>)}
+              {data.habits.length > 0 && (
+                <optgroup label="Einzelne Gewohnheit">
+                  {data.habits.map((h) => <option key={h.id} value={`habit:${h.id}`}>{h.icon} {h.name}</option>)}
+                </optgroup>
+              )}
+              {slot.source.startsWith('habit:') && !data.habits.some((h) => `habit:${h.id}` === slot.source) && <option value={slot.source}>Gelöschte Gewohnheit</option>}
+              {i > 0 && <option value="off">Aus</option>}
+            </select>
+          </label>
+          {sourceHasGoal(slot.source) && (
+            <label>
+              Ziel pro Tag ({slot.source === 'tasks' ? 'Aufgaben' : 'Minuten'})
+              <input
+                type="number"
+                min={1}
+                step={slot.source === 'tasks' ? 1 : 5}
+                value={slot.goal}
+                onChange={(e) => setSlot(i, { ...slot, goal: Math.max(1, Number(e.target.value) || 0) })}
+              />
+            </label>
+          )}
+        </div>
+      ))}
       <label className="check">
         <input type="checkbox" checked={goals.reminder} onChange={(e) => toggleReminder(e.target.checked)} />
         Abends erinnern, wenn ein Ring offen ist
@@ -146,8 +185,8 @@ function RingGoalsForm() {
         <input type="time" value={goals.reminderTime} disabled={!goals.reminder} onChange={(e) => e.target.value && set({ reminderTime: e.target.value })} />
       </label>
       <p className="muted small full">
-        Lernzeit kommt automatisch aus dem Fokus-Timer, Bewegung aus erledigten Trainings (ohne Dauer zählt ein Training mit 30 Minuten).
-        Die Erinnerung kommt, solange AntonOS geöffnet ist.
+        Lernen und Fokuszeit kommen automatisch aus dem Fokus-Timer, Bewegung aus erledigten Trainings (ohne Dauer zählt ein Training mit 30 Minuten),
+        Aufgaben aus heute erledigten Aufgaben. Eine einzelne Gewohnheit nutzt ihr eigenes Tagesziel. Die Erinnerung kommt, solange AntonOS geöffnet ist.
       </p>
     </div>
   );
@@ -169,14 +208,68 @@ function Awards() {
   );
 }
 
+/** Neue Gewohnheit anlegen oder eine bestehende bearbeiten */
+function HabitSheet({ habit, onClose }: { habit?: Habit; onClose: () => void }) {
+  const { add, update, remove } = useStore();
+  const [name, setName] = useState(habit?.name ?? '');
+  const [icon, setIcon] = useState(habit?.icon ?? '✨');
+  const [target, setTarget] = useState(habit?.target ? num(habit.target) : '');
+  const [unit, setUnit] = useState(habit?.unit ?? '');
+  const [amounts, setAmounts] = useState(habit?.target ? formatAmounts(habitSteps(habit)) : '');
+  const goal = Number(target.replace(',', '.'));
+
+  const save = () => {
+    const steps = parseAmounts(amounts);
+    const fields: Partial<Habit> = {
+      name: name.trim(),
+      icon: icon.trim() || '✨',
+      ...(goal > 0
+        ? { target: goal, unit: unit.trim(), step: steps[0] ?? (goal >= 20 ? 5 : goal >= 4 ? 1 : goal / 4), steps: steps.length ? steps : undefined }
+        : { target: undefined, unit: undefined, step: undefined, steps: undefined }),
+    };
+    if (habit) update('habits', habit.id, fields);
+    else add('habits', fields as Omit<Habit, 'id'>);
+    onClose();
+  };
+
+  return (
+    <Sheet title={habit ? 'Gewohnheit bearbeiten' : 'Neue Gewohnheit'} onClose={onClose} submitLabel={habit ? 'Sichern' : 'Hinzufügen'} submitDisabled={!name.trim()} onSubmit={save}>
+      <div className="row">
+        <label className="narrow-label">Symbol<input className="narrow" value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={4} /></label>
+        <label className="grow">Gewohnheit<input autoFocus={!habit} placeholder="z. B. 10 Minuten meditieren" value={name} onChange={(e) => setName(e.target.value)} /></label>
+      </div>
+      <div className="emoji-picks" role="group" aria-label="Symbol wählen">
+        {['✨', '🧘', '📖', '💧', '🏃', '🥗', '😴', '📝', '🎸', '🧹', '💊', '🚭'].map((x) => (
+          <button key={x} type="button" className={icon === x ? 'on' : ''} onClick={() => setIcon(x)}>{x}</button>
+        ))}
+      </div>
+      <p className="muted small">Optional als Menge mit Tagesziel – dann gibt es „+“-Knöpfe (z. B. 2 l Wasser, 20 Seiten).</p>
+      <div className="modal-grid">
+        <label>Tagesziel<input inputMode="decimal" placeholder="z. B. 2" value={target} onChange={(e) => setTarget(e.target.value)} /></label>
+        <label>Einheit<input placeholder="z. B. l, Seiten" value={unit} onChange={(e) => setUnit(e.target.value)} /></label>
+      </div>
+      {goal > 0 && (
+        <label>
+          Mengen zum Hinzufügen
+          <input inputMode="decimal" placeholder="z. B. 0,2; 0,5" value={amounts} onChange={(e) => setAmounts(e.target.value)} />
+          <span className="muted small">Mehrere mit Semikolon trennen – für jede gibt es einen eigenen Knopf. Leer lassen für einen passenden Schritt.</span>
+        </label>
+      )}
+      {habit && (
+        <button type="button" className="danger" onClick={() => { if (confirm(`„${habit.name}“ mit Verlauf löschen?`)) { remove('habits', habit.id); onClose(); } }}>
+          Gewohnheit löschen
+        </button>
+      )}
+    </Sheet>
+  );
+}
+
 export function Habits() {
-  const { data, add, remove } = useStore();
+  const { data, remove } = useStore();
   const toggle = useToggleHabit();
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState('✨');
-  const [target, setTarget] = useState('');
-  const [unit, setUnit] = useState('');
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<ID | null>(null);
+  const editing = data.habits.find((h) => h.id === editingId);
   const t = today();
   const week = Array.from({ length: 7 }, (_, i) => addDays(t, i - 6));
 
@@ -187,45 +280,13 @@ export function Habits() {
       <div className="grid-2">
         <Panel title="Heute">
           {data.habits.length === 0 ? <Empty>Noch keine Gewohnheiten.</Empty> : (
-            <ul className="list habit-rows">{data.habits.map((h) => <HabitRow key={h.id} habit={h} />)}</ul>
+            <ul className="list habit-rows">{data.habits.map((h) => <HabitRow key={h.id} habit={h} onEdit={() => setEditingId(h.id)} />)}</ul>
           )}
         </Panel>
         <Panel title="Auszeichnungen"><Awards /></Panel>
       </div>
-      {adding && (
-        <Sheet
-          title="Neue Gewohnheit"
-          onClose={() => setAdding(false)}
-          submitDisabled={!name.trim()}
-          onSubmit={() => {
-            const goal = Number(target.replace(',', '.'));
-            add('habits', {
-              name: name.trim(),
-              icon: icon.trim() || '✨',
-              ...(goal > 0 ? { target: goal, unit: unit.trim(), step: goal >= 20 ? 5 : goal >= 4 ? 1 : goal / 4 } : {}),
-            });
-            setName('');
-            setTarget('');
-            setUnit('');
-            setAdding(false);
-          }}
-        >
-          <div className="row">
-            <label className="narrow-label">Symbol<input className="narrow" value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={4} /></label>
-            <label className="grow">Gewohnheit<input autoFocus placeholder="z. B. 10 Minuten meditieren" value={name} onChange={(e) => setName(e.target.value)} /></label>
-          </div>
-          <div className="emoji-picks" role="group" aria-label="Symbol wählen">
-            {['✨', '🧘', '📖', '💧', '🏃', '🥗', '😴', '📝', '🎸', '🧹', '💊', '🚭'].map((x) => (
-              <button key={x} type="button" className={icon === x ? 'on' : ''} onClick={() => setIcon(x)}>{x}</button>
-            ))}
-          </div>
-          <p className="muted small">Optional als Menge mit Tagesziel – dann gibt es einen „+“-Knopf (z. B. 2 l Wasser, 20 Seiten).</p>
-          <div className="modal-grid">
-            <label>Tagesziel<input inputMode="decimal" placeholder="z. B. 2" value={target} onChange={(e) => setTarget(e.target.value)} /></label>
-            <label>Einheit<input placeholder="z. B. l, Seiten" value={unit} onChange={(e) => setUnit(e.target.value)} /></label>
-          </div>
-        </Sheet>
-      )}
+      {adding && <HabitSheet onClose={() => setAdding(false)} />}
+      {editing && <HabitSheet habit={editing} onClose={() => setEditingId(null)} />}
       <Panel title="Letzte 7 Tage">
         {data.habits.length === 0 ? <Empty>Noch keine Gewohnheiten.</Empty> : (
           <div className="table-wrap">

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Collection, Data, ID, Settings } from './types';
 import { defaultAppearance, defaultFinance, defaultSemester, defaultSettings, demoData } from './demo';
 import { defaultRingGoals } from './lib/rings';
@@ -7,6 +7,8 @@ import { today } from './lib/dates';
 import { migrateSidebar, SIDEBAR_LAYOUT } from './lib/layout';
 
 const STORAGE_KEY = 'antonos:v1';
+/** Wartezeit nach der letzten Änderung, bevor gespeichert wird (ms) */
+const SAVE_DELAY = 400;
 
 export const emptyData = (): Data => ({
   courses: [],
@@ -34,7 +36,6 @@ export const emptyData = (): Data => ({
   schemaVersion: SCHEMA_VERSION,
 });
 
-/** Ergänzt fehlende Sammlungen, z. B. bei Importen älterer Exporte. */
 /**
  * Ergänzt fehlende Sammlungen, z. B. bei Importen älterer Exporte.
  * Unbekannte Bereiche (von einer neueren AntonOS-Version) bleiben erhalten,
@@ -105,15 +106,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Data>(load);
   const [saveFailed, setSaveFailed] = useState(false);
 
-  useEffect(() => {
+  // Kurz gebündelt speichern statt bei jedem Tastendruck alles (inkl. Bilder) neu zu schreiben
+  const unsaved = useRef<Data | null>(null);
+  const flush = useCallback(() => {
+    const next = unsaved.current;
+    if (!next) return;
+    unsaved.current = null;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       setSaveFailed(false);
     } catch {
       // z. B. Speicher voll (große Bilder) oder privater Modus
       setSaveFailed(true);
     }
-  }, [data]);
+  }, []);
+
+  useEffect(() => {
+    unsaved.current = data;
+    const timer = setTimeout(flush, SAVE_DELAY);
+    return () => clearTimeout(timer);
+  }, [data, flush]);
+
+  // Beim Schließen, Neuladen oder Wechsel in den Hintergrund sofort sichern
+  useEffect(() => {
+    const onVisibility = () => document.visibilityState === 'hidden' && flush();
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+      flush();
+    };
+  }, [flush]);
 
   const add = useCallback(<C extends Collection>(collection: C, item: Omit<Item<C>, 'id'>) => {
     const id = newId();

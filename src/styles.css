@@ -1596,6 +1596,122 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adj
 .modal-backdrop, .spotlight-backdrop { overscroll-behavior: contain; }
 .modal { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 
+/* Kalender: Geburtstage und Reisen */
+.cal-item.birthday, .tl-event.birthday { --p: var(--c, #FF2D55); border-left: 3px solid var(--p); background: color-mix(in srgb, var(--p) 14%, var(--surface)); }
+.cal-item.trip, .tl-event.trip { --p: #0A84A8; border-left: 3px solid var(--p); background: color-mix(in srgb, var(--p) 14%, var(--surface)); }
+.cal-dot.birthday, .dl-bar.birthday { --p: var(--c, #FF2D55); background: var(--p); }
+.cal-dot.trip, .dl-bar.trip { --p: #0A84A8; background: var(--p); }
+
+/* Gemeinsame Kleinteile */
+.page-tabs { align-self: flex-start; }
+.small-pill { font-size: 0.8rem; padding: 0.2rem 0.65rem; border-radius: 999px; background: var(--surface-2); border: 1px solid transparent; color: var(--text); min-height: 0; }
+.small-pill:hover { border-color: var(--border); }
+.struck { text-decoration: line-through; color: var(--muted); }
+.negative { color: var(--danger); }
+.abo-warn { color: var(--warn); font-weight: 600; }
+.stepper { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface-2); border-radius: 999px; padding: 2px; }
+.stepper button { width: 32px; height: 32px; padding: 0; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); }
+.stepper span { font-size: 0.9rem; font-weight: 600; padding: 0 0.25rem; }
+.list li.done > .grow { color: var(--muted); text-decoration: line-through; }
+.list li.done .shop-check, .pack-check[aria-checked='true'] { background: #34C759 !important; border-color: #34C759 !important; box-shadow: inset 0 0 0 3px var(--surface); }
+
+/* Essen */
+.meal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.5rem; }
+.meal-day { display: flex; flex-direction: column; gap: 0.4rem; background: var(--surface-2); border-radius: 10px; padding: 0.5rem; min-width: 0; }
+.meal-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); background: var(--accent-soft); }
+.meal-day.past { opacity: 0.6; }
+.meal-day-name { display: flex; align-items: baseline; gap: 0.35rem; }
+.meal-slot { display: flex; flex-direction: column; gap: 0.25rem; min-height: 56px; }
+.meal-slot-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.meal-chip { display: flex; align-items: center; gap: 0.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.25rem 0.2rem 0.25rem 0.5rem; font-size: 0.85rem; min-width: 0; }
+.meal-chip.has-recipe { border-left: 3px solid #FF9500; }
+.meal-chip > a, .meal-chip > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--text); }
+.meal-chip .icon { width: 24px; height: 24px; min-height: 0; padding: 0; font-size: 0.9rem; }
+.meal-add { border: 1.5px dashed var(--border) !important; background: none !important; color: var(--muted); border-radius: 8px; height: 34px; padding: 0; }
+.meal-add:hover { color: var(--accent); border-color: var(--accent) !important; }
+.meal-pick { max-height: 260px; overflow-y: auto; }
+.meal-when { min-width: 6.5rem; }
+.recipe-search { width: 100%; max-width: 420px; }
+.recipe-actions { align-items: center; }
+.recipe-steps { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 0.6rem; line-height: 1.55; }
+.cook-mode { position: fixed; inset: 0; z-index: 60; background: var(--bg); padding: max(1.25rem, env(safe-area-inset-top)) 1.25rem max(1.25rem, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
+.cook-step { font-size: clamp(1.5rem, 4.5vw, 2.4rem); line-height: 1.35; font-weight: 600; margin: auto 0; max-width: 900px; }
+.cook-nav button { min-width: 8rem; min-height: 48px; font-size: 1rem; }
+.cook-ingredients { font-size: 1.3rem; line-height: 1.8; margin: 0; padding-left: 1.2rem; }
+@media (max-width: 800px) {
+  .meal-week { grid-template-columns: minmax(0, 1fr); }
+  .meal-day { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+  .meal-day-name { width: 100%; }
+  .meal-slot { flex: 1 1 140px; min-height: 0; }
+}
+
+/* Abos & Verträge */
+.abo-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.abo-summary { background: #1C1C1E; color: #fff; border-radius: 18px; padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 0.9rem; }
+.abo-summary-label { color: #AEAEB2; font-weight: 600; font-size: 0.9rem; }
+.abo-sum { display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.abo-sum strong { font-size: 2.4rem; letter-spacing: -0.02em; line-height: 1.1; }
+.abo-sum span { color: #AEAEB2; font-size: 0.9rem; }
+.abo-bar { display: flex; height: 10px; border-radius: 10px; overflow: hidden; gap: 2px; }
+.abo-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: #D1D1D6; }
+.abo-legend li { display: flex; align-items: center; gap: 0.35rem; }
+.segmented.dark { border-color: #3A3A3C; }
+.segmented.dark button { background: #2C2C2E; color: #D1D1D6; font-size: 0.8rem; padding: 0.2rem 0.7rem; min-height: 0; }
+.segmented.dark button + button { border-left-color: #3A3A3C; }
+.segmented.dark button.selected { background: #636366; color: #fff; }
+.abo-deadline { background: color-mix(in srgb, #FF9500 14%, var(--surface)); border: 1px solid color-mix(in srgb, #FF9500 35%, var(--surface)); border-radius: 14px; padding: 0.9rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.abo-hint { background: var(--accent-soft); border-radius: 12px; padding: 0.7rem 0.9rem; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.9rem; }
+.abo-list li { padding: 0; }
+.abo-open { display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; background: none !important; border: 0 !important; padding: 0.6rem 0.25rem; color: var(--text); border-radius: 8px; }
+.abo-open:hover { background: var(--surface-2) !important; }
+.abo-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.abo-icon { width: 38px; height: 38px; flex: none; border-radius: 10px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 1rem; text-shadow: 0 1px 2px rgb(0 0 0 / 0.25); }
+.abo-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; white-space: nowrap; }
+.abo-row.paused { opacity: 0.6; }
+.meta.abo-warn { color: var(--warn); }
+.abo-stopped summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 800px) { .abo-top { grid-template-columns: minmax(0, 1fr); } }
+
+/* Menschen */
+.avatar { flex: none; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-weight: 700; text-shadow: 0 1px 2px rgb(0 0 0 / 0.2); }
+.bday-ring { position: relative; flex: none; display: inline-grid; place-items: center; width: 46px; height: 46px; }
+.bday-ring svg { position: absolute; inset: 0; }
+.bday-soon { color: #D70040; }
+.people-group h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0.5rem 0 0.1rem; }
+.person-hero { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center; padding: 1.25rem 1rem 1rem; border-radius: var(--radius); background: color-mix(in srgb, var(--c) 16%, var(--surface)); }
+.person-hero > .button { position: absolute; left: 12px; top: 12px; }
+.person-hero h1 { margin: 0.2rem 0 0; }
+.person-hero p { margin: 0; color: var(--muted); }
+.person-countdown { color: var(--text) !important; }
+.meet-date { min-width: 7.5rem; }
+
+/* Reisen */
+.trip-hero { position: relative; border-radius: var(--radius); overflow: hidden; }
+.trip-hero .cover.banner { border-radius: 0; }
+.trip-hero-title { position: absolute; inset: auto 0 0 0; padding: 2.5rem 1.25rem 1rem; color: #fff; background: linear-gradient(transparent, rgb(0 0 0 / 0.6)); display: flex; flex-direction: column; }
+.trip-hero-title h1 { color: #fff; margin: 0; }
+.trip-hero-title span { opacity: 0.9; font-size: 0.9rem; }
+.trip-actions { align-items: center; }
+.trip-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+.trip-stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.8rem 1rem; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.trip-stat strong { font-size: 1.35rem; }
+.trip-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.trip-timeline li { position: relative; display: flex; gap: 0.75rem; align-items: flex-start; padding: 0 0 0.9rem 0; }
+.trip-timeline li::before { content: ''; position: absolute; left: 5px; top: 16px; bottom: 0; width: 2px; background: var(--border); }
+.trip-timeline li:last-child::before { display: none; }
+.trip-dot { flex: none; width: 12px; height: 12px; margin-top: 5px; border-radius: 50%; background: var(--c); position: relative; z-index: 1; }
+.pack-section h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0.4rem 0 0; }
+.pack-check { flex: none; width: 20px; height: 20px; min-height: 0; padding: 0; border-radius: 6px; border: 1.5px solid #C7C7CC !important; background: transparent; }
+.pack-templates { align-items: center; gap: 0.35rem; }
+.trips-past { margin-top: 0.5rem; }
+.trips-past summary { cursor: pointer; font-weight: 600; margin-bottom: 0.75rem; }
+.gallery-card.past { opacity: 0.7; }
+.trip-widget { display: flex; flex-direction: column; gap: 0.2rem; color: var(--text); }
+.trip-widget:hover { text-decoration: none; }
+.trip-widget-title { font-size: 1.2rem; }
+.trip-widget-count { font-size: 1.8rem; font-weight: 700; color: #0A84A8; line-height: 1.15; }
+@media (max-width: 520px) { .trip-stats { grid-template-columns: minmax(0, 1fr); } }
+
 /* Blättern mit Übergang: die Ansicht gleitet, ohne die Seite seitlich scrollen zu lassen */
 .calendar { overflow-x: clip; }
 .cal-body { display: flex; flex-direction: column; gap: 0.6rem; touch-action: pan-y; }

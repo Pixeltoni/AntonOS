@@ -12,7 +12,7 @@ export interface SearchHit {
 }
 
 /** Reihenfolge der Gruppen in der Trefferliste */
-export const GROUP_ORDER = ['Seiten', 'Aufgaben', 'Notizen', 'Lernkarten', 'Termine', 'Prüfungen', 'Kurse', 'Projekte', 'Ziele', 'Gewohnheiten', 'Einkaufsliste', 'Medien', 'Buchungen', 'Tools'];
+export const GROUP_ORDER = ['Seiten', 'Aufgaben', 'Notizen', 'Lernkarten', 'Termine', 'Prüfungen', 'Kurse', 'Projekte', 'Ziele', 'Gewohnheiten', 'Menschen', 'Rezepte', 'Reisen', 'Abos', 'Einkaufsliste', 'Medien', 'Buchungen', 'Tools'];
 
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ß/g, 'ss');
 
@@ -65,6 +65,13 @@ export function searchAll(data: Data, query: string, pages: NavItem[], limitPerG
   for (const p of data.projects) push({ key: `proj-${p.id}`, group: 'Projekte', icon: '🚀', title: p.title, subtitle: p.status, href: `#/projekte/${p.id}` }, p.title, p.description);
   for (const g of data.goals) push({ key: `goal-${g.id}`, group: 'Ziele', icon: '🎯', title: g.title, subtitle: `${g.area} · ${g.progress} %`, href: '#/ziele' }, g.title, g.why);
   for (const h of data.habits) push({ key: `habit-${h.id}`, group: 'Gewohnheiten', icon: h.icon, title: h.name, subtitle: 'Gewohnheit', href: '#/gewohnheiten' }, h.name);
+  for (const p of data.people ?? []) {
+    const bday = p.birthday ? `Geburtstag ${Number(p.birthday.slice(3))}.${Number(p.birthday.slice(0, 2))}.` : '';
+    push({ key: `person-${p.id}`, group: 'Menschen', icon: '👤', title: p.name, subtitle: [p.group, bday].filter(Boolean).join(' · ') || 'Mensch', href: `#/menschen/${p.id}` }, p.name, `${p.group} ${p.note} ${p.gifts.map((g) => g.title).join(' ')}`);
+  }
+  for (const r of data.recipes ?? []) push({ key: `recipe-${r.id}`, group: 'Rezepte', icon: '🍽️', title: r.title, subtitle: [r.minutes ? `${r.minutes} Min.` : '', r.tags].filter(Boolean).join(' · ') || 'Rezept', href: `#/essen/${r.id}` }, r.title, `${r.tags} ${r.ingredients}`);
+  for (const t of data.trips ?? []) push({ key: `trip-${t.id}`, group: 'Reisen', icon: '✈️', title: t.title, subtitle: `${new Date(`${t.start}T12:00`).toLocaleDateString('de-DE')} – ${new Date(`${t.end}T12:00`).toLocaleDateString('de-DE')}`, href: `#/reisen/${t.id}` }, t.title, t.note);
+  for (const r of data.recurring) if (r.type === 'Ausgabe') push({ key: `abo-${r.id}`, group: 'Abos', icon: '🔁', title: r.description || r.category, subtitle: `${r.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} · ${r.category}`, href: '#/abos' }, r.description || r.category, r.category);
   for (const s of data.shopping) push({ key: `shop-${s.id}`, group: 'Einkaufsliste', icon: s.done ? '☑️' : '🛒', title: s.name, subtitle: s.amount || 'Einkaufsliste', href: '#/einkauf' }, s.name);
   for (const m of data.media) {
     const read = m.kind === 'Buch' || m.kind === 'Hörbuch';

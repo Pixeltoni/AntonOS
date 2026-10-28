@@ -26,6 +26,10 @@ export const emptyData = (): Data => ({
   recurring: [],
   pots: [],
   shopping: [],
+  recipes: [],
+  meals: [],
+  people: [],
+  trips: [],
   moods: [],
   media: [],
   workouts: [],
@@ -58,7 +62,7 @@ export function normalize(raw: unknown): Data {
   }
   if (obj.settings && typeof obj.settings === 'object') {
     const stored = obj.settings as Partial<Settings>;
-    result.settings = { ...base.settings, ...stored, appearance: normalizeAppearance(stored.appearance), rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) }, shoppingFrequent: Array.isArray(stored.shoppingFrequent) ? stored.shoppingFrequent : [], semester: { ...defaultSemester(), ...(stored.semester ?? {}) } };
+    result.settings = { ...base.settings, ...stored, appearance: normalizeAppearance(stored.appearance), rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) }, shoppingFrequent: Array.isArray(stored.shoppingFrequent) ? stored.shoppingFrequent : [], packTemplates: Array.isArray(stored.packTemplates) ? stored.packTemplates : [], semester: { ...defaultSemester(), ...(stored.semester ?? {}) } };
     // Alte Sidebar einmalig auf die neue Ordnung (Life-Organizer) umstellen
     if ((stored.sidebarLayout ?? 1) < SIDEBAR_LAYOUT) {
       result.settings.sidebar = Array.isArray(stored.sidebar) && stored.sidebar.length ? migrateSidebar(stored.sidebar) : [];
@@ -164,6 +168,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const next = { ...d, [collection]: (d[collection] as { id: ID }[]).filter((x) => x.id !== id) };
       // Abhängige Einträge mitpflegen
       if (collection === 'habits') next.habitLogs = d.habitLogs.filter((l) => l.habitId !== id);
+      if (collection === 'recipes') next.meals = d.meals.map((m) => (m.recipeId === id ? { ...m, recipeId: null } : m));
+      if (collection === 'trips') next.transactions = d.transactions.map((t) => (t.tripId === id ? { ...t, tripId: undefined } : t));
       if (collection === 'projects') next.tasks = d.tasks.map((t) => (t.projectId === id ? { ...t, projectId: null } : t));
       return next;
     });

@@ -5,7 +5,10 @@ import { App } from './App';
 import { SyncProvider } from './components/sync';
 import { ToastProvider } from './components/toast';
 import { FocusProvider } from './components/focus';
+import { setupPwa } from './lib/pwa';
 import './styles.css';
+
+setupPwa();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

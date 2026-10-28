@@ -6,6 +6,7 @@ import { spotifyEmbedUrl } from '../lib/life';
 import { ImageInput } from '../components/widgets';
 import { AppearanceEditor } from '../components/appearance';
 import { CloudPanel, useSync } from '../components/sync';
+import { AppPanel } from '../components/pwa';
 import { PageHeader, Panel } from '../components/ui';
 
 export function Settings() {
@@ -53,6 +54,9 @@ export function Settings() {
       </Panel>
       <Panel title="🎨 Hintergrund & Design">
         <AppearanceEditor />
+      </Panel>
+      <Panel title="📱 Als App auf dem Handy">
+        <AppPanel />
       </Panel>
       <Panel title="☁️ Synchronisierung">
         <CloudPanel />

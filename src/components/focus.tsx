@@ -7,6 +7,7 @@ import {
   start as startTimer, stop as stopTimer, tick, type FocusConfig, type FocusTimer,
 } from '../lib/focus';
 import { useToast } from './toast';
+import { notify } from '../lib/notify';
 
 const KEY = 'antonos:focus';
 
@@ -106,13 +107,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       const last = r.finished[r.finished.length - 1];
       chime();
       show(`${focusMode(r.timer.config.mode).icon} ${NEXT_TEXT[last.next]}`, undefined, 6000);
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
-        try {
-          new Notification('AntonOS Fokus', { body: NEXT_TEXT[last.next] });
-        } catch {
-          // nur über Service Worker möglich
-        }
-      }
+      if (document.hidden) void notify('AntonOS Fokus', NEXT_TEXT[last.next], 'fokus');
     };
     step();
     const id = setInterval(step, 500);

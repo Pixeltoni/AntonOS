@@ -3,6 +3,7 @@ import { useRingReminder } from './components/rings';
 import { FocusPill } from './components/focus';
 import { openSpotlight, SHORTCUT, Spotlight } from './components/spotlight';
 import { useEventReminders } from './components/calendar';
+import { OfflineBanner, ShareSheet, useAppBadge } from './components/pwa';
 import { useRecurringBookings } from './pages/Finance';
 import { useStore } from './store';
 import type { NavItem } from './types';
@@ -139,6 +140,7 @@ function Shell() {
   useRingReminder();
   useRecurringBookings();
   useEventReminders();
+  useAppBadge();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);
@@ -226,6 +228,7 @@ function Shell() {
             Bild-Links statt Uploads, und lade ein <a href="#/einstellungen">Backup</a> herunter.
           </p>
         )}
+        <OfflineBanner />
         <UpdateBanner />
         <ConflictBanner />
         <Page route={route} />
@@ -233,6 +236,7 @@ function Shell() {
       <MiniPlayer hidden={current === 'musik' || current === 'dashboard'} />
       <FocusPill hidden={current === 'fokus'} />
       <Spotlight />
+      <ShareSheet />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type { DateStr, WidgetVariant } from '../types';
 import { today } from '../lib/dates';
 import { defaultRingGoals, openRings, RING_COLORS, RING_TRACKS, ringDay, weekOf, type RingDay } from '../lib/rings';
 import { useToast } from './toast';
+import { notify } from '../lib/notify';
 
 const KEYS = ['learn', 'move', 'habits'] as const;
 
@@ -187,15 +188,9 @@ export function useRingReminder() {
       const open = openRings(ringDay(data, goals, t));
       if (open.length === 0) return;
       const text = `Noch offen: ${open.join(', ')}`;
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        try {
-          new Notification('AntonOS – schließ deine Ringe', { body: text });
-          return;
-        } catch {
-          // z. B. auf Mobilgeräten nur über einen Service Worker möglich
-        }
-      }
-      show(`⭕ ${text}`, { label: 'Ansehen', run: () => (location.hash = '#/gewohnheiten') }, 10000);
+      notify('AntonOS – schließ deine Ringe', text, 'ringe').then((ok) => {
+        if (!ok) show(`⭕ ${text}`, { label: 'Ansehen', run: () => (location.hash = '#/gewohnheiten') }, 10000);
+      });
     };
     check();
     const id = setInterval(check, 60_000);

@@ -52,7 +52,7 @@ export function Settings() {
           </label>
         </div>
       </Panel>
-      <Panel title="🎨 Hintergrund & Design">
+      <Panel title="🎨 Design">
         <AppearanceEditor />
       </Panel>
       <Panel title="📱 Als App auf dem Handy">

@@ -2,27 +2,26 @@ import { useEffect } from 'react';
 import { useStore } from '../store';
 import type { DateStr, WidgetVariant } from '../types';
 import { today } from '../lib/dates';
-import { defaultRingGoals, openRings, RING_COLORS, RING_TRACKS, ringDay, weekOf, type RingDay } from '../lib/rings';
+import { defaultRingGoals, openRings, RING_COLORS, RING_TRACKS, ringDay, weekOf, type RingDay, type RingValue } from '../lib/rings';
 import { useToast } from './toast';
 import { notify } from '../lib/notify';
 
-const KEYS = ['learn', 'move', 'habits'] as const;
+type RingArc = Pick<RingValue, 'share' | 'color' | 'track'>;
 
-/** Drei ineinanderliegende Ringe wie bei Apple Fitness. Über 100 % läuft der Ring weiter. */
-export function Rings({ day, size = 120, stroke }: { day: Pick<RingDay, 'learnShare' | 'moveShare' | 'habitsShare'>; size?: number; stroke?: number }) {
+/** Ineinanderliegende Ringe wie bei Apple Fitness. Über 100 % läuft der Ring weiter. */
+export function Rings({ rings, size = 120, stroke }: { rings: RingArc[]; size?: number; stroke?: number }) {
   const sw = stroke ?? Math.max(3, Math.round(size / 9));
   const gap = Math.max(1, Math.round(sw / 6));
-  const shares = [day.learnShare, day.moveShare, day.habitsShare];
   return (
     <svg className="rings" width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-      {KEYS.map((k, i) => {
+      {rings.map((ring, i) => {
         const r = size / 2 - sw / 2 - i * (sw + gap);
         if (r <= 0) return null;
         const c = 2 * Math.PI * r;
-        const share = Math.max(0, shares[i]);
+        const share = Math.max(0, ring.share);
         return (
-          <g key={k} transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={RING_TRACKS[k]} strokeWidth={sw} />
+          <g key={i} transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={ring.track} strokeWidth={sw} />
             {share > 0 && (
               <circle
                 className="ring-arc"
@@ -30,7 +29,7 @@ export function Rings({ day, size = 120, stroke }: { day: Pick<RingDay, 'learnSh
                 cy={size / 2}
                 r={r}
                 fill="none"
-                stroke={RING_COLORS[k]}
+                stroke={ring.color}
                 strokeWidth={sw}
                 strokeLinecap="round"
                 strokeDasharray={`${Math.min(share, 1) * c} ${c}`}
@@ -42,7 +41,7 @@ export function Rings({ day, size = 120, stroke }: { day: Pick<RingDay, 'learnSh
                 cy={size / 2}
                 r={r}
                 fill="none"
-                stroke={RING_COLORS[k]}
+                stroke={ring.color}
                 strokeWidth={sw}
                 strokeLinecap="round"
                 strokeDasharray={`${Math.min(share - 1, 1) * c} ${c}`}
@@ -61,28 +60,15 @@ export function useRingDay(date: DateStr = today()): RingDay {
   return ringDay(data, data.settings.rings ?? defaultRingGoals(), date);
 }
 
-const fmtHours = (min: number) => (min / 60).toLocaleString('de-DE', { maximumFractionDigits: 1 });
-
 function Legend({ day }: { day: RingDay }) {
-  const { data } = useStore();
-  const goals = data.settings.rings ?? defaultRingGoals();
-  const inHours = goals.learnMinutes >= 60;
-  const learnGoal = inHours ? `${fmtHours(goals.learnMinutes)} Std.` : `${goals.learnMinutes} Min.`;
-  const learnNow = inHours ? fmtHours(day.learn) : String(day.learn);
   return (
     <dl className="ring-legend">
-      <div>
-        <dt>Lernen</dt>
-        <dd style={{ color: RING_COLORS.learn }}>{learnNow}/{learnGoal}</dd>
-      </div>
-      <div>
-        <dt>Bewegung</dt>
-        <dd style={{ color: RING_COLORS.move }}>{day.move}/{goals.moveMinutes} Min.</dd>
-      </div>
-      <div>
-        <dt>Gewohnheiten</dt>
-        <dd style={{ color: RING_COLORS.habits }}>{day.habitsDone}/{day.habitsTotal}</dd>
-      </div>
+      {day.rings.map((r) => (
+        <div key={r.slot}>
+          <dt>{r.label}</dt>
+          <dd style={{ color: r.color }}>{r.text}</dd>
+        </div>
+      ))}
     </dl>
   );
 }
@@ -99,7 +85,7 @@ function WeekStrip() {
         return (
           <div key={d} className={`ring-week-day ${d === t ? 'today' : ''} ${future ? 'future' : ''}`} title={`${d}${day.closed ? ' · alle Ringe geschlossen' : ''}`}>
             <span>{new Date(`${d}T12:00`).toLocaleDateString('de-DE', { weekday: 'narrow' })}</span>
-            <Rings day={future ? { learnShare: 0, moveShare: 0, habitsShare: 0 } : day} size={30} stroke={4} />
+            <Rings rings={future ? day.rings.map((r) => ({ ...r, share: 0 })) : day.rings} size={30} stroke={4} />
           </div>
         );
       })}
@@ -128,7 +114,7 @@ export function RingsCard() {
   return (
     <section className="rings-card" aria-label="Aktivitätsringe heute">
       <div className="rings-card-main">
-        <Rings day={day} size={150} />
+        <Rings rings={day.rings} size={150} />
         <div>
           <h2>Heute</h2>
           <Legend day={day} />
@@ -146,14 +132,14 @@ export function RingsWidget({ variant = 'standard' }: { variant?: WidgetVariant 
   if (variant === 'kompakt') {
     return (
       <a className="rings-widget kompakt" href="#/gewohnheiten" aria-label="Aktivitätsringe">
-        <Rings day={day} size={96} />
+        <Rings rings={day.rings} size={96} />
       </a>
     );
   }
   return (
     <div className="rings-widget">
       <div className="rings-widget-row">
-        <Rings day={day} size={variant === 'detail' ? 120 : 96} />
+        <Rings rings={day.rings} size={variant === 'detail' ? 120 : 96} />
         <Legend day={day} />
       </div>
       {variant === 'detail' && <WeekStrip />}

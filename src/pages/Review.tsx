@@ -166,7 +166,7 @@ function Story({ week, prev, title, weekLabel }: { week: WeekReview; prev: WeekR
           <div className="story-rings">
             {week.days.map((d) => (
               <div key={d}>
-                <Rings day={ringDay(data, goals, d)} size={38} stroke={5} />
+                <Rings rings={ringDay(data, goals, d).rings} size={38} stroke={5} />
                 <small>{parseDate(d).toLocaleDateString('de-DE', { weekday: 'narrow' })}</small>
               </div>
             ))}

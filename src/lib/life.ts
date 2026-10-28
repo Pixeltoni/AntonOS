@@ -96,6 +96,23 @@ export function completionRate(logs: HabitLog[], habit: HabitRef, on: DateStr, d
   return (done / days) * 100;
 }
 
+/** Mengen für die Plus-Knöpfe einer Gewohnheit (mindestens eine). */
+export function habitSteps(habit: Pick<Habit, 'step' | 'steps'>): number[] {
+  const list = (habit.steps ?? []).filter((n) => Number.isFinite(n) && n > 0);
+  if (list.length) return list;
+  return [habit.step && habit.step > 0 ? habit.step : 1];
+}
+
+/** „0,2; 0,5“ oder „0,2 0,5“ → [0.2, 0.5] (sortiert, ohne Doppelte) */
+export function parseAmounts(text: string): number[] {
+  const parts = text.replace(/,\s+/g, ';').split(/[;\s/|]+/);
+  const nums = parts.map((p) => Number(p.replace(',', '.'))).filter((n) => Number.isFinite(n) && n > 0);
+  return [...new Set(nums.map((n) => Math.round(n * 1000) / 1000))].sort((a, b) => a - b);
+}
+
+/** [0.2, 0.5] → „0,2; 0,5“ */
+export const formatAmounts = (list: number[]): string => list.map((n) => n.toLocaleString('de-DE', { maximumFractionDigits: 3 })).join('; ');
+
 /* ---------- Finanzen ---------- */
 
 export interface MonthTotals {

@@ -161,8 +161,10 @@ export interface Habit {
   target?: number;
   /** Einheit, z. B. „l“ oder „Seiten“ */
   unit?: string;
-  /** Schrittweite für den Plus-Knopf, z. B. 0,25 */
+  /** Schrittweite für den Plus-Knopf, z. B. 0,25 (ältere Gewohnheiten) */
   step?: number;
+  /** Mehrere Mengen zum Hinzufügen, z. B. [0,2, 0,5] – je ein Plus-Knopf */
+  steps?: number[];
 }
 
 export interface HabitLog {
@@ -408,11 +410,25 @@ export interface SemesterSettings {
   remind: number;
 }
 
+/**
+ * Was ein Aktivitätsring zeigt: Lernen (Fokus-Timer im Lernmodus), Fokuszeit gesamt,
+ * Bewegung (Training), alle Gewohnheiten, erledigte Aufgaben oder eine einzelne Gewohnheit.
+ */
+export type RingSource = 'learn' | 'focus' | 'move' | 'habits' | 'tasks' | `habit:${string}` | 'off';
+
+export interface RingSlot {
+  source: RingSource;
+  /** Tagesziel (Minuten bzw. Aufgaben); bei Gewohnheiten ohne Bedeutung */
+  goal: number;
+}
+
 export interface RingGoals {
-  /** Lernminuten pro Tag (aus dem Fokus-Timer) */
+  /** Lernminuten pro Tag (aus dem Fokus-Timer) – ältere Einstellung, gilt ohne `slots` */
   learnMinutes: number;
-  /** Bewegungsminuten pro Tag (aus dem Training) */
+  /** Bewegungsminuten pro Tag (aus dem Training) – ältere Einstellung, gilt ohne `slots` */
   moveMinutes: number;
+  /** Die drei Ringe von außen nach innen */
+  slots?: RingSlot[];
   /** Abends erinnern, wenn ein Ring noch offen ist */
   reminder: boolean;
   reminderTime: string;

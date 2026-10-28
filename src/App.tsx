@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRingReminder } from './components/rings';
 import { FocusPill } from './components/focus';
 import { openSpotlight, SHORTCUT, Spotlight } from './components/spotlight';
+import { ASSISTANT_SHORTCUT, Assistant, openAssistant, useTaskReminders } from './components/assistant';
 import { useEventReminders } from './components/calendar';
 import { OfflineBanner, ShareSheet, useAppBadge } from './components/pwa';
 import { Icon, Logo, NavIcon, PAGE_ICONS } from './components/icons';
@@ -146,6 +147,7 @@ function Shell() {
   useRingReminder();
   useRecurringBookings();
   useEventReminders();
+  useTaskReminders();
   useAppBadge();
   useWeeklyReviewReminder();
 
@@ -176,6 +178,7 @@ function Shell() {
             <span className="nav-icon" aria-hidden><Logo /></span>
             <span className="nav-text">AntonOS</span>
           </span>
+          <button className="icon search-toggle assistant-toggle" onClick={openAssistant} aria-label="Assistentin"><Icon icon={PAGE_ICONS.assistentin} size={22} /></button>
           <button className="icon search-toggle" onClick={openSpotlight} aria-label="Suchen"><Icon icon={PAGE_ICONS.suche} size={22} /></button>
           <button className="icon menu-toggle" onClick={() => setMenuOpen((o) => !o)} aria-label={menuOpen ? 'Menü schließen' : 'Menü öffnen'} aria-expanded={menuOpen}>
             {menuOpen ? '✕' : '☰'}
@@ -210,6 +213,11 @@ function Shell() {
                 <span className="nav-text grow">Suchen</span>
                 <kbd className="nav-kbd nav-text">{SHORTCUT}</kbd>
               </button>
+              <button className="nav-button" onClick={() => { setMenuOpen(false); openAssistant(); }} title={`Assistentin (${ASSISTANT_SHORTCUT})`}>
+                <span className="nav-icon" aria-hidden><Icon icon={PAGE_ICONS.assistentin} /></span>
+                <span className="nav-text grow">Assistentin</span>
+                <kbd className="nav-kbd nav-text">{ASSISTANT_SHORTCUT}</kbd>
+              </button>
               <SyncBadge />
               <button className="nav-button" onClick={() => setEditingSidebar(true)} title="Sidebar bearbeiten">
                 <span className="nav-icon" aria-hidden><Icon icon={PAGE_ICONS.bearbeiten} /></span>
@@ -238,6 +246,7 @@ function Shell() {
       <MiniPlayer hidden={current === 'musik' || current === 'dashboard'} />
       <FocusPill hidden={current === 'fokus'} />
       <Spotlight />
+      <Assistant />
       <ShareSheet />
     </div>
   );

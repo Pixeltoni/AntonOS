@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detachOccurrence, editWholeSeries, layoutTimed, moveEvent, occurrenceDraft, onDay, rangeLabel, resizeEvent, shiftAnchor, sortEntries, spanLanes, validateEvent, weekDays, type CalendarEntry } from './calendar';
+import { detachOccurrence, dueTaskReminders, editWholeSeries, layoutTimed, moveEvent, occurrenceDraft, onDay, rangeLabel, resizeEvent, shiftAnchor, sortEntries, spanLanes, validateEvent, weekDays, type CalendarEntry } from './calendar';
 import { isoWeek } from './dates';
 
 const entry = (patch: Partial<CalendarEntry>): CalendarEntry => ({
@@ -110,5 +110,18 @@ describe('Kalender: Balken, Ziehen und Serien', () => {
     expect(single).toMatchObject({ start: '2026-10-28', startTime: '18:00', repeat: null });
     // Vorkommen um einen Tag verschoben → ganze Serie ab Donnerstag
     expect(editWholeSeries(series, '2026-10-28', { ...occ, start: '2026-10-29' }).start).toBe('2026-10-08');
+  });
+});
+
+describe('Erinnerungen an Aufgaben', () => {
+  const task = { due: '2026-10-28', dueTime: '08:00', remind: true, status: 'offen' as const };
+  it('meldet sich ab der Uhrzeit bis eine Stunde danach', () => {
+    expect(dueTaskReminders([task], new Date(2026, 9, 28, 7, 59))).toEqual([]);
+    expect(dueTaskReminders([task], new Date(2026, 9, 28, 8, 0))).toEqual([task]);
+    expect(dueTaskReminders([task], new Date(2026, 9, 28, 9, 0))).toEqual([]);
+  });
+  it('ignoriert erledigte Aufgaben und solche ohne Erinnerung', () => {
+    const at = new Date(2026, 9, 28, 8, 5);
+    expect(dueTaskReminders([{ ...task, status: 'erledigt' as const }, { ...task, remind: false }], at)).toEqual([]);
   });
 });

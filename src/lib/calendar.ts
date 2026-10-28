@@ -1,4 +1,4 @@
-import type { CalEvent, DateStr, EventColor, EventPriority, Recurrence } from '../types';
+import type { CalEvent, DateStr, EventColor, EventPriority, Recurrence, Task } from '../types';
 import { addDays, daysBetween, parseDate, toDateStr } from './dates';
 import { monthLabel, monthKey } from './life';
 import { occursOn } from './recurrence';
@@ -194,6 +194,18 @@ export function dueReminders(entries: (CalendarEntry & { remind?: number | null 
     }
   }
   return out;
+}
+
+/**
+ * Aufgaben mit Erinnerung, deren Uhrzeit erreicht ist – bis zu einer Stunde danach,
+ * falls AntonOS genau zur Uhrzeit geschlossen war.
+ */
+export function dueTaskReminders<T extends Pick<Task, 'due' | 'dueTime' | 'remind' | 'status'>>(tasks: T[], now: Date): T[] {
+  return tasks.filter((t) => {
+    if (!t.remind || t.status === 'erledigt' || !t.due || !t.dueTime) return false;
+    const at = startAt(t.due, t.dueTime);
+    return now.getTime() >= at && now.getTime() < at + 60 * 60_000;
+  });
 }
 
 export interface SpanSegment {

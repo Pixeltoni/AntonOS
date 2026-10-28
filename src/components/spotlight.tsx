@@ -9,6 +9,7 @@ import { calculate, matchScore, searchAll, topHit, type SearchHit } from '../lib
 import { useFocus } from './focus';
 import { useToast } from './toast';
 import { NavIcon } from './icons';
+import { openAssistant } from './assistant';
 
 const OPEN_EVENT = 'antonos:spotlight';
 
@@ -92,6 +93,7 @@ export function Spotlight() {
     if (!q) {
       // Ohne Eingabe: schnelle Wege
       out.push(
+        { key: 'a-assist', group: 'Vorschläge', icon: '🪄', title: 'Assistentin', hint: '„Erinnere mich morgen um 8 …“', run: () => { close(); openAssistant(); } },
         { key: 'a-task', group: 'Vorschläge', icon: '✅', title: 'Neue Aufgabe', hint: 'z. B. „Blatt 4 morgen 10 Uhr“', run: () => go('#/aufgaben') },
         { key: 'a-focus', group: 'Vorschläge', icon: '⏱️', title: focus.timer.active ? 'Zum laufenden Fokus' : 'Fokus starten', run: () => { if (!focus.timer.active) focus.start(); go('#/fokus'); } },
         { key: 'a-note', group: 'Vorschläge', icon: '📝', title: 'Neue Notiz', run: () => { const id = add('notes', { title: '', courseId: null, content: '', updated: new Date().toISOString() }); go(`#/notizen/${id}`); } },

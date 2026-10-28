@@ -271,6 +271,10 @@ export function TaskModal({ task, onClose }: { task: Task; onClose: () => void }
             <input type="checkbox" checked={!!draft.flagged} onChange={(e) => set('flagged', e.target.checked)} />
             Markiert
           </label>
+          <label className="row">
+            <input type="checkbox" checked={!!draft.remind} onChange={(e) => set('remind', e.target.checked)} disabled={!draft.due || !draft.dueTime} />
+            Zur Uhrzeit erinnern
+          </label>
         </div>
         {error && <p className="danger small" role="alert">{error}</p>}
         <div className="row between">
@@ -343,6 +347,7 @@ export function TaskList({ tasks, showCourse = true, compact = false }: { tasks:
                     <span className={overdue ? 'rem-overdue' : ''} title={formatDate(task.due)}>
                       {relativeLabel(task.due, t).replace(/^./, (c) => c.toUpperCase())}
                       {task.dueTime && `, ${task.dueTime}`}
+                      {task.remind && task.dueTime && ' 🔔'}
                     </span>
                   )}
                   {showCourse && !compact && task.courseId && <CourseBadge id={task.courseId} />}

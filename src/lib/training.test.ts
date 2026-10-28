@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TrainingDay, Workout } from '../types';
-import { bestSet, buildPlan, compareSets, describeComparison, exerciseHistory, formatSets, nextTrainingDay, parseNumber, prefillSets, previousEntry, volume } from './training';
+import { MAX_SERIES, removeSeriesFrom, seriesDates, bestSet, buildPlan, compareSets, describeComparison, exerciseHistory, formatSets, nextTrainingDay, parseNumber, prefillSets, previousEntry, volume } from './training';
 
 const day = (id: string, name: string): TrainingDay => ({ id, name, exercises: [{ id: `${id}-1`, name: 'Bankdrücken', sets: 3 }] });
 const session = (id: string, date: string, planDayId: string, sets: { weight: number; reps: number }[], name = 'Bankdrücken', exerciseId = 'push-1'): Workout => ({
@@ -71,5 +71,36 @@ describe('Trainingsplan', () => {
   it('übernimmt die Sätze vom letzten Mal', () => {
     expect(prefillSets(3, [{ weight: 60, reps: 10 }, { weight: 60, reps: 0 }])).toEqual([{ weight: 60, reps: 10 }]);
     expect(prefillSets(3, undefined)).toHaveLength(3);
+  });
+});
+
+describe('Trainings-Serien', () => {
+  it('plant an mehreren Wochentagen', () => {
+    // 2026-11-02 ist ein Montag
+    expect(seriesDates('woechentlich', '2026-11-02', '2026-11-15', [1, 4])).toEqual(['2026-11-02', '2026-11-05', '2026-11-09', '2026-11-12']);
+    expect(seriesDates('woechentlich', '2026-11-04', '2026-11-18', [])).toEqual(['2026-11-04', '2026-11-11', '2026-11-18']);
+  });
+  it('plant monatlich, auch am Monatsende', () => {
+    expect(seriesDates('monatlich', '2027-01-31', '2027-04-30')).toEqual(['2027-01-31', '2027-02-28', '2027-03-31', '2027-04-30']);
+    expect(seriesDates('monatlich', '2026-11-15', '2027-01-15')).toEqual(['2026-11-15', '2026-12-15', '2027-01-15']);
+  });
+  it('einmal oder ohne gültiges Ende nur ein Termin, nie unendlich viele', () => {
+    expect(seriesDates('einmal', '2026-11-02', '2027-11-02', [1])).toEqual(['2026-11-02']);
+    expect(seriesDates('woechentlich', '2026-11-02', '2026-10-01', [1])).toEqual(['2026-11-02']);
+    expect(seriesDates('woechentlich', '2026-01-01', '2036-01-01', [1, 2, 3, 4, 5, 6, 7])).toHaveLength(MAX_SERIES);
+  });
+});
+
+describe('Serie löschen', () => {
+  it('löscht nur offene, künftige Termine der Serie', () => {
+    const base = { title: 'Push', type: 'Krafttraining', notes: '' };
+    const ws = [
+      { ...base, id: '1', date: '2026-11-02', done: true, seriesId: 's' },
+      { ...base, id: '2', date: '2026-11-05', done: false, seriesId: 's' },
+      { ...base, id: '3', date: '2026-11-09', done: false, seriesId: 's' },
+      { ...base, id: '4', date: '2026-11-09', done: false, seriesId: 'x' },
+      { ...base, id: '5', date: '2026-11-01', done: false, seriesId: 's' },
+    ];
+    expect(removeSeriesFrom(ws, 's', '2026-11-05').map((w) => w.id)).toEqual(['1', '4', '5']);
   });
 });

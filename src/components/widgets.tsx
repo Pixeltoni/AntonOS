@@ -182,9 +182,15 @@ export function Agenda({ days }: { days: number }) {
           <span className="agenda-day">{d === t ? 'Heute' : relativeLabel(d, t) === 'morgen' ? 'Morgen' : formatDate(d).slice(0, 9)}</span>
           <div className="col">
             {items.map((e) => (
-              <a key={e.key} href={e.href ?? '#/kalender'} className={`cal-item ${e.kind} ${e.priority ? `prio-${e.priority}` : ''}`}>
+              <a
+                key={e.key}
+                href={e.href ?? '#/kalender'}
+                className={`cal-item ${e.kind} ${e.priority ? `prio-${e.priority}` : ''} ${e.kind === 'event' && e.color ? 'colored' : ''}`}
+                style={e.color ? ({ ['--c' as string]: e.color } as React.CSSProperties) : undefined}
+              >
+                {e.priority === 'hoch' && <span className="prio-flag" aria-label="wichtig" />}
                 {e.time && <span className="cal-time">{e.time}</span>}
-                {e.label}
+                <span className="cal-label">{e.label}</span>
               </a>
             ))}
           </div>

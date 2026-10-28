@@ -312,6 +312,9 @@ export interface Album {
 
 export type EventPriority = 'niedrig' | 'mittel' | 'hoch';
 
+/** Farben im Notion-Stil für eigene Termine */
+export type EventColor = 'grau' | 'braun' | 'orange' | 'gelb' | 'gruen' | 'blau' | 'lila' | 'rosa' | 'rot';
+
 /** Eigener Kalendertermin */
 export interface CalEvent {
   id: ID;
@@ -328,6 +331,10 @@ export interface CalEvent {
   repeat?: Recurrence | null;
   /** Erinnerung so viele Minuten vorher (leer = keine) */
   remind?: number | null;
+  /** Ort, z. B. Raum oder Adresse */
+  location?: string;
+  /** Eigene Farbe; leer = Farbe nach Wichtigkeit */
+  color?: EventColor | null;
 }
 
 export interface Tool {

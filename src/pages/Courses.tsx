@@ -6,6 +6,7 @@ import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
 import { isDue } from '../lib/srs';
 import { TaskForm, TaskList } from '../components/TaskList';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
+import { CourseSlots, SemesterSettingsForm, Timetable } from '../components/timetable';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#0ea5e9', '#a855f7', '#ec4899', '#64748b'];
 
@@ -87,6 +88,12 @@ export function Courses() {
           })}
         </div>
       )}
+      {data.courses.length > 0 && (
+        <div className="grid-2">
+          <Panel title="🗓️ Stundenplan"><Timetable /></Panel>
+          <Panel title="🎓 Semester"><SemesterSettingsForm /></Panel>
+        </div>
+      )}
     </>
   );
 }
@@ -161,6 +168,7 @@ export function CourseDetail({ id }: { id: ID }) {
               </ul>
             )}
           </Panel>
+          <Panel title="🗓️ Zeiten im Stundenplan"><CourseSlots course={course} /></Panel>
           <Panel title="⏱️ Lernzeit" actions={<a href="#/fokus">Fokus starten →</a>}>
             <p>
               Diese Woche <strong>{hours(weekFocus)} Std.</strong> · insgesamt <strong>{hours(totalFocus)} Std.</strong>

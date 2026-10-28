@@ -12,6 +12,36 @@ export interface Course {
   room: string;
   ects: number;
   color: string;
+  /** Feste Zeiten im Stundenplan (Vorlesung, Übung …) */
+  slots?: CourseSlot[];
+}
+
+/** Wöchentliche Zeit eines Kurses */
+export interface CourseSlot {
+  id: ID;
+  /** 1 = Montag … 7 = Sonntag */
+  day: number;
+  start: string;
+  end: string;
+  room: string;
+  /** Vorlesung, Übung, Tutorium, Seminar, Praktikum */
+  kind: string;
+  /** 1 = jede Woche, 2 = alle 2 Wochen */
+  every: 1 | 2;
+  /** Erster Termin (wichtig bei „alle 2 Wochen“), sonst Semesterbeginn */
+  from?: DateStr;
+  /** Ausgefallene Termine */
+  except?: DateStr[];
+}
+
+export type RepeatFreq = 'taeglich' | 'woechentlich' | 'zweiwoechentlich' | 'monatlich' | 'jaehrlich';
+
+export interface Recurrence {
+  freq: RepeatFreq;
+  /** Letzter möglicher Tag, null = ohne Ende */
+  until: DateStr | null;
+  /** Einzelne ausgelassene Tage */
+  except?: DateStr[];
 }
 
 export type TaskStatus = 'offen' | 'in Arbeit' | 'erledigt';
@@ -240,6 +270,10 @@ export interface CalEvent {
   startTime: string;
   endTime: string;
   priority: EventPriority;
+  /** Wiederholung, z. B. jeden Mittwoch */
+  repeat?: Recurrence | null;
+  /** Erinnerung so viele Minuten vorher (leer = keine) */
+  remind?: number | null;
 }
 
 export interface Tool {
@@ -314,6 +348,16 @@ export interface Settings {
   finance: FinanceSettings;
   /** Häufig gekaufte Artikel für Vorschläge */
   shoppingFrequent: { name: string; count: number }[];
+  /** Vorlesungszeit für den Stundenplan und Erinnerung vor Vorlesungen */
+  semester: SemesterSettings;
+}
+
+export interface SemesterSettings {
+  /** Erster und letzter Vorlesungstag (leer = ohne Grenze) */
+  start: DateStr;
+  end: DateStr;
+  /** Minuten vor einer Vorlesung erinnern (0 = nie) */
+  remind: number;
 }
 
 export interface RingGoals {

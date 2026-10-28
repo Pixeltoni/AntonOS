@@ -1169,3 +1169,25 @@ main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
   .spotlight-kbd, .spotlight-foot { display: none; }
   .spotlight-close { display: block; }
 }
+
+/* ---------- Stundenplan & Wiederholungen (Vorschlag 11) ---------- */
+.cal-item.lecture, .tl-event.lecture { --p: var(--c, var(--accent)); border-left: 3px solid var(--p); background: color-mix(in srgb, var(--p) 16%, var(--surface)); }
+.cal-dot.lecture, .dl-bar.lecture { --p: var(--c, var(--accent)); background: var(--p); }
+.slot-day { display: inline-grid; place-items: center; min-width: 2rem; height: 2rem; border-radius: 8px; color: #fff; font-weight: 700; font-size: 0.8rem; flex: none; }
+.slot-row { align-items: center; gap: 0.6rem; }
+.slot-form input[type='time'] { width: auto; }
+.timetable { --days: 5; font-size: 0.78rem; }
+.tt-head { display: grid; grid-template-columns: 44px repeat(var(--days), minmax(0, 1fr)); text-align: center; color: var(--muted); font-weight: 600; padding-bottom: 6px; }
+.tt-head .today { color: #FF3B30; }
+.tt-body { position: relative; display: grid; grid-template-columns: 44px repeat(var(--days), minmax(0, 1fr)); }
+.tt-hours { position: relative; }
+.tt-hours span { position: absolute; left: 0; transform: translateY(-50%); color: var(--muted); font-size: 0.7rem; }
+.tt-col { position: relative; border-left: 1px solid var(--border); background: repeating-linear-gradient(to bottom, transparent 0, transparent 43px, var(--border) 43px, var(--border) 44px); }
+.tt-slot {
+  position: absolute; left: 3px; right: 3px; overflow: hidden; border-radius: 7px; padding: 3px 6px; display: flex; flex-direction: column; line-height: 1.25;
+  background: color-mix(in srgb, var(--c) 16%, var(--surface)); border-left: 3px solid var(--c); color: var(--text); text-decoration: none;
+}
+.tt-slot strong { color: color-mix(in srgb, var(--c) 75%, var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-slot span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-now { position: absolute; left: 0; right: 0; border-top: 2px solid #FF3B30; z-index: 1; }
+.tt-now::before { content: ''; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: #FF3B30; }

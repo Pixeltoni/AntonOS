@@ -1,6 +1,7 @@
-import type { DateStr, EventPriority } from '../types';
+import type { DateStr, EventPriority, Recurrence } from '../types';
 import { addDays, parseDate, toDateStr } from './dates';
 import { monthLabel, monthKey } from './life';
+import { occursOn } from './recurrence';
 
 export type CalendarMode = 'tag' | 'woche' | 'monat';
 
@@ -13,16 +14,21 @@ export interface CalendarEntry {
   time: string;
   endTime: string;
   label: string;
-  kind: 'event' | 'task' | 'exam' | 'project' | 'workout';
+  kind: 'event' | 'task' | 'exam' | 'project' | 'workout' | 'lecture';
   href?: string;
   done?: boolean;
   priority?: EventPriority;
   note?: string;
   /** Bei eigenen Terminen: zum Bearbeiten */
   eventId?: string;
+  /** Wiederholung; start/end beschreiben dann das erste Vorkommen */
+  recur?: Recurrence;
+  /** Eigene Farbe, z. B. die Kursfarbe bei Vorlesungen */
+  color?: string;
 }
 
 export function onDay(e: CalendarEntry, day: DateStr): boolean {
+  if (e.recur) return occursOn(e.recur, e.start, e.end, day);
   return e.start <= day && day <= e.end;
 }
 
@@ -63,12 +69,13 @@ export function rangeLabel(mode: CalendarMode, anchor: DateStr, isoWeek: (d: Dat
 }
 
 /** Prüft die Eingaben eines Termins. Gibt eine Fehlermeldung oder null zurück. */
-export function validateEvent(e: { title: string; start: DateStr; end: DateStr | null; startTime: string; endTime: string }): string | null {
+export function validateEvent(e: { title: string; start: DateStr; end: DateStr | null; startTime: string; endTime: string; repeat?: Recurrence | null }): string | null {
   if (!e.title.trim()) return 'Bitte gib einen Namen ein.';
   if (!e.start) return 'Bitte wähle ein Datum.';
   if (e.end && e.end < e.start) return 'Das Enddatum liegt vor dem Startdatum.';
   if (e.endTime && !e.startTime) return 'Bitte gib auch eine Startzeit an.';
   if ((!e.end || e.end === e.start) && e.startTime && e.endTime && e.endTime < e.startTime) return 'Die Endzeit liegt vor der Startzeit.';
+  if (e.repeat?.until && e.repeat.until < e.start) return 'Die Wiederholung endet vor dem ersten Termin.';
   return null;
 }
 
@@ -94,7 +101,7 @@ const toMinutes = (hhmm: string) => {
 
 /** Termine mit Uhrzeit, die an diesem Tag beginnen und enden – der Rest gilt dort als ganztägig. */
 export function isTimedOn(e: CalendarEntry, day: DateStr): boolean {
-  return !!e.time && e.start === day && e.end === day;
+  return !!e.time && e.start === e.end && onDay(e, day);
 }
 
 /**
@@ -132,4 +139,29 @@ export function layoutTimed(entries: CalendarEntry[], day: DateStr): TimedBlock[
   }
   if (cluster.length) close();
   return blocks;
+}
+
+/** Startzeitpunkt (ms) eines Vorkommens an `day` um `time` */
+export function startAt(day: DateStr, time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  const d = parseDate(day);
+  d.setHours(h, m || 0, 0, 0);
+  return d.getTime();
+}
+
+/**
+ * Welche Erinnerungen jetzt fällig sind: Termine mit Uhrzeit heute oder morgen, deren
+ * Erinnerungszeitpunkt erreicht, deren Beginn aber noch nicht vorbei ist.
+ */
+export function dueReminders(entries: (CalendarEntry & { remind?: number | null })[], now: Date): { entry: CalendarEntry; day: DateStr; id: string }[] {
+  const t = toDateStr(now);
+  const out: { entry: CalendarEntry; day: DateStr; id: string }[] = [];
+  for (const day of [t, addDays(t, 1)]) {
+    for (const e of entries) {
+      if (!e.remind || !e.time || !isTimedOn(e, day)) continue;
+      const start = startAt(day, e.time);
+      if (now.getTime() >= start - e.remind * 60_000 && now.getTime() < start) out.push({ entry: e, day, id: `${e.key}@${day}` });
+    }
+  }
+  return out;
 }

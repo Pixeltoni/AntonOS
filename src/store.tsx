@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Collection, Data, ID, Settings } from './types';
-import { defaultAppearance, defaultFinance, defaultSettings, demoData } from './demo';
+import { defaultAppearance, defaultFinance, defaultSemester, defaultSettings, demoData } from './demo';
 import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
 
@@ -47,7 +47,7 @@ export function normalize(raw: unknown): Data {
   }
   if (obj.settings && typeof obj.settings === 'object') {
     const stored = obj.settings as Partial<Settings>;
-    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) }, shoppingFrequent: Array.isArray(stored.shoppingFrequent) ? stored.shoppingFrequent : [] };
+    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) }, shoppingFrequent: Array.isArray(stored.shoppingFrequent) ? stored.shoppingFrequent : [], semester: { ...defaultSemester(), ...(stored.semester ?? {}) } };
   }
   if (typeof obj.schemaVersion === 'number') result.schemaVersion = obj.schemaVersion;
   return result;

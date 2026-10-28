@@ -1,4 +1,4 @@
-import type { Appearance, Data, FinanceSettings, Settings } from './types';
+import type { Appearance, Data, FinanceSettings, SemesterSettings, Settings } from './types';
 import { addDays, today } from './lib/dates';
 import { START_EASE } from './lib/srs';
 import { defaultRingGoals } from './lib/rings';
@@ -14,7 +14,10 @@ export const defaultSettings = (): Settings => ({
   rings: defaultRingGoals(),
   finance: defaultFinance(),
   shoppingFrequent: [],
+  semester: defaultSemester(),
 });
+
+export const defaultSemester = (): SemesterSettings => ({ start: '', end: '', remind: 0 });
 
 export const defaultFinance = (): FinanceSettings => ({ budget: 0, categoryBudgets: [] });
 
@@ -33,8 +36,15 @@ export function demoData(): Data {
 
   return {
     courses: [
-      { id: ana, name: 'Analysis I', code: 'MA-101', semester: 'WiSe 26/27', lecturer: 'Prof. Weber', room: 'H 1', ects: 9, color: '#6366f1' },
-      { id: prog, name: 'Einführung in die Programmierung', code: 'INF-110', semester: 'WiSe 26/27', lecturer: 'Dr. Yilmaz', room: 'PC-Pool 2', ects: 6, color: '#10b981' },
+      { id: ana, name: 'Analysis I', code: 'MA-101', semester: 'WiSe 26/27', lecturer: 'Prof. Weber', room: 'H 1', ects: 9, color: '#6366f1', slots: [
+        { id: 'demo-sl1', day: 1, start: '08:15', end: '09:45', room: 'H 1', kind: 'Vorlesung', every: 1 },
+        { id: 'demo-sl2', day: 3, start: '08:15', end: '09:45', room: 'H 1', kind: 'Vorlesung', every: 1 },
+        { id: 'demo-sl3', day: 4, start: '12:15', end: '13:45', room: 'S 3', kind: 'Übung', every: 1 },
+      ] },
+      { id: prog, name: 'Einführung in die Programmierung', code: 'INF-110', semester: 'WiSe 26/27', lecturer: 'Dr. Yilmaz', room: 'PC-Pool 2', ects: 6, color: '#10b981', slots: [
+        { id: 'demo-sl4', day: 2, start: '10:15', end: '11:45', room: 'PC-Pool 2', kind: 'Vorlesung', every: 1 },
+        { id: 'demo-sl5', day: 5, start: '10:15', end: '11:45', room: 'PC-Pool 2', kind: 'Tutorium', every: 1 },
+      ] },
     ],
     tasks: [
       { id: 'demo-t1', title: 'Übungsblatt 3', courseId: ana, kind: 'Aufgabe', status: 'offen', priority: 'hoch', due: addDays(t, 2) },
@@ -112,7 +122,7 @@ export function demoData(): Data {
       { id: 'demo-w3', title: 'Dehnen & Mobility', type: 'Dehnen', date: addDays(t, 1), done: false, notes: '' },
     ],
     events: [
-      { id: 'demo-ev1', title: 'Lerngruppe Analysis', note: 'Bibliothek, Raum 2.14', start: addDays(t, 1), end: null, startTime: '14:00', endTime: '16:00', priority: 'mittel' },
+      { id: 'demo-ev1', title: 'Lerngruppe Analysis', note: 'Bibliothek, Raum 2.14', start: addDays(t, 1), end: null, startTime: '14:00', endTime: '16:00', priority: 'mittel', repeat: { freq: 'woechentlich', until: null, except: [] }, remind: 15 },
       { id: 'demo-ev2', title: 'Zahnarzt', note: '', start: addDays(t, 3), end: null, startTime: '09:30', endTime: '', priority: 'hoch' },
       { id: 'demo-ev3', title: 'Wochenende in Hamburg', note: 'Zug um 8:12', start: addDays(t, 11), end: addDays(t, 13), startTime: '', endTime: '', priority: 'niedrig' },
     ],

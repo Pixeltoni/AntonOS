@@ -1,10 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
-import type { CalEvent, DateStr, EventPriority } from '../types';
+import type { CalEvent, DateStr, EventPriority, RepeatFreq } from '../types';
 import { formatDate, isoWeek, parseDate, today } from '../lib/dates';
 import { monthGrid, monthKey } from '../lib/life';
-import { isTimedOn, layoutTimed, onDay, rangeLabel, shiftAnchor, sortEntries, timeRange, validateEvent, weekDays, type CalendarEntry, type CalendarMode } from '../lib/calendar';
+import { describeRepeat, REPEAT_LABELS, slotSeries } from '../lib/recurrence';
+import { defaultSemester } from '../demo';
+import { askNotifications, notify } from '../lib/notify';
+import { useToast } from './toast';
+import { dueReminders, isTimedOn, layoutTimed, onDay, rangeLabel, shiftAnchor, sortEntries, timeRange, validateEvent, weekDays, type CalendarEntry, type CalendarMode } from '../lib/calendar';
 
 export const PRIORITIES: { value: EventPriority; label: string }[] = [
   { value: 'niedrig', label: 'Niedrig' },
@@ -13,7 +17,7 @@ export const PRIORITIES: { value: EventPriority; label: string }[] = [
 ];
 
 /** Alle Einträge für den Kalender: eigene Termine plus Fristen aus anderen Bereichen. */
-export function useCalendarEntries(): CalendarEntry[] {
+export function useCalendarEntries(): (CalendarEntry & { remind?: number | null })[] {
   const { data } = useStore();
   const single = (date: DateStr) => ({ start: date, end: date, endTime: '' });
   return [
@@ -28,6 +32,23 @@ export function useCalendarEntries(): CalendarEntry[] {
       priority: e.priority,
       note: e.note,
       eventId: e.id,
+      recur: e.repeat ?? undefined,
+      remind: e.remind ?? null,
+    })),
+    // Stundenplan: Kurszeiten als wöchentliche Serien
+    ...slotSeries(data.courses, data.settings.semester ?? defaultSemester(), weekDays(today())[0]).map((s) => ({
+      key: `l-${s.slot.id}`,
+      start: s.start,
+      end: s.start,
+      time: s.slot.start,
+      endTime: s.slot.end,
+      label: s.course.name,
+      note: [s.slot.kind, s.slot.room].filter(Boolean).join(' · '),
+      kind: 'lecture' as const,
+      href: `#/kurse/${s.course.id}`,
+      recur: s.rule,
+      color: s.course.color,
+      remind: data.settings.semester?.remind || null,
     })),
     ...data.tasks.filter((t) => t.due).map((t) => ({ key: `t-${t.id}`, ...single(t.due!), time: '', label: t.title, kind: 'task' as const, href: '#/aufgaben', done: t.status === 'erledigt' })),
     ...data.exams.map((e) => ({ key: `x-${e.id}`, ...single(e.date), time: e.time, label: e.title, kind: 'exam' as const, href: '#/pruefungen' })),
@@ -36,11 +57,59 @@ export function useCalendarEntries(): CalendarEntry[] {
   ];
 }
 
+const REMINDED_KEY = 'antonos:erinnert';
+
+/** Erinnert vor Terminen und Vorlesungen – solange AntonOS offen ist (bzw. als App im Hintergrund läuft). */
+export function useEventReminders() {
+  const entries = useCalendarEntries();
+  const { show } = useToast();
+  const ref = useRef(entries);
+  ref.current = entries;
+  useEffect(() => {
+    const check = () => {
+      let done: string[] = [];
+      try {
+        done = JSON.parse(localStorage.getItem(REMINDED_KEY) ?? '[]');
+      } catch {
+        done = [];
+      }
+      const due = dueReminders(ref.current, new Date()).filter((r) => !done.includes(r.id));
+      if (due.length === 0) return;
+      for (const { entry, day } of due) {
+        const when = day === today() ? `um ${entry.time}` : `morgen um ${entry.time}`;
+        const body = `${when}${entry.note ? ` · ${entry.note}` : ''}`;
+        notify(entry.label, body, entry.key).then((ok) => {
+          if (!ok) show(`⏰ ${entry.label} ${body}`, undefined, 10000);
+        });
+      }
+      try {
+        // Nur die letzten 200 merken
+        localStorage.setItem(REMINDED_KEY, JSON.stringify([...done, ...due.map((r) => r.id)].slice(-200)));
+      } catch {
+        // dann eben ohne Merken
+      }
+    };
+    check();
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [show]);
+}
+
 type Draft = Omit<CalEvent, 'id'>;
 const blank = (date: DateStr): Draft => ({ title: '', note: '', start: date, end: null, startTime: '', endTime: '', priority: 'mittel' });
 
 /** Fenster zum Anlegen und Bearbeiten eines Termins. */
-export function EventModal({ initial, eventId, onClose }: { initial: Draft; eventId?: string; onClose: () => void }) {
+const REMINDERS: { value: number; label: string }[] = [
+  { value: 0, label: 'Keine' },
+  { value: 5, label: '5 Minuten vorher' },
+  { value: 15, label: '15 Minuten vorher' },
+  { value: 30, label: '30 Minuten vorher' },
+  { value: 60, label: '1 Stunde vorher' },
+  { value: 1440, label: '1 Tag vorher' },
+];
+
+/** Fenster zum Anlegen und Bearbeiten eines Termins. `occurrence` = angeklickter Tag einer Serie. */
+export function EventModal({ initial, eventId, occurrence, onClose }: { initial: Draft; eventId?: string; occurrence?: DateStr; onClose: () => void }) {
   const { add, update, remove } = useStore();
   const [e, setE] = useState<Draft>(initial);
   const [multiDay, setMultiDay] = useState(!!initial.end && initial.end !== initial.start);
@@ -63,12 +132,15 @@ export function EventModal({ initial, eventId, onClose }: { initial: Draft; even
       end: multiDay && e.end && e.end !== e.start ? e.end : null,
       startTime: allDay ? '' : e.startTime,
       endTime: allDay ? '' : e.endTime,
+      repeat: e.repeat ? { ...e.repeat, until: e.repeat.until || null } : null,
+      remind: !allDay && e.remind ? e.remind : null,
     };
     const problem = validateEvent(final);
     if (problem) {
       setError(problem);
       return;
     }
+    if (final.remind) void askNotifications();
     if (eventId) update('events', eventId, final);
     else add('events', final);
     onClose();
@@ -123,6 +195,44 @@ export function EventModal({ initial, eventId, onClose }: { initial: Draft; even
           </div>
         )}
 
+        <div className="modal-grid">
+          <label>
+            Wiederholen
+            <select
+              value={e.repeat?.freq ?? ''}
+              onChange={(x) => set('repeat', x.target.value ? { freq: x.target.value as RepeatFreq, until: e.repeat?.until ?? null, except: e.repeat?.except ?? [] } : null)}
+            >
+              <option value="">Nie</option>
+              {(Object.keys(REPEAT_LABELS) as RepeatFreq[]).map((f) => <option key={f} value={f}>{REPEAT_LABELS[f]}</option>)}
+            </select>
+          </label>
+          {e.repeat && (
+            <label>
+              Endet am (optional)
+              <input type="date" value={e.repeat.until ?? ''} min={e.start} onChange={(x) => set('repeat', { ...e.repeat!, until: x.target.value || null })} />
+            </label>
+          )}
+          {!allDay && (
+            <label>
+              Erinnerung
+              <select value={e.remind ?? 0} onChange={(x) => set('remind', Number(x.target.value) || null)}>
+                {REMINDERS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+        {e.repeat && (
+          <p className="small muted">
+            🔁 {describeRepeat(e.repeat, e.start)}
+            {(e.repeat.except?.length ?? 0) > 0 && (
+              <>
+                {' · '}{e.repeat.except!.length} ausgelassen{' '}
+                <button type="button" className="link" onClick={() => set('repeat', { ...e.repeat!, except: [] })}>wiederherstellen</button>
+              </>
+            )}
+          </p>
+        )}
+
         <div className="col">
           <span className="small muted">Wichtigkeit</span>
           <div className="segmented prio-picker" role="radiogroup" aria-label="Wichtigkeit">
@@ -150,9 +260,23 @@ export function EventModal({ initial, eventId, onClose }: { initial: Draft; even
 
         <div className="row between">
           {eventId ? (
-            <button type="button" className="danger" onClick={() => { if (confirm('Termin löschen?')) { remove('events', eventId); onClose(); } }}>
-              Löschen
-            </button>
+            <div className="row wrap">
+              {initial.repeat && occurrence && (
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={() => {
+                    update('events', eventId, { repeat: { ...initial.repeat!, except: [...(initial.repeat!.except ?? []), occurrence] } });
+                    onClose();
+                  }}
+                >
+                  Nur am {parseDate(occurrence).toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' })} löschen
+                </button>
+              )}
+              <button type="button" className="danger" onClick={() => { if (confirm(initial.repeat ? 'Alle Termine dieser Serie löschen?' : 'Termin löschen?')) { remove('events', eventId); onClose(); } }}>
+                {initial.repeat ? 'Serie löschen' : 'Löschen'}
+              </button>
+            </div>
           ) : <span />}
           <div className="row">
             <button type="button" onClick={onClose}>Abbrechen</button>
@@ -165,7 +289,7 @@ export function EventModal({ initial, eventId, onClose }: { initial: Draft; even
   );
 }
 
-function EntryChip({ e, onOpen, showTime = true }: { e: CalendarEntry; onOpen: (e: CalendarEntry) => void; showTime?: boolean }) {
+function EntryChip({ e, day, onOpen, showTime = true }: { e: CalendarEntry; day?: DateStr; onOpen: (e: CalendarEntry, day?: DateStr) => void; showTime?: boolean }) {
   const cls = `cal-item ${e.kind} ${e.priority ? `prio-${e.priority}` : ''} ${e.done ? 'done' : ''}`;
   const text = (
     <>
@@ -177,12 +301,12 @@ function EntryChip({ e, onOpen, showTime = true }: { e: CalendarEntry; onOpen: (
   const title = `${e.label} · ${timeRange(e)}${e.note ? `\n${e.note}` : ''}`;
   if (e.eventId) {
     return (
-      <button type="button" className={cls} title={title} onClick={(ev) => { ev.stopPropagation(); onOpen(e); }}>
+      <button type="button" className={cls} style={entryStyle(e)} title={title} onClick={(ev) => { ev.stopPropagation(); onOpen(e, day); }}>
         {text}
       </button>
     );
   }
-  return <a className={cls} href={e.href} title={title} onClick={(ev) => ev.stopPropagation()}>{text}</a>;
+  return <a className={cls} style={entryStyle(e)} href={e.href} title={title} onClick={(ev) => ev.stopPropagation()}>{text}</a>;
 }
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -230,6 +354,9 @@ function useNowMinutes(): number {
   return m;
 }
 
+/** Kursfarbe für Vorlesungen */
+const entryStyle = (e: CalendarEntry) => (e.color ? ({ ['--c' as string]: e.color } as React.CSSProperties) : undefined);
+
 const dotClass = (e: CalendarEntry) => `cal-dot ${e.kind} ${e.priority ? `prio-${e.priority}` : ''}`;
 
 /** Wochenleiste mit Datums-Kreisen wie oben im iPhone-Kalender. */
@@ -259,7 +386,7 @@ function WeekStrip({ anchor, entries, onPick }: { anchor: DateStr; entries: Cale
 }
 
 /** Terminliste eines Tages im Stil der iPhone-Listenansicht. */
-function DayList({ day, entries, onOpen, onNew, hideEmpty = false }: { day: DateStr; entries: CalendarEntry[]; onOpen: (e: CalendarEntry) => void; onNew: () => void; hideEmpty?: boolean }) {
+function DayList({ day, entries, onOpen, onNew, hideEmpty = false }: { day: DateStr; entries: CalendarEntry[]; onOpen: (e: CalendarEntry, day?: DateStr) => void; onNew: () => void; hideEmpty?: boolean }) {
   const items = sortEntries(entries.filter((e) => onDay(e, day)));
   if (hideEmpty && items.length === 0) return null;
   return (
@@ -275,7 +402,7 @@ function DayList({ day, entries, onOpen, onNew, hideEmpty = false }: { day: Date
           {items.map((e) => {
             const body = (
               <>
-                <span className={`dl-bar ${dotClass(e)}`} aria-hidden />
+                <span className={`dl-bar ${dotClass(e)}`} style={entryStyle(e)} aria-hidden />
                 <span className="dl-main">
                   <span className={`dl-title ${e.done ? 'done' : ''}`}>
                     {e.priority === 'hoch' && '❗ '}
@@ -298,7 +425,7 @@ function DayList({ day, entries, onOpen, onNew, hideEmpty = false }: { day: Date
             return (
               <li key={e.key}>
                 {e.eventId ? (
-                  <button type="button" className="dl-row" onClick={() => onOpen(e)}>{body}</button>
+                  <button type="button" className="dl-row" onClick={() => onOpen(e, day)}>{body}</button>
                 ) : (
                   <a className="dl-row" href={e.href}>{body}</a>
                 )}
@@ -316,7 +443,7 @@ function Timeline({ day, entries, compact, onOpen, onNew }: {
   day: DateStr;
   entries: CalendarEntry[];
   compact: boolean;
-  onOpen: (e: CalendarEntry) => void;
+  onOpen: (e: CalendarEntry, day?: DateStr) => void;
   onNew: (time: string) => void;
 }) {
   const hourH = compact ? 48 : 52;
@@ -341,7 +468,7 @@ function Timeline({ day, entries, compact, onOpen, onNew }: {
         <div className="tl-allday">
           <span className="tl-allday-label">ganztägig</span>
           <div className="tl-allday-items">
-            {allDay.map((e) => <EntryChip key={e.key} e={e} onOpen={onOpen} />)}
+            {allDay.map((e) => <EntryChip key={e.key} e={e} day={day} onOpen={onOpen} />)}
           </div>
         </div>
       )}
@@ -365,6 +492,7 @@ function Timeline({ day, entries, compact, onOpen, onNew }: {
             const e = b.entry;
             const height = Math.max(22, ((b.end - b.start) / 60) * hourH - 2);
             const style = {
+              ...entryStyle(e),
               top: (b.start / 60) * hourH + 1,
               height,
               left: `calc(var(--tl-gutter) + (100% - var(--tl-gutter) - 6px) * ${b.col / b.cols})`,
@@ -379,7 +507,7 @@ function Timeline({ day, entries, compact, onOpen, onNew }: {
             );
             const cls = `tl-event ${e.kind} ${e.priority ? `prio-${e.priority}` : ''} ${e.done ? 'done' : ''}`;
             return e.eventId ? (
-              <button key={e.key} type="button" className={cls} style={style} onClick={(ev) => { ev.stopPropagation(); onOpen(e); }} title={`${e.label} · ${timeRange(e)}`}>
+              <button key={e.key} type="button" className={cls} style={style} onClick={(ev) => { ev.stopPropagation(); onOpen(e, day); }} title={`${e.label} · ${timeRange(e)}`}>
                 {inner}
               </button>
             ) : (
@@ -405,7 +533,7 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
   const t = today();
   const [mode, setModeState] = useState<CalendarMode>(() => (remember ? loadMode(defaultMode) : defaultMode));
   const [anchor, setAnchor] = useState(t);
-  const [modal, setModal] = useState<{ initial: Draft; eventId?: string } | null>(null);
+  const [modal, setModal] = useState<{ initial: Draft; eventId?: string; occurrence?: DateStr } | null>(null);
   const entries = useCalendarEntries();
   const [rootRef, width] = useWidth();
   const compact = width < COMPACT_WIDTH;
@@ -421,9 +549,9 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
     }
   };
   const openNew = (date: DateStr, time = '') => setModal({ initial: { ...blank(date), startTime: time } });
-  const openEntry = (e: CalendarEntry) => {
+  const openEntry = (e: CalendarEntry, day?: DateStr) => {
     const ev = data.events.find((x) => x.id === e.eventId);
-    if (ev) setModal({ initial: { ...ev }, eventId: ev.id });
+    if (ev) setModal({ initial: { ...ev }, eventId: ev.id, occurrence: day });
   };
   const goDay = (d: DateStr) => {
     setAnchor(d);
@@ -498,7 +626,7 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
                 >
                   <span className="mm-num">{Number(d.slice(8))}</span>
                   <span className="mm-dots" aria-hidden>
-                    {items.slice(0, 3).map((e) => <span key={e.key} className={dotClass(e)} />)}
+                    {items.slice(0, 3).map((e) => <span key={e.key} className={dotClass(e)} style={entryStyle(e)} />)}
                   </span>
                 </button>
               );
@@ -523,7 +651,7 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
                 <button type="button" className="cal-num" onClick={(ev) => { ev.stopPropagation(); goDay(d); }} aria-label={`${formatDate(d)} als Tag anzeigen`}>
                   {Number(d.slice(8))}
                 </button>
-                {items.slice(0, 3).map((e) => <EntryChip key={e.key} e={e} onOpen={openEntry} />)}
+                {items.slice(0, 3).map((e) => <EntryChip key={e.key} e={e} day={d} onOpen={openEntry} />)}
                 {items.length > 3 && (
                   <button type="button" className="cal-more" onClick={(ev) => { ev.stopPropagation(); goDay(d); }}>
                     +{items.length - 3} weitere
@@ -562,7 +690,7 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
                 <strong>{parseDate(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</strong>
               </button>
               <div className="cal-week-items">
-                {dayEntries(d).map((e) => <EntryChip key={e.key} e={e} onOpen={openEntry} />)}
+                {dayEntries(d).map((e) => <EntryChip key={e.key} e={e} day={d} onOpen={openEntry} />)}
               </div>
             </div>
           ))}
@@ -590,10 +718,11 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
           <span className="cal-item exam">Prüfung</span>
           <span className="cal-item project">Projekt</span>
           <span className="cal-item workout">Training</span>
+          <span className="cal-item lecture">Vorlesung</span>
         </div>
       )}
 
-      {modal && <EventModal initial={modal.initial} eventId={modal.eventId} onClose={() => setModal(null)} />}
+      {modal && <EventModal initial={modal.initial} eventId={modal.eventId} occurrence={modal.occurrence} onClose={() => setModal(null)} />}
     </div>
   );
 }

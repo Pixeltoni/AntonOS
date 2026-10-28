@@ -895,7 +895,7 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
   const entries = all.filter((e) => !hidden.includes(e.kind));
   const [rootRef, width] = useWidth();
   const compact = width < COMPACT_WIDTH;
-  const swipe = useRef<{ x: number; y: number; at: number } | null>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   const setMode = (m: CalendarMode) => {
     setModeState(m);
@@ -974,11 +974,10 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
       const el = ev.target as HTMLElement | null;
       if (ev.metaKey || ev.ctrlKey || ev.altKey || keyRef.current.modal) return;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
-      const { mode: m, anchor: a } = keyRef.current;
       const k = ev.key.toLowerCase();
-      if (ev.key === 'ArrowLeft') setAnchor(shiftAnchor(m, a, -1));
-      else if (ev.key === 'ArrowRight') setAnchor(shiftAnchor(m, a, 1));
-      else if (k === 't') setAnchor(today());
+      if (ev.key === 'ArrowLeft') goRef.current(-1);
+      else if (ev.key === 'ArrowRight') goRef.current(1);
+      else if (k === 't') goTodayRef.current();
       else if (k === 'n') openNew(keyRef.current.newDay);
       else if (k === 'd') setMode('tag');
       else if (k === 'w') setMode('woche');
@@ -991,24 +990,115 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remember]);
 
-  // Wischen nach links/rechts blättert (nicht beim Ziehen von Terminen)
-  const onTouchStart = (ev: React.TouchEvent) => {
-    const target = ev.target as HTMLElement;
-    if (ev.touches.length !== 1 || target.closest('.tl-event, input, textarea, .cal-filter')) {
-      swipe.current = null;
-      return;
-    }
-    swipe.current = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, at: Date.now() };
+  // Blättern mit Übergang: alte Ansicht gleitet hinaus, neue von der Gegenseite herein
+  const navRef = useRef({ mode, anchor });
+  navRef.current = { mode, anchor };
+  const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const slideIn = (dir: -1 | 1, from = 0.3) => {
+    const el = bodyRef.current;
+    if (!el || reduceMotion() || !el.animate) return;
+    const w = el.getBoundingClientRect().width;
+    el.animate(
+      [{ transform: `translateX(${dir * w * from}px)`, opacity: 0.35 }, { transform: 'translateX(0)', opacity: 1 }],
+      { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
   };
-  const onTouchEnd = (ev: React.TouchEvent) => {
-    const s = swipe.current;
-    swipe.current = null;
-    if (!s || Date.now() - s.at > 700) return;
-    const dx = ev.changedTouches[0].clientX - s.x;
-    const dy = ev.changedTouches[0].clientY - s.y;
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    setAnchor(shiftAnchor(mode, anchor, dx < 0 ? 1 : -1));
+  const goTo = (next: DateStr, dir: -1 | 1) => {
+    setAnchor(next);
+    slideIn(dir);
   };
+  const go = (dir: -1 | 1) => goTo(shiftAnchor(navRef.current.mode, navRef.current.anchor, dir), dir);
+  const goToday = () => {
+    const a = navRef.current.anchor;
+    if (a === today()) return;
+    goTo(today(), today() > a ? 1 : -1);
+  };
+  const goRef = useRef(go);
+  goRef.current = go;
+  const goTodayRef = useRef(goToday);
+  goTodayRef.current = goToday;
+
+  // Wischen: die Ansicht folgt dem Finger und gleitet beim Loslassen weiter (nicht beim Ziehen von Terminen)
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    let start: { x: number; y: number; at: number } | null = null;
+    let axis: 'x' | 'y' | null = null;
+    let dx = 0;
+    const reset = (animate: boolean) => {
+      if (animate && el.animate && !reduceMotion()) {
+        el.animate([{ transform: `translateX(${dx}px)` }, { transform: 'translateX(0)' }], { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+      }
+      el.style.transform = '';
+    };
+    const onStart = (ev: TouchEvent) => {
+      const target = ev.target as HTMLElement;
+      if (ev.touches.length !== 1 || target.closest('.tl-event, input, textarea, .cal-filter')) {
+        start = null;
+        return;
+      }
+      start = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, at: Date.now() };
+      axis = null;
+      dx = 0;
+    };
+    const onMove = (ev: TouchEvent) => {
+      if (!start) return;
+      const x = ev.touches[0].clientX - start.x;
+      const y = ev.touches[0].clientY - start.y;
+      if (!axis) {
+        if (Math.hypot(x, y) < 8) return;
+        axis = Math.abs(x) > Math.abs(y) * 1.2 ? 'x' : 'y';
+      }
+      if (axis !== 'x') return;
+      ev.preventDefault();
+      dx = x;
+      el.style.transform = `translateX(${x}px)`;
+    };
+    const onEnd = () => {
+      if (!start || axis !== 'x') {
+        start = null;
+        return;
+      }
+      const velocity = Math.abs(dx) / Math.max(1, Date.now() - start.at);
+      start = null;
+      const w = el.getBoundingClientRect().width;
+      if (Math.abs(dx) < w * 0.22 && velocity < 0.45) {
+        reset(true);
+        return;
+      }
+      const dir: -1 | 1 = dx < 0 ? 1 : -1;
+      if (!el.animate || reduceMotion()) {
+        reset(false);
+        goRef.current(dir);
+        return;
+      }
+      const out = el.animate([{ transform: `translateX(${dx}px)`, opacity: 1 }, { transform: `translateX(${-dir * w}px)`, opacity: 0.2 }], {
+        duration: Math.max(90, Math.min(200, ((w - Math.abs(dx)) / Math.max(velocity, 1.2)) | 0)),
+        easing: 'cubic-bezier(0.4, 0, 1, 1)',
+        fill: 'forwards',
+      });
+      out.onfinish = () => {
+        el.style.transform = '';
+        goRef.current(dir);
+        out.cancel();
+      };
+    };
+    const onCancel = () => {
+      if (start && axis === 'x') reset(true);
+      start = null;
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onCancel);
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onCancel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const title = compact
     ? mode === 'monat'
@@ -1054,17 +1144,17 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
   const weeks = Array.from({ length: grid.length / 7 }, (_, i) => grid.slice(i * 7, i * 7 + 7));
 
   return (
-    <div className={`calendar ${compact ? 'compact' : ''}`} ref={rootRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className={`calendar ${compact ? 'compact' : ''}`} ref={rootRef}>
       {compact ? (
         <div className="cal-toolbar-compact">
           <div className="row between">
             <div className="row">
-              <button className="icon cal-arrow" onClick={() => setAnchor(shiftAnchor(mode, anchor, -1))} aria-label="Zurück">‹</button>
+              <button className="icon cal-arrow" onClick={() => go(-1)} aria-label="Zurück">‹</button>
               <strong className="cal-big-title">{title}</strong>
-              <button className="icon cal-arrow" onClick={() => setAnchor(shiftAnchor(mode, anchor, 1))} aria-label="Weiter">›</button>
+              <button className="icon cal-arrow" onClick={() => go(1)} aria-label="Weiter">›</button>
             </div>
             <div className="row">
-              <button className="cal-today" onClick={() => setAnchor(t)}>Heute</button>
+              <button className="cal-today" onClick={goToday}>Heute</button>
               <button className="cal-plus" onClick={() => openNew(anchor)} aria-label="Neuer Termin">+</button>
             </div>
           </div>
@@ -1075,9 +1165,9 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
         <>
           <div className="cal-toolbar">
             <div className="row">
-              <button onClick={() => setAnchor(shiftAnchor(mode, anchor, -1))} aria-label="Zurück" title="Zurück (←)">‹</button>
-              <button onClick={() => setAnchor(t)} title="Heute (T)">Heute</button>
-              <button onClick={() => setAnchor(shiftAnchor(mode, anchor, 1))} aria-label="Weiter" title="Weiter (→)">›</button>
+              <button onClick={() => go(-1)} aria-label="Zurück" title="Zurück (←)">‹</button>
+              <button onClick={goToday} title="Heute (T)">Heute</button>
+              <button onClick={() => go(1)} aria-label="Weiter" title="Weiter (→)">›</button>
               <strong className="cal-title">{title}</strong>
             </div>
             <div className="row">
@@ -1090,6 +1180,8 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
       )}
 
       <KindFilter hidden={hidden} onToggle={toggleKind} />
+
+      <div className="cal-body" ref={bodyRef}>
 
       {mode === 'monat' && compact && (
         <>
@@ -1168,6 +1260,8 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
           <Timeline days={[anchor]} {...timelineProps} />
         </>
       )}
+
+      </div>
 
       {modal && <EventModal initial={modal.initial} eventId={modal.eventId} occurrence={modal.occurrence} onClose={() => setModal(null)} />}
     </div>

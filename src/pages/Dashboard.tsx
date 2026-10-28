@@ -475,7 +475,7 @@ export function Dashboard({ editing }: { editing: boolean }) {
             <label>Dein Name<input value={data.settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></label>
             <label className="full">Titelbild<ImageInput value={data.settings.cover} onChange={(cover) => updateSettings({ cover })} /></label>
           </div>
-          <h3>🎨 Hintergrund & Design</h3>
+          <h3>🎨 Design</h3>
           <AppearanceEditor />
         </Panel>
       ) : null}

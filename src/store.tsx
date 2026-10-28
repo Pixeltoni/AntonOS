@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Collection, Data, ID, Settings } from './types';
+import type { Appearance, Collection, Data, ID, Settings } from './types';
 import { defaultAppearance, defaultFinance, defaultSemester, defaultSettings, demoData } from './demo';
 import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
@@ -37,6 +37,12 @@ export const emptyData = (): Data => ({
   schemaVersion: SCHEMA_VERSION,
 });
 
+/** Übernimmt nur Hell/Dunkel – frühere Hintergrund-, Farb- und Milchglas-Einstellungen fallen weg. */
+function normalizeAppearance(stored: Partial<Appearance> | undefined): Appearance {
+  const theme = stored?.theme;
+  return theme === 'hell' || theme === 'dunkel' || theme === 'system' ? { theme } : defaultAppearance();
+}
+
 /**
  * Ergänzt fehlende Sammlungen, z. B. bei Importen älterer Exporte.
  * Unbekannte Bereiche (von einer neueren AntonOS-Version) bleiben erhalten,
@@ -52,7 +58,7 @@ export function normalize(raw: unknown): Data {
   }
   if (obj.settings && typeof obj.settings === 'object') {
     const stored = obj.settings as Partial<Settings>;
-    result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) }, shoppingFrequent: Array.isArray(stored.shoppingFrequent) ? stored.shoppingFrequent : [], semester: { ...defaultSemester(), ...(stored.semester ?? {}) } };
+    result.settings = { ...base.settings, ...stored, appearance: normalizeAppearance(stored.appearance), rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) }, shoppingFrequent: Array.isArray(stored.shoppingFrequent) ? stored.shoppingFrequent : [], semester: { ...defaultSemester(), ...(stored.semester ?? {}) } };
     // Alte Sidebar einmalig auf die neue Ordnung (Life-Organizer) umstellen
     if ((stored.sidebarLayout ?? 1) < SIDEBAR_LAYOUT) {
       result.settings.sidebar = Array.isArray(stored.sidebar) && stored.sidebar.length ? migrateSidebar(stored.sidebar) : [];

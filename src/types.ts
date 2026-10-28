@@ -357,25 +357,10 @@ export interface WidgetConfig {
   hidden: boolean;
 }
 
-export type BackgroundKind = 'standard' | 'farbe' | 'verlauf' | 'bild';
 export type ThemeMode = 'system' | 'hell' | 'dunkel';
 
 export interface Appearance {
   theme: ThemeMode;
-  background: BackgroundKind;
-  color: string;
-  /** Kennung eines vordefinierten Verlaufs */
-  gradient: string;
-  /** Bild-URL oder hochgeladenes Bild */
-  image: string;
-  /** Abdunkeln des Hintergrunds in Prozent (0–80) */
-  dim: number;
-  /** Halbdurchsichtige Kästen mit Unschärfe-Effekt */
-  glass: boolean;
-  /** Wie milchig die Glas-Kästen sind (0–100) */
-  glassLevel: number;
-  /** Akzentfarbe, leer = Standard */
-  accent: string;
 }
 
 export interface NavItem {

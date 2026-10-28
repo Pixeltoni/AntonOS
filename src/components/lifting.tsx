@@ -56,6 +56,11 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
   const [rows, setRows] = useState<RowDraft[]>(() => buildRows(day, workout, data.workouts, workout?.date ?? t));
   const name = day?.name ?? workout?.title ?? 'Training';
 
+  // Beim Nachtragen mit anderem Datum „Letztes Mal“ neu bestimmen, eingetragene Sätze bleiben
+  const changeDate = (d: DateStr) => {
+    setDate(d);
+    setRows((rs) => rs.map((r) => ({ ...r, prev: previousEntry(data.workouts, r.exerciseId, r.name, d, workout?.id) })));
+  };
   const setRow = (i: number, fn: (r: RowDraft) => RowDraft) => setRows((rs) => rs.map((r, j) => (j === i ? fn(r) : r)));
   const setCell = (i: number, k: number, key: keyof SetDraft, v: string) =>
     setRow(i, (r) => ({ ...r, sets: r.sets.map((s, j) => (j === k ? { ...s, [key]: v } : s)) }));
@@ -116,7 +121,7 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
         );
       })}
       <div className="modal-grid">
-        <label>Datum<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+        <label>Datum<input type="date" value={date} onChange={(e) => e.target.value && changeDate(e.target.value)} /></label>
         <label>Dauer (Min.)<input type="number" min={1} value={minutes} placeholder="optional" onChange={(e) => setMinutes(e.target.value)} /></label>
       </div>
       <label>Notiz<input value={notes} placeholder="z. B. Schulter gezwickt" onChange={(e) => setNotes(e.target.value)} /></label>

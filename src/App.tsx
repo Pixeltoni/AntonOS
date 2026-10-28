@@ -4,6 +4,7 @@ import { FocusPill } from './components/focus';
 import { openSpotlight, SHORTCUT, Spotlight } from './components/spotlight';
 import { useEventReminders } from './components/calendar';
 import { OfflineBanner, ShareSheet, useAppBadge } from './components/pwa';
+import { Icon, Logo, NavIcon, PAGE_ICONS } from './components/icons';
 import { useRecurringBookings } from './pages/Finance';
 import { useStore } from './store';
 import type { NavItem } from './types';
@@ -105,12 +106,13 @@ function SidebarEditor({ items, onChange, onDone }: { items: NavItem[]; onChange
   const set = (index: number, patch: Partial<NavItem>) => onChange(items.map((x, i) => (i === index ? { ...x, ...patch } : x)));
   return (
     <div className="sidebar-editor">
-      <p className="muted small">Umbenennen, Symbol ändern, verschieben, Gruppe wählen oder ausblenden.</p>
+      <p className="muted small">Umbenennen, verschieben, Gruppe wählen oder ausblenden. Ein Emoji ersetzt das Symbol – leer lassen für das Standard-Symbol.</p>
       <datalist id="nav-groups">{groups.map((g) => <option key={g} value={g} />)}</datalist>
       {items.map((item, i) => (
         <div key={item.path} className={`nav-edit ${item.hidden ? 'is-hidden' : ''}`}>
           <div className="row">
-            <input className="emoji-input" value={item.icon} onChange={(e) => set(i, { icon: e.target.value })} aria-label={`Symbol für ${item.label}`} maxLength={4} />
+            <span className="nav-edit-icon" title="Standard-Symbol"><NavIcon item={item} /></span>
+            <input className="emoji-input" value={item.icon} placeholder="Emoji" onChange={(e) => set(i, { icon: e.target.value })} aria-label={`Eigenes Emoji für ${item.label} (leer = Standard-Symbol)`} maxLength={4} />
             <input className="grow" value={item.label} onChange={(e) => set(i, { label: e.target.value })} aria-label={`Name für ${item.path}`} />
           </div>
           <div className="row">
@@ -175,10 +177,10 @@ function Shell() {
       <aside className={`sidebar ${menuOpen ? 'open' : ''} ${editingSidebar ? 'editing' : ''}`}>
         <div className="brand">
           <span className="brand-name">
-            <span className="nav-icon" aria-hidden>🎓</span>
+            <span className="nav-icon" aria-hidden><Logo /></span>
             <span className="nav-text">AntonOS</span>
           </span>
-          <button className="icon search-toggle" onClick={openSpotlight} aria-label="Suchen">🔍</button>
+          <button className="icon search-toggle" onClick={openSpotlight} aria-label="Suchen"><Icon icon={PAGE_ICONS.suche} size={22} /></button>
           <button className="icon menu-toggle" onClick={() => setMenuOpen((o) => !o)} aria-label={menuOpen ? 'Menü schließen' : 'Menü öffnen'} aria-expanded={menuOpen}>
             {menuOpen ? '✕' : '☰'}
           </button>
@@ -197,7 +199,7 @@ function Shell() {
                 {section.group && <span className="nav-label">{section.group}</span>}
                 {section.items.map((n) => (
                   <a key={n.path} href={`#/${n.path}`} className={current === n.path ? 'active' : ''} title={n.label}>
-                    <span className="nav-icon" aria-hidden>{n.icon}</span>
+                    <span className="nav-icon" aria-hidden><NavIcon item={n} /></span>
                     <span className="grow nav-text">{n.label}</span>
                     {counts[n.path] > 0 && <span className="count">{counts[n.path]}</span>}
                   </a>
@@ -208,17 +210,17 @@ function Shell() {
           {!editingSidebar && (
             <div className="nav-group nav-footer">
               <button className="nav-button" onClick={() => { setMenuOpen(false); openSpotlight(); }} title={`Suchen (${SHORTCUT})`}>
-                <span className="nav-icon" aria-hidden>🔍</span>
+                <span className="nav-icon" aria-hidden><Icon icon={PAGE_ICONS.suche} /></span>
                 <span className="nav-text grow">Suchen</span>
                 <kbd className="nav-kbd nav-text">{SHORTCUT}</kbd>
               </button>
               <SyncBadge />
               <button className="nav-button" onClick={() => setEditingSidebar(true)} title="Sidebar bearbeiten">
-                <span className="nav-icon" aria-hidden>✏️</span>
+                <span className="nav-icon" aria-hidden><Icon icon={PAGE_ICONS.bearbeiten} /></span>
                 <span className="nav-text">Sidebar bearbeiten</span>
               </button>
               <a className="nav-button" href="#/dashboard/bearbeiten" onClick={() => setMenuOpen(false)} title="Dashboard bearbeiten">
-                <span className="nav-icon" aria-hidden>🧩</span>
+                <span className="nav-icon" aria-hidden><Icon icon={PAGE_ICONS['dashboard-bearbeiten']} /></span>
                 <span className="nav-text">Dashboard bearbeiten</span>
               </a>
             </div>

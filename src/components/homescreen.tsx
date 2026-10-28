@@ -7,6 +7,7 @@ import { onDay, sortEntries } from '../lib/calendar';
 import { stackOrder, WIDGET_LABELS, type StackPage } from '../lib/layout';
 import { monthKey } from '../lib/life';
 import { useCalendarEntries } from './calendar';
+import { Icon, stripEmoji, WIDGET_ICONS } from './icons';
 import { RingsWidget } from './rings';
 import { FocusWidget } from './focus';
 import { useBudgetStatus, WalletCard } from '../pages/Finance';
@@ -194,7 +195,7 @@ export function WidgetGallery({
             <ul className="gallery-list">
               {hidden.map((w) => (
                 <li key={w.id}>
-                  <button type="button" className={current.id === w.id ? 'on' : ''} onClick={() => setSelected(w.id)}>{WIDGET_LABELS[w.id]}</button>
+                  <button type="button" className={current.id === w.id ? 'on' : ''} onClick={() => setSelected(w.id)}>{WIDGET_ICONS[w.id] && <Icon icon={WIDGET_ICONS[w.id]!} size={15} />} {stripEmoji(WIDGET_LABELS[w.id])}</button>
                 </li>
               ))}
             </ul>

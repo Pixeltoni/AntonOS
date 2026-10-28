@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { today } from '../lib/dates';
@@ -8,6 +8,7 @@ import { categorize, parseShopping } from '../lib/shopping';
 import { calculate, matchScore, searchAll, topHit, type SearchHit } from '../lib/search';
 import { useFocus } from './focus';
 import { useToast } from './toast';
+import { NavIcon } from './icons';
 
 const OPEN_EVENT = 'antonos:spotlight';
 
@@ -17,7 +18,7 @@ export const openSpotlight = () => window.dispatchEvent(new Event(OPEN_EVENT));
 interface Row {
   key: string;
   group: string;
-  icon: string;
+  icon: ReactNode;
   title: string;
   subtitle?: string;
   hint?: string;
@@ -96,7 +97,7 @@ export function Spotlight() {
         { key: 'a-note', group: 'Vorschläge', icon: '📝', title: 'Neue Notiz', run: () => { const id = add('notes', { title: '', courseId: null, content: '', updated: new Date().toISOString() }); go(`#/notizen/${id}`); } },
         { key: 'a-shop', group: 'Vorschläge', icon: '🛒', title: 'Einkaufsliste', run: () => go('#/einkauf') },
       );
-      for (const p of pages.slice(0, 8)) out.push({ key: `p-${p.path}`, group: 'Seiten', icon: p.icon, title: p.label, run: () => go(`#/${p.path}`) });
+      for (const p of pages.slice(0, 8)) out.push({ key: `p-${p.path}`, group: 'Seiten', icon: <NavIcon item={p} size={18} />, title: p.label, run: () => go(`#/${p.path}`) });
       return out;
     }
 
@@ -111,7 +112,11 @@ export function Spotlight() {
 
     const hits = searchAll(data, q, pages);
     const top = topHit(hits);
-    const toRow = (h: SearchHit, group = h.group): Row => ({ key: `${group}-${h.key}`, group, icon: h.icon, title: h.title, subtitle: h.subtitle, run: () => go(h.href) });
+    const navIcon = (h: SearchHit) => {
+      const page = h.key.startsWith('page-') ? pages.find((p) => `page-${p.path}` === h.key) : undefined;
+      return page ? <NavIcon item={page} size={18} /> : h.icon;
+    };
+    const toRow = (h: SearchHit, group = h.group): Row => ({ key: `${group}-${h.key}`, group, icon: navIcon(h), title: h.title, subtitle: h.subtitle, run: () => go(h.href) });
     if (top && top.score >= 12) out.push(toRow(top, 'Top-Treffer'));
     for (const h of hits) if (!(top && top.score >= 12 && h.key === top.key)) out.push(toRow(h));
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { useStore } from '../store';
 import type { Course, ID } from '../types';
 
@@ -14,12 +15,12 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   );
 }
 
-export function Panel({ title, actions, children }: { title?: string; actions?: ReactNode; children: ReactNode }) {
+export function Panel({ title, icon: Glyph, actions, children }: { title?: string; icon?: LucideIcon; actions?: ReactNode; children: ReactNode }) {
   return (
     <section className="panel">
       {(title || actions) && (
         <div className="panel-head">
-          {title && <h2>{title}</h2>}
+          {title && <h2>{Glyph && <Glyph size={17} strokeWidth={2} aria-hidden="true" className="panel-icon" />}{title}</h2>}
           {actions}
         </div>
       )}

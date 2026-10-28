@@ -10,6 +10,7 @@ export const defaultSettings = (): Settings => ({
   spotifyClientId: '',
   dashboard: [],
   sidebar: [],
+  sidebarLayout: 2,
   appearance: defaultAppearance(),
   rings: defaultRingGoals(),
   finance: defaultFinance(),

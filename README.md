@@ -1,6 +1,8 @@
-# AntonOS 🎓
+# AntonOS
 
-Ein persönliches Studien- und Lebens-Betriebssystem im Browser, inspiriert von Notion-Templates wie *Academia OS* und *Life Planner OS*, aber als eigene Web-App.
+Dein persönlicher Life-Organizer im Browser und als App: Kalender, Aufgaben, Notizen, Gewohnheiten, Ziele, Finanzen, Einkauf, Training, Studium und Freizeit an einem Ort – im Stil von Apple. Ursprünglich inspiriert von Notion-Templates wie *Academia OS* und *Life Planner OS*.
+
+Die Sidebar ist nach Lebensbereichen geordnet (Start, Leben, Geld, Studium, Freizeit) und nutzt einheitliche Linien-Symbole; das App-Symbol ist ein kursives „A“.
 
 ## Funktionen
 

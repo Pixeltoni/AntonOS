@@ -4,6 +4,7 @@ import { defaultAppearance, defaultFinance, defaultSemester, defaultSettings, de
 import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
 import { today } from './lib/dates';
+import { migrateSidebar, SIDEBAR_LAYOUT } from './lib/layout';
 
 const STORAGE_KEY = 'antonos:v1';
 
@@ -50,6 +51,11 @@ export function normalize(raw: unknown): Data {
   if (obj.settings && typeof obj.settings === 'object') {
     const stored = obj.settings as Partial<Settings>;
     result.settings = { ...base.settings, ...stored, appearance: { ...defaultAppearance(), ...(stored.appearance ?? {}) }, rings: { ...defaultRingGoals(), ...(stored.rings ?? {}) }, finance: { ...defaultFinance(), ...(stored.finance ?? {}) }, shoppingFrequent: Array.isArray(stored.shoppingFrequent) ? stored.shoppingFrequent : [], semester: { ...defaultSemester(), ...(stored.semester ?? {}) } };
+    // Alte Sidebar einmalig auf die neue Ordnung (Life-Organizer) umstellen
+    if ((stored.sidebarLayout ?? 1) < SIDEBAR_LAYOUT) {
+      result.settings.sidebar = Array.isArray(stored.sidebar) && stored.sidebar.length ? migrateSidebar(stored.sidebar) : [];
+      result.settings.sidebarLayout = SIDEBAR_LAYOUT;
+    }
   }
   if (typeof obj.schemaVersion === 'number') result.schemaVersion = obj.schemaVersion;
   return result;

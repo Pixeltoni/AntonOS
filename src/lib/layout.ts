@@ -109,19 +109,53 @@ export function normalizeWidgets(stored: unknown): WidgetConfig[] {
     }));
 }
 
+/**
+ * Sidebar als Life-Organizer: Start, Leben, Geld, Studium, Freizeit.
+ * `icon` leer = einheitliches Linien-Symbol; ein Emoji dort ersetzt es (eigene Wahl).
+ */
 export const DEFAULT_SIDEBAR: NavItem[] = (
   [
-    ['dashboard', 'Dashboard', '🏠', ''], ['kalender', 'Kalender', '🗓️', ''], ['musik', 'Musik', '🎵', ''],
-    ['kurse', 'Kurse', '📚', 'Studium'], ['aufgaben', 'Aufgaben', '✅', 'Studium'], ['notizen', 'Notizen', '📝', 'Studium'],
-    ['lernen', 'Lernkarten', '🧠', 'Studium'], ['pruefungen', 'Prüfungen', '📅', 'Studium'], ['noten', 'Noten', '📊', 'Studium'],
-    ['fokus', 'Fokus', '⏱️', 'Studium'],
-    ['projekte', 'Projekte', '🚀', 'Leben'], ['gewohnheiten', 'Gewohnheiten', '✨', 'Leben'], ['rueckblick', 'Rückblick', '🌟', 'Leben'], ['ziele', 'Ziele', '🎯', 'Leben'],
-    ['finanzen', 'Finanzen', '💰', 'Leben'], ['einkauf', 'Einkaufsliste', '🛒', 'Leben'], ['training', 'Training', '🏋️', 'Leben'],
-    ['schauen', 'Watchlist', '📺', 'Sammlungen'], ['lesen', 'Leseliste', '📖', 'Sammlungen'], ['alben', 'Alben', '📸', 'Sammlungen'],
-    ['tools', 'Tools', '🧰', 'Sammlungen'],
-    ['einstellungen', 'Einstellungen', '⚙️', ''],
-  ] as [string, string, string, string][]
-).map(([path, label, icon, group]) => ({ path, label, icon, group, hidden: false }));
+    ['dashboard', 'Übersicht', 'Start'], ['kalender', 'Kalender', 'Start'], ['aufgaben', 'Aufgaben', 'Start'], ['notizen', 'Notizen', 'Start'],
+    ['gewohnheiten', 'Gewohnheiten', 'Leben'], ['rueckblick', 'Rückblick', 'Leben'], ['ziele', 'Ziele', 'Leben'], ['projekte', 'Projekte', 'Leben'],
+    ['training', 'Training', 'Leben'],
+    ['finanzen', 'Finanzen', 'Geld'], ['einkauf', 'Einkaufsliste', 'Geld'],
+    ['kurse', 'Kurse', 'Studium'], ['lernen', 'Lernkarten', 'Studium'], ['pruefungen', 'Prüfungen', 'Studium'], ['noten', 'Noten', 'Studium'],
+    ['fokus', 'Fokus', 'Studium'],
+    ['musik', 'Musik', 'Freizeit'], ['schauen', 'Watchlist', 'Freizeit'], ['lesen', 'Leseliste', 'Freizeit'], ['alben', 'Alben', 'Freizeit'],
+    ['tools', 'Tools', ''], ['einstellungen', 'Einstellungen', ''],
+  ] as [string, string, string][]
+).map(([path, label, group]) => ({ path, label, icon: '', group, hidden: false }));
+
+/** Sidebar-Version: 2 = Life-Organizer-Gruppen mit Linien-Symbolen */
+export const SIDEBAR_LAYOUT = 2;
+
+/** Namen und Emojis der ersten Sidebar – um eigene Anpassungen davon zu unterscheiden */
+const OLD_SIDEBAR: Record<string, [string, string]> = {
+  dashboard: ['Dashboard', '🏠'], kalender: ['Kalender', '🗓️'], musik: ['Musik', '🎵'], kurse: ['Kurse', '📚'], aufgaben: ['Aufgaben', '✅'],
+  notizen: ['Notizen', '📝'], lernen: ['Lernkarten', '🧠'], pruefungen: ['Prüfungen', '📅'], noten: ['Noten', '📊'], fokus: ['Fokus', '⏱️'],
+  projekte: ['Projekte', '🚀'], gewohnheiten: ['Gewohnheiten', '✨'], rueckblick: ['Rückblick', '🌟'], ziele: ['Ziele', '🎯'],
+  finanzen: ['Finanzen', '💰'], einkauf: ['Einkaufsliste', '🛒'], training: ['Training', '🏋️'], schauen: ['Watchlist', '📺'],
+  lesen: ['Leseliste', '📖'], alben: ['Alben', '📸'], tools: ['Tools', '🧰'], einstellungen: ['Einstellungen', '⚙️'],
+};
+
+/**
+ * Stellt eine alte, angepasste Sidebar auf die neue Ordnung um: Reihenfolge und Gruppen
+ * kommen vom neuen Standard, ausgeblendete Einträge sowie eigene Namen und Emojis bleiben.
+ */
+export function migrateSidebar(stored: NavItem[]): NavItem[] {
+  const byPath = new Map(stored.map((s) => [s.path, s]));
+  return DEFAULT_SIDEBAR.map((d) => {
+    const s = byPath.get(d.path);
+    if (!s) return d;
+    const [oldLabel, oldIcon] = OLD_SIDEBAR[d.path] ?? ['', ''];
+    return {
+      ...d,
+      hidden: !!s.hidden,
+      label: s.label && s.label !== oldLabel ? s.label : d.label,
+      icon: s.icon && s.icon !== oldIcon ? s.icon : '',
+    };
+  });
+}
 
 /**
  * Übernimmt die gespeicherte Anpassung, verwirft unbekannte Einträge und fügt

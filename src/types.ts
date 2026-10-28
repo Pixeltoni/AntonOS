@@ -354,6 +354,8 @@ export interface Settings {
   dashboard: WidgetConfig[];
   /** Reihenfolge, Namen und Sichtbarkeit der Sidebar-Einträge (leer = Standard) */
   sidebar: NavItem[];
+  /** Version der Sidebar-Ordnung (siehe SIDEBAR_LAYOUT) */
+  sidebarLayout?: number;
   appearance: Appearance;
   /** Tagesziele der Aktivitätsringe */
   rings: RingGoals;

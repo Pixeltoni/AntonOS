@@ -1,7 +1,7 @@
 {
   "name": "AntonOS",
   "short_name": "AntonOS",
-  "description": "Studium, Aufgaben, Gewohnheiten, Finanzen und mehr – an einem Ort.",
+  "description": "Dein Life-Organizer: Kalender, Aufgaben, Gewohnheiten, Ziele, Finanzen, Studium und mehr – an einem Ort.",
   "lang": "de",
   "id": "./",
   "start_url": "./",
@@ -9,7 +9,7 @@
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f6f7fb",
-  "theme_color": "#4f46e5",
+  "theme_color": "#6366F1",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },

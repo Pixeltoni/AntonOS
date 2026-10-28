@@ -12,6 +12,7 @@ import { CalendarView } from '../components/calendar';
 import { SpotifyPlayer } from '../components/spotify';
 import { AppearanceEditor } from '../components/appearance';
 import { RingsWidget } from '../components/rings';
+import { Icon, PAGE_ICONS, stripEmoji, WIDGET_ICONS } from '../components/icons';
 import { FocusWidget, useFocus } from '../components/focus';
 import { focusMode } from '../lib/focus';
 import { noteTitle } from '../lib/notes';
@@ -47,14 +48,14 @@ const QUICK_ACTIONS = [
 ];
 
 const TOP_NAV = [
-  { label: 'Studium', icon: '🎓', href: '#/kurse' },
-  { label: 'Projekte', icon: '🚀', href: '#/projekte' },
-  { label: 'Finanzen', icon: '💰', href: '#/finanzen' },
-  { label: 'Gewohnheiten', icon: '✨', href: '#/gewohnheiten' },
-  { label: 'Training', icon: '🏋️', href: '#/training' },
-  { label: 'Musik', icon: '🎵', href: '#/musik' },
-  { label: 'Kalender', icon: '📅', href: '#/kalender' },
-  { label: 'Ziele', icon: '🎯', href: '#/ziele' },
+  { label: 'Kalender', path: 'kalender' },
+  { label: 'Aufgaben', path: 'aufgaben' },
+  { label: 'Gewohnheiten', path: 'gewohnheiten' },
+  { label: 'Finanzen', path: 'finanzen' },
+  { label: 'Ziele', path: 'ziele' },
+  { label: 'Training', path: 'training' },
+  { label: 'Studium', path: 'kurse' },
+  { label: 'Musik', path: 'musik' },
 ];
 
 /** Wie viele Einträge eine Liste je nach Ansicht zeigt. */
@@ -135,9 +136,9 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
       render: (v) => (
         <nav className={`top-nav ${v}`} aria-label="Bereiche">
           {TOP_NAV.map((n) => (
-            <a key={n.href} href={n.href} title={n.label}>
-              <span aria-hidden>{n.icon}</span>
-              {v !== 'kompakt' && ` ${n.label}`}
+            <a key={n.path} href={`#/${n.path}`} title={n.label}>
+              <Icon icon={PAGE_ICONS[n.path]} size={16} />
+              {v !== 'kompakt' && <span>{n.label}</span>}
             </a>
           ))}
         </nav>
@@ -390,8 +391,8 @@ function EditBar({ widget, def, index, layout, onChange, onDragStart }: { widget
   return (
     <div className="edit-bar">
       <div className="row edit-head">
-        <button type="button" className="drag-handle" onPointerDown={onDragStart} aria-label={`${WIDGET_LABELS[widget.id]} verschieben (ziehen)`} title="Zum Verschieben ziehen">⠿</button>
-        <strong className="edit-title small">{WIDGET_LABELS[widget.id]}</strong>
+        <button type="button" className="drag-handle" onPointerDown={onDragStart} aria-label={`${stripEmoji(WIDGET_LABELS[widget.id])} verschieben (ziehen)`} title="Zum Verschieben ziehen">⠿</button>
+        <strong className="edit-title small">{WIDGET_ICONS[widget.id] && <Icon icon={WIDGET_ICONS[widget.id]!} size={15} />} {stripEmoji(WIDGET_LABELS[widget.id])}</strong>
       </div>
       <div className="edit-controls">
         <button onClick={() => onChange(moveItem(layout, index, -1))} aria-label="Nach vorn" title="Nach vorn">←</button>
@@ -433,7 +434,7 @@ export function Dashboard({ editing }: { editing: boolean }) {
     const def = widgets[id];
     const variant = def.variants && !def.variants.includes(v) ? 'standard' : v;
     const body = def.render(variant);
-    return def.title === null ? body : <Panel title={def.title || undefined}>{body}</Panel>;
+    return def.title === null ? body : <Panel title={stripEmoji(def.title) || undefined} icon={WIDGET_ICONS[id]}>{body}</Panel>;
   };
   const addWidget = (id: WidgetId, size: WidgetSize) => {
     const rest = layout.filter((w) => w.id !== id);
@@ -487,7 +488,7 @@ export function Dashboard({ editing }: { editing: boolean }) {
           const body = def.render(variant);
           const content =
             def.title === null ? body : (
-              <Panel title={def.title || undefined} actions={def.link && !editing ? <a href={def.link[0]}>{def.link[1]}</a> : undefined}>
+              <Panel title={stripEmoji(def.title) || undefined} icon={WIDGET_ICONS[w.id]} actions={def.link && !editing ? <a href={def.link[0]}>{def.link[1]}</a> : undefined}>
                 {body}
               </Panel>
             );

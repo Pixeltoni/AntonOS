@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NavItem, WidgetConfig } from '../types';
-import { DEFAULT_DASHBOARD, DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem, moveTo, normalizeWidgets, stackOrder } from './layout';
+import { DEFAULT_DASHBOARD, DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, migrateSidebar, moveItem, moveTo, normalizeWidgets, stackOrder } from './layout';
 import { base64url, codeChallenge, parseBody, randomString } from './spotify';
 
 describe('Dashboard-Layout', () => {
@@ -59,9 +59,10 @@ describe('Sidebar', () => {
   it('ergänzt neue Seiten bei alten Anpassungen', () => {
     const stored = DEFAULT_SIDEBAR.filter((i) => i.path !== 'musik').map((i) => ({ ...i, label: i.label.toUpperCase() }));
     const merged = mergeWithDefaults(stored, DEFAULT_SIDEBAR, 'path');
-    expect(merged[0].label).toBe('DASHBOARD');
-    // „Musik“ steht im Standard hinter „Kalender“ und kommt wieder dorthin
-    expect(merged.map((m) => m.path).slice(0, 3)).toEqual(['dashboard', 'kalender', 'musik']);
+    expect(merged[0].label).toBe('ÜBERSICHT');
+    // „Musik“ steht im Standard hinter „Fokus“ und kommt wieder dorthin
+    const paths = merged.map((m) => m.path);
+    expect(paths.indexOf('musik')).toBe(paths.indexOf('fokus') + 1);
   });
 
   it('fügt neue Seiten hinter ihrem Vorgänger ein, auch bei eigener Reihenfolge', () => {
@@ -80,8 +81,9 @@ describe('Sidebar', () => {
     const named = groups.filter(Boolean);
     expect(new Set(named).size).toBe(named.length);
     const paths = merged.map((m) => m.path);
-    expect(paths.indexOf('projekte')).toBe(paths.indexOf('gewohnheiten') - 1);
-    expect(paths.indexOf('kurse')).toBeLessThan(paths.indexOf('projekte'));
+    // Neue Einträge der Gruppe „Leben“ landen bei „Gewohnheiten“, nicht bei „Kurse“
+    expect(paths.indexOf('projekte')).toBeGreaterThan(paths.indexOf('gewohnheiten'));
+    expect(paths.indexOf('lernen')).toBe(paths.indexOf('kurse') + 1);
   });
 });
 
@@ -116,5 +118,23 @@ describe('Homescreen', () => {
     expect(stackOrder(14)[0]).toBe('aufgaben');
     expect(stackOrder(20)[0]).toBe('ringe');
     expect(stackOrder(2)).toHaveLength(6);
+  });
+});
+
+describe('Sidebar Life-Organizer', () => {
+  it('stellt alte Anpassungen auf die neue Ordnung um', () => {
+    const old = [
+      { path: 'dashboard', label: 'Dashboard', icon: '🏠', group: '', hidden: false },
+      { path: 'kurse', label: 'Meine Kurse', icon: '📚', group: 'Studium', hidden: false },
+      { path: 'alben', label: 'Alben', icon: '🌈', group: 'Sammlungen', hidden: true },
+      { path: 'musik', label: 'Musik', icon: '🎵', group: '', hidden: false },
+    ];
+    const m = migrateSidebar(old);
+    expect(m.map((x) => x.path)).toEqual(DEFAULT_SIDEBAR.map((x) => x.path));
+    const by = (p: string) => m.find((x) => x.path === p)!;
+    expect(by('dashboard')).toMatchObject({ label: 'Übersicht', icon: '', group: 'Start' });
+    expect(by('kurse')).toMatchObject({ label: 'Meine Kurse', icon: '', group: 'Studium' });
+    expect(by('alben')).toMatchObject({ icon: '🌈', hidden: true, group: 'Freizeit' });
+    expect(new Set(groupNav(m).map((g) => g.group)).size).toBe(groupNav(m).length);
   });
 });

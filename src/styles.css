@@ -1488,3 +1488,23 @@ main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
   .rem-main { min-height: 40px; }
   .top-nav a { min-height: 40px; display: inline-flex; align-items: center; }
 }
+
+/* ---------- Linien-Symbole und Logo (Life-Organizer) ---------- */
+.lucide-icon { display: block; flex: none; }
+.nav-icon { display: inline-grid; place-items: center; }
+.sidebar nav a .lucide-icon, .sidebar .nav-button .lucide-icon { color: color-mix(in srgb, var(--text) 78%, transparent); }
+.sidebar nav a.active .lucide-icon { color: var(--accent); }
+.sidebar nav a:hover .lucide-icon { color: var(--text); }
+.nav-emoji { font-size: 1.05rem; line-height: 1; }
+.brand-logo { display: block; border-radius: 7px; box-shadow: 0 2px 6px rgb(88 86 214 / 0.35); }
+.nav-edit-icon { display: inline-grid; place-items: center; width: 2rem; color: var(--muted); }
+.panel-head h2 { display: flex; align-items: center; gap: 0.45rem; }
+.panel-icon { color: var(--accent); flex: none; }
+.top-nav a { display: inline-flex; align-items: center; gap: 0.4rem; }
+.top-nav a .lucide-icon { color: var(--accent); }
+.edit-title { display: inline-flex; align-items: center; gap: 0.35rem; }
+.gallery-list button { display: flex; align-items: center; gap: 0.4rem; }
+.spotlight-icon { display: inline-grid; place-items: center; }
+.spotlight-row.on .lucide-icon { color: #fff; }
+.search-toggle { display: none; place-items: center; }
+@media (max-width: 800px) { .search-toggle { display: grid; } }

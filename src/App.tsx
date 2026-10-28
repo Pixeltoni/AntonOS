@@ -152,17 +152,12 @@ function Shell() {
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);
 
-  // Solange das Menü offen ist: Seite dahinter nicht mitscrollen, Escape schließt
+  // Solange das Menü offen ist, schließt Escape (Scrollsperre dahinter: lib/mobile.ts)
   useEffect(() => {
     if (!menuOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
     window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [menuOpen]);
   const t = today();
   const counts: Record<string, number> = {

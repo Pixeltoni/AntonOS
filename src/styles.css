@@ -1746,3 +1746,43 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adj
 @media (max-width: 800px) {
   .assistant-field > span:first-child { width: 4.8rem; }
 }
+
+/* ---------- Wecker ---------- */
+.stack-tight { display: flex; flex-direction: column; gap: 0.4rem; }
+.alarm-time-input { font-size: 2.6rem; font-weight: 300; font-variant-numeric: tabular-nums; text-align: center; padding: 0.3rem; }
+.alarm-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.alarm-days button { padding: 0.45rem 0; border-radius: 999px; font-size: 0.85rem; }
+.alarm-list li.off .alarm-row-time { color: var(--muted); }
+.alarm-row { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; background: none; border: 0; padding: 0.2rem 0; text-align: left; color: var(--text); }
+.alarm-row-time { font-size: 2.2rem; font-weight: 300; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.list input.switch, input[type=checkbox].switch { appearance: none; min-width: 51px; max-width: none; box-sizing: border-box; margin: 0; -webkit-appearance: none; flex: none; width: 51px; height: 31px; border-radius: 999px; background: color-mix(in srgb, var(--text) 18%, var(--surface)); position: relative; cursor: pointer; transition: background 0.2s; border: 0; padding: 0; }
+input.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / 0.25); transition: transform 0.2s; }
+input.switch:checked { background: #34C759; }
+input.switch:checked::after { transform: translateX(20px); }
+.alarm-ring, .alarm-night { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; gap: 1.1rem; overflow-y: auto; text-align: center; padding: max(2rem, env(safe-area-inset-top)) 1.25rem max(1.5rem, env(safe-area-inset-bottom)); }
+.alarm-ring { background: #000; color: #fff; }
+.alarm-ring.klingelt { animation: alarm-pulse 1.2s ease-in-out infinite; }
+@keyframes alarm-pulse { 50% { background: #3a0d0d; } }
+.alarm-head { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 4vh; }
+.alarm-big { font-size: clamp(4.5rem, 24vw, 7rem); font-weight: 200; line-height: 1; font-variant-numeric: tabular-nums; }
+.alarm-off { margin-top: auto; margin-bottom: 8vh; width: min(320px, 100%); min-height: 64px; border-radius: 999px; font-size: 1.3rem; font-weight: 600; background: #FF9500; color: #000; border: 0; }
+.alarm-note { color: #AEAEB2; max-width: 420px; margin: 0; }
+.alarm-countdown { display: flex; flex-direction: column; gap: 0.4rem; width: min(360px, 100%); color: #AEAEB2; }
+.alarm-countdown strong { color: #fff; }
+.alarm-bar { height: 6px; border-radius: 99px; background: #2C2C2E; overflow: hidden; }
+.alarm-bar span { display: block; height: 100%; background: #FF9500; transition: width 0.25s linear; }
+.alarm-challenge { width: min(420px, 100%); }
+.alarm-task { display: flex; flex-direction: column; gap: 0.7rem; background: #1C1C1E; border-radius: 18px; padding: 1.1rem; }
+.alarm-task input, .alarm-task textarea { background: #2C2C2E; color: #fff; border-color: #3A3A3C; font-size: 1.4rem; text-align: center; }
+.alarm-task textarea { font-size: 1.05rem; text-align: left; }
+.alarm-question { font-size: 2.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.alarm-phrase { font-size: 1.15rem; line-height: 1.45; user-select: none; -webkit-user-select: none; }
+.alarm-wrong { color: #FF453A; font-weight: 600; }
+.alarm-video { width: min(320px, 100%); aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #111; }
+.alarm-video iframe { width: 100%; height: 100%; }
+.alarm-skip { background: none; border: 0; color: #AEAEB2; text-decoration: underline; }
+.alarm-night { z-index: 70; background: #000; color: #8E8E93; justify-content: center; }
+.alarm-night-clock { font-size: clamp(5rem, 28vw, 9rem); font-weight: 200; color: #D1D1D6; font-variant-numeric: tabular-nums; line-height: 1; }
+.alarm-night .small { max-width: 340px; }
+.alarm-night button { margin-top: 2rem; background: #1C1C1E; color: #AEAEB2; border-color: #2C2C2E; }
+.qr-scanner video { width: 100%; max-height: 50vh; border-radius: 12px; background: #000; object-fit: cover; }

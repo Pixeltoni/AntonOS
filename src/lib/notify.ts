@@ -16,7 +16,7 @@ async function activeRegistration(ms: number): Promise<ServiceWorkerRegistration
 }
 
 /** Handy-Browser (Android, iOS) kennen `new Notification()` nicht – dort geht es nur über den Service Worker. */
-const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 /**
  * Zeigt eine System-Mitteilung – über den Service Worker (nötig auf dem Handy), am Computer

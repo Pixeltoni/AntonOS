@@ -53,6 +53,10 @@ export function demoData(): Data {
       { id: 'demo-t2', title: 'Kapitel 4 lesen', courseId: ana, kind: 'Lektüre', status: 'in Arbeit', priority: 'mittel', due: addDays(t, 5) },
       { id: 'demo-t3', title: 'Projekt: Taschenrechner', courseId: prog, kind: 'Projekt', status: 'offen', priority: 'mittel', due: addDays(t, 14) },
       { id: 'demo-t4', title: 'Bewerbung Werkstudentenstelle', courseId: null, kind: 'Bewerbung', status: 'offen', priority: 'niedrig', due: addDays(t, 9) },
+      { id: 'demo-t5', title: 'Wäsche waschen', courseId: null, listId: 'demo-l1', kind: 'Aufgabe', status: 'offen', priority: 'mittel', due: null, plannedFor: t, repeat: { freq: 'woechentlich' }, tags: ['zuhause'], estimate: 30 },
+    ],
+    taskLists: [
+      { id: 'demo-l1', name: 'Haushalt', color: '#34C759' },
     ],
     notes: [
       {

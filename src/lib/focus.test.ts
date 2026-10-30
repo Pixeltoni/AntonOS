@@ -18,7 +18,7 @@ describe('Fokus-Timer', () => {
     let t = start(idleTimer(cfg), 0);
     t = { ...t, distractions: 2 };
     let r = tick(t, 25 * MIN);
-    expect(r.finished).toEqual([{ session: { minutes: 25, courseId: 'ana', distractions: 2, mode: 'lernen' }, next: 'pause' }]);
+    expect(r.finished).toEqual([{ session: { minutes: 25, courseId: 'ana', distractions: 2, mode: 'lernen', taskId: null }, next: 'pause' }]);
     expect(r.timer).toMatchObject({ phase: 'pause', round: 1, running: true, endAt: 30 * MIN, distractions: 2 });
     r = tick(r.timer, 30 * MIN);
     expect(r.timer).toMatchObject({ phase: 'fokus', round: 2, distractions: 0 });

@@ -19,6 +19,8 @@ export interface WeekReview {
   /** Lernminuten pro Kurs, absteigend */
   courses: { courseId: string | null; minutes: number }[];
   tasksDone: number;
+  /** Erledigte Aufgaben mit Schätzung: geschätzte und tatsächlich gearbeitete Minuten */
+  estimate: { planned: number; worked: number; tasks: number };
   ringsClosed: number;
   habitChecks: number;
   bestStreak: { name: string; icon: string; days: number } | null;
@@ -60,6 +62,9 @@ export function weekReview(data: Data, day: DateStr, until: DateStr): WeekReview
     courses,
     // Ältere Aufgaben ohne Erledigt-Datum zählen am Fälligkeitstag
     tasksDone: data.tasks.filter((t) => t.status === 'erledigt' && inWeek(t.completedAt ?? t.due)).length,
+    estimate: data.tasks
+      .filter((t) => t.status === 'erledigt' && t.estimate && inWeek(t.completedAt))
+      .reduce((acc, t) => ({ planned: acc.planned + (t.estimate ?? 0), worked: acc.worked + (t.spent ?? 0), tasks: acc.tasks + 1 }), { planned: 0, worked: 0, tasks: 0 }),
     ringsClosed: rings.filter((r) => r.closed).length,
     habitChecks: rings.reduce((s, r) => s + r.habitsDone, 0),
     bestStreak: streaks[0] && streaks[0].days > 0 ? streaks[0] : null,

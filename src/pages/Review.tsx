@@ -1,3 +1,4 @@
+import { formatMinutes } from '../lib/tasks';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
 import type { WidgetVariant } from '../types';
@@ -126,7 +127,7 @@ function Story({ week, prev, title, weekLabel }: { week: WeekReview; prev: WeekR
           <h2>{title}</h2>
           <div className="story-grid">
             <Stat label="Lernzeit" value={hoursText(week.learnMinutes)} />
-            <Stat label="Aufgaben erledigt" value={week.tasksDone} />
+            <Stat label="Aufgaben erledigt" value={week.tasksDone} sub={week.estimate.tasks > 0 ? `geschätzt ${formatMinutes(week.estimate.planned)}, gearbeitet ${formatMinutes(week.estimate.worked)}` : undefined} />
             <Stat label="Ringe geschlossen" value={`${week.ringsClosed} / ${week.days.length}`} />
             <Stat label="Ausgaben" value={formatMoney(week.spent)} />
           </div>

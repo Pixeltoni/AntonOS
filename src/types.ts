@@ -74,6 +74,37 @@ export interface Task {
   someday?: boolean;
   /** Abschnitt innerhalb eines Projekts */
   section?: string;
+  /** Wiederholung: beim Abhaken entsteht die nächste Aufgabe */
+  repeat?: TaskRepeat | null;
+  /** Vorgänger einer wiederholten Aufgabe (zum Widerrufen) */
+  repeatOf?: ID;
+  /** Eigene Reihenfolge (per Ziehen), kleinere zuerst */
+  order?: number;
+  /** Eigene Liste (z. B. Haushalt), sonst Kurs oder ohne Liste */
+  listId?: ID | null;
+  /** Tags wie „zuhause“ (ohne @) */
+  tags?: string[];
+  /** Geschätzter Aufwand in Minuten */
+  estimate?: number;
+  /** Im Fokus-Timer gearbeitete Minuten */
+  spent?: number;
+}
+
+export interface TaskRepeat {
+  freq: RepeatFreq | 'werktags';
+  /** Bei „täglich“: alle n Tage */
+  interval?: number;
+  /** Bei „wöchentlich“: Wochentage 1 (Mo) bis 7 (So); leer = Wochentag der Fälligkeit */
+  days?: number[];
+  /** Nächste ab Erledigung statt ab Fälligkeit */
+  afterDone?: boolean;
+}
+
+/** Eigene Aufgabenliste neben den Kursen */
+export interface TodoList {
+  id: ID;
+  name: string;
+  color: string;
 }
 
 export interface Subtask {
@@ -566,6 +597,8 @@ export interface FocusSession {
   distractions: number;
   /** Fokus-Modus (ältere Einträge ohne Modus zählen als Lernen) */
   mode?: FocusMode;
+  /** Aufgabe, an der gearbeitet wurde */
+  taskId?: ID | null;
 }
 
 export type AlarmChallenge = 'rechnen' | 'text' | 'qr';
@@ -601,6 +634,7 @@ export interface Alarm {
 export interface Data {
   courses: Course[];
   tasks: Task[];
+  taskLists: TodoList[];
   notes: Note[];
   cards: Card[];
   exams: Exam[];

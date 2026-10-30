@@ -2,6 +2,7 @@ import { useStore } from '../store';
 import type { FocusMode } from '../types';
 import { addDays, formatDate, hours, today } from '../lib/dates';
 import { FOCUS_MODES, focusMode, mmss, stackedWeek } from '../lib/focus';
+import { formatMinutes } from '../lib/tasks';
 import { weekOf } from '../lib/rings';
 import { TimerRing, useFocus } from '../components/focus';
 import { CourseBadge, CourseSelect, Empty, PageHeader, Panel } from '../components/ui';
@@ -42,8 +43,9 @@ function TimerPanel() {
   const { config } = timer;
   const mode = focusMode(config.mode);
   const course = data.courses.find((c) => c.id === config.courseId);
+  const task = data.tasks.find((t) => t.id === config.taskId);
   const phaseLabel = timer.phase === 'fokus'
-    ? `${course ? `${course.name} · ` : ''}Runde ${timer.round} von ${config.rounds}`
+    ? `${task ? `${task.title} · ` : course ? `${course.name} · ` : ''}Runde ${timer.round} von ${config.rounds}`
     : timer.phase === 'pause' ? 'Kurze Pause ☕' : 'Lange Pause 🌿';
 
   return (
@@ -72,6 +74,13 @@ function TimerPanel() {
             <button type="button" onClick={skip}>Pause überspringen</button>
           )}
         </div>
+      )}
+      {task && (
+        <p className="focus-task small">
+          Aufgabe: <strong>{task.title}</strong>
+          {(task.spent ?? 0) > 0 && <span className="muted"> · bisher {formatMinutes(task.spent!)}</span>}
+          <button type="button" className="link-btn" onClick={() => configure({ taskId: null })} aria-label="Aufgabe vom Timer lösen">Lösen</button>
+        </p>
       )}
       <details className="focus-settings" open={!timer.active}>
         <summary>Einstellungen</summary>

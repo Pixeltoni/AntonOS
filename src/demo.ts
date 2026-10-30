@@ -174,6 +174,7 @@ export function demoData(): Data {
     albums: [
       { id: 'demo-a1', title: 'Ersti-Woche', date: addDays(t, -30), cover: '', tags: 'Uni, Freunde', description: '' },
     ],
+    alarms: [],
     tools: [
       { id: 'demo-tl1', name: 'Moodle', url: 'https://moodle.org/', category: 'Studium' },
       { id: 'demo-tl2', name: 'Google Scholar', url: 'https://scholar.google.com/', category: 'Studium' },

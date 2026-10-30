@@ -1,8 +1,8 @@
 /**
  * Datenformat-Version. Erhöhen, sobald eine neue Version Bereiche hinzufügt,
- * die ältere Versionen nicht kennen (z. B. 2 = Kalendertermine, 3 = Daueraufträge und Spartöpfe, 4 = Einkaufsliste, 5 = Stimmung, 6 = Trainingsplan, 7 = Rezepte, Menschen und Reisen).
+ * die ältere Versionen nicht kennen (z. B. 2 = Kalendertermine, 3 = Daueraufträge und Spartöpfe, 4 = Einkaufsliste, 5 = Stimmung, 6 = Trainingsplan, 7 = Rezepte, Menschen und Reisen, 8 = Wecker).
  */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 /** Build-Kennung, wird beim Bauen gesetzt (siehe vite.config.ts). */
 export const APP_VERSION: string = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';

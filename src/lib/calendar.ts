@@ -14,7 +14,7 @@ export interface CalendarEntry {
   time: string;
   endTime: string;
   label: string;
-  kind: 'event' | 'task' | 'exam' | 'project' | 'workout' | 'lecture' | 'birthday' | 'trip';
+  kind: 'event' | 'task' | 'exam' | 'project' | 'lecture' | 'birthday' | 'trip';
   href?: string;
   done?: boolean;
   priority?: EventPriority;
@@ -38,7 +38,6 @@ export const KIND_LABELS: Record<EntryKind, string> = {
   task: 'Aufgaben',
   exam: 'Prüfungen',
   project: 'Projekte',
-  workout: 'Trainings',
   birthday: 'Geburtstage',
   trip: 'Reisen',
 };

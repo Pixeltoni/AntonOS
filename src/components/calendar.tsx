@@ -61,7 +61,6 @@ export function useCalendarEntries(): (CalendarEntry & { remind?: number | null 
     ...data.tasks.filter((t) => t.due).map((t) => ({ key: `t-${t.id}`, ...single(t.due!), time: '', label: t.title, kind: 'task' as const, href: '#/aufgaben', done: t.status === 'erledigt' })),
     ...data.exams.map((e) => ({ key: `x-${e.id}`, ...single(e.date), time: e.time, label: e.title, kind: 'exam' as const, href: '#/pruefungen' })),
     ...data.projects.filter((p) => p.due).map((p) => ({ key: `p-${p.id}`, ...single(p.due!), time: '', label: p.title, kind: 'project' as const, href: `#/projekte/${p.id}`, done: p.status === 'abgeschlossen' })),
-    ...data.workouts.map((w) => ({ key: `w-${w.id}`, ...single(w.date), time: '', label: w.title, kind: 'workout' as const, href: '#/training', done: w.done })),
     // Geburtstage im letzten, diesem und den nächsten beiden Jahren
     ...(data.people ?? []).filter((p) => p.birthday).flatMap((p) => {
       const year = Number(today().slice(0, 4));

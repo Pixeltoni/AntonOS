@@ -66,7 +66,15 @@ describe('Assistentin', () => {
   });
 
   it('schreibt Notizen und macht den Rest zu Aufgaben', () => {
-    expect(interpret('Notiz: Idee für die Hausarbeit', NOW)).toEqual({ kind: 'note', title: 'Idee für die Hausarbeit' });
+    expect(interpret('Notiz: Idee für die Hausarbeit', NOW)).toEqual({ kind: 'note', title: 'Idee für die Hausarbeit', content: 'Idee für die Hausarbeit' });
+    expect(interpret('Notiz, Verbesserung der App durch Anpassung der Trainingsapp', NOW)).toEqual({
+      kind: 'note',
+      title: 'Verbesserung der App durch Anpassung der …',
+      content: 'Verbesserung der App durch Anpassung der Trainingsapp',
+    });
+    expect(interpret('Mach eine Notiz: zwei Ideen. Erstens mehr Widgets', NOW)).toMatchObject({ title: 'Zwei Ideen', content: 'Zwei Ideen. Erstens mehr Widgets' });
+    expect(interpret('Neue Notiz Einkaufsliste für die Party', NOW)).toMatchObject({ kind: 'note', content: 'Einkaufsliste für die Party' });
+    expect(interpret('notiere dass ich um acht Uhr Training hab', NOW)).toMatchObject({ kind: 'note', content: 'Ich um acht Uhr Training hab' });
     expect(interpret('Übungsblatt 4 morgen 10 Uhr !!!', NOW)).toMatchObject({ kind: 'task', title: 'Übungsblatt 4', due: '2026-10-28', dueTime: '10:00', priority: 'hoch', remind: false });
     expect(interpret('Ich muss morgen Wäsche waschen', NOW)).toMatchObject({ kind: 'task', title: 'Wäsche waschen', due: '2026-10-28' });
     expect(interpret('   ', NOW)).toBeNull();

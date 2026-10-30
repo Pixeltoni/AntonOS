@@ -21,7 +21,7 @@ export type Intent =
   | { kind: 'event'; event: EventQuickAdd }
   | { kind: 'habit'; habitId: ID; amount: number | null; date: DateStr }
   | { kind: 'expense'; type: TxType; amount: number; description: string; category: string; date: DateStr }
-  | { kind: 'note'; title: string };
+  | { kind: 'note'; title: string; content: string };
 
 export interface AssistantContext {
   habits?: Pick<Habit, 'id' | 'name' | 'target' | 'unit'>[];
@@ -188,6 +188,15 @@ function habit(s: string, today: DateStr, habits: AssistantContext['habits'] = [
   return { kind: 'habit', habitId: hit.id, amount, date };
 }
 
+/** Ganzer Text als Inhalt, der erste Satz (höchstens 6 Wörter) als Titel */
+function noteIntent(raw: string): Intent {
+  const content = capitalize(raw.trim().replace(/^(?:dass|:)\s*/i, ''));
+  const sentence = content.split(/(?<=[.!?])\s|\n/)[0].replace(/[.!?]+$/, '');
+  const words = sentence.split(/\s+/);
+  const title = words.length > 6 ? `${words.slice(0, 6).join(' ').replace(/[,;:]+$/, '')} …` : sentence;
+  return { kind: 'note', title, content };
+}
+
 function event(text: string, today: DateStr): Intent {
   const ev = parseEventQuickAdd(text.replace(/,(?!\d)/g, ' '), today);
   let title = ev.title.replace(/^(?:einen|den|ein)?\s*termin\s*/i, '').trim();
@@ -220,8 +229,14 @@ function task(text: string, now: Date, ctx: AssistantContext, remind: boolean): 
  */
 export function interpret(input: string, now: Date, ctx: AssistantContext = {}): Intent | null {
   const today = toDateStr(now);
-  const s = normalizeTimes(digits(tidy(input)));
-  if (!s) return null;
+  const plain = tidy(input);
+  if (!plain) return null;
+
+  // Notizen – Text unverändert übernehmen (ohne Zahlen- und Uhrzeit-Umwandlung)
+  const note = plain.match(/^(?:(?:mach|mache|schreib|schreibe|erstell|erstelle)\s+(?:mir\s+)?(?:eine\s+)?notiz|(?:neue\s+)?notiz(?:\s+(?:machen|erstellen|anlegen))?|notiere|notier|merk\s+dir|schreib(?:e)?\s+(?:mir\s+)?auf)(?:\s+mir)?(?:\s*[:,;.\-–]\s*|\s+)(.+)$/is);
+  if (note) return noteIntent(note[1]);
+
+  const s = normalizeTimes(digits(plain));
 
   // Erinnerungen
   const asked = s.match(/^(?:kannst|könntest|würdest)\s+du\s+mich\s+(.*?)\s*(?:daran\s+)?erinnern\b[,\s]*(.*)$/i);
@@ -236,10 +251,6 @@ export function interpret(input: string, now: Date, ctx: AssistantContext = {}):
   }
   const need = s.match(/^(?:ich|wir)\s+(?:brauche|brauchen)\s+(?:noch\s+)?(.+)$/i) ?? s.match(/^(?:kauf(?:e|en)?|einkaufen:?)\s+(.+)$/i);
   if (need && !parseQuickAdd(need[1], today).due) return { kind: 'shopping', items: shoppingItems(need[1]) };
-
-  // Notizen
-  const note = s.match(/^(?:notiz|notiere|notier|merk\s+dir|schreib(?:e)?\s+(?:mir\s+)?auf)(?:\s+mir)?[:,\s]+(.+)$/i);
-  if (note) return { kind: 'note', title: capitalize(note[1].trim()) };
 
   // Termine
   const ev =

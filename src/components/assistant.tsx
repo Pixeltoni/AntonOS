@@ -70,7 +70,7 @@ function summary(intent: Intent, data: Data, t: string): string {
     case 'expense':
       return [`${intent.type === 'Einnahme' ? '+' : '−'}${euro(intent.amount)}`, intent.description || intent.category, intent.category].join(' · ');
     case 'note':
-      return intent.title;
+      return intent.content;
   }
 }
 
@@ -190,7 +190,7 @@ export function Assistant() {
         break;
       }
       case 'note': {
-        const id = add('notes', { title: intent.title, courseId: null, content: '', updated: new Date().toISOString() });
+        const id = add('notes', { title: intent.title, courseId: null, content: intent.content, updated: new Date().toISOString() });
         result = { collection: 'notes', ids: [id], href: `#/notizen/${id}`, undo: () => remove('notes', id) };
         break;
       }
@@ -360,7 +360,13 @@ function Confirmation({ done, onUndo, onOpen }: { done: Done; onUndo: () => void
       );
   } else if (done.collection === 'notes') {
     const note = data.notes.find((x) => x.id === done.ids[0]);
-    if (note) fields = field('Titel', <input value={note.title} onChange={(e) => update('notes', note.id, { title: e.target.value })} />);
+    if (note)
+      fields = (
+        <>
+          {field('Titel', <input value={note.title} onChange={(e) => update('notes', note.id, { title: e.target.value })} />)}
+          {field('Text', <textarea rows={3} value={note.content} onChange={(e) => update('notes', note.id, { content: e.target.value, updated: new Date().toISOString() })} />)}
+        </>
+      );
   } else if (done.collection === 'habitLogs') {
     const log = data.habitLogs.find((x) => x.id === done.ids[0]);
     const habit = data.habits.find((h) => h.id === log?.habitId);

@@ -1,5 +1,6 @@
-import type { Course, DateStr, ID, Priority, RepeatFreq } from '../types';
+import type { Course, DateStr, ID, Priority, RepeatFreq, TaskRepeat, TodoList } from '../types';
 import { addDays, parseDate, toDateStr } from './dates';
+import { firstRepeatDate } from './tasks';
 
 export interface QuickAdd {
   title: string;
@@ -11,6 +12,16 @@ export interface QuickAdd {
   evening: boolean;
   /** „irgendwann“ → Irgendwann */
   someday: boolean;
+  /** „jeden Montag“, „alle 2 Wochen“ … */
+  repeat: TaskRepeat | null;
+  /** Erster Tag einer Wiederholung ohne genanntes Datum */
+  repeatStart: DateStr | null;
+  /** @zuhause → ['zuhause'] */
+  tags: string[];
+  /** ~30m, ~1,5h → Minuten */
+  estimate: number | null;
+  /** #Haushalt → eigene Liste */
+  listId: ID | null;
 }
 
 const WEEKDAYS = ['sonntag', 'montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'samstag'];
@@ -24,12 +35,16 @@ const pad = (n: number) => String(n).padStart(2, '0');
  * Uhrzeit (10 Uhr, 10:30, um 9), Priorität wie bei Apple (! niedrig, !! mittel, !!! hoch)
  * und Kurs per #Name oder #Kürzel. Was erkannt wurde, verschwindet aus dem Titel.
  */
-export function parseQuickAdd(input: string, today: DateStr, courses: Pick<Course, 'id' | 'name' | 'code'>[] = []): QuickAdd {
+export function parseQuickAdd(input: string, today: DateStr, courses: Pick<Course, 'id' | 'name' | 'code'>[] = [], lists: Pick<TodoList, 'id' | 'name'>[] = []): QuickAdd {
   let text = ` ${input} `;
   let due: DateStr | null = null;
   let dueTime = '';
   let priority: Priority | null = null;
   let courseId: ID | null = null;
+  let listId: ID | null = null;
+  let repeat: TaskRepeat | null = null;
+  let estimate: number | null = null;
+  const tags: string[] = [];
 
   const take = (re: RegExp, fn: (m: RegExpMatchArray) => boolean | void) => {
     const m = text.match(re);
@@ -41,13 +56,64 @@ export function parseQuickAdd(input: string, today: DateStr, courses: Pick<Cours
     priority = PRIORITY[m[1].length];
   });
 
-  // Kurs: #analysis, #MA-101
+  // Kurs oder eigene Liste: #analysis, #MA-101, #haushalt
   take(/\s#([\p{L}\d][\p{L}\d-]*)(?=\s)/u, (m) => {
     const q = m[1].toLowerCase();
     const hit = courses.find((c) => c.code.toLowerCase() === q) ?? courses.find((c) => c.name.toLowerCase().startsWith(q));
-    if (!hit) return false;
-    courseId = hit.id;
+    if (hit) {
+      courseId = hit.id;
+      return;
+    }
+    const list = lists.find((l) => l.name.toLowerCase() === q) ?? lists.find((l) => l.name.toLowerCase().startsWith(q));
+    if (!list) return false;
+    listId = list.id;
   });
+
+  // Tags: @zuhause @pc
+  for (let i = 0; i < 10; i++) {
+    const before = text;
+    take(/\s@([\p{L}\d][\p{L}\d_-]*)(?=\s)/u, (m) => {
+      const tag = m[1].toLowerCase();
+      if (!tags.includes(tag)) tags.push(tag);
+    });
+    if (text === before) break;
+  }
+
+  // Aufwand: ~30m, ~45 min, ~1h, ~1,5h, ~1h30
+  take(/\s~\s?(\d+(?:[.,]\d+)?)\s?(m|min|h|std)(\d{1,2})?(?=\s)/i, (m) => {
+    const n = Number(m[1].replace(',', '.'));
+    const unit = m[2].toLowerCase();
+    const minutes = unit === 'h' || unit === 'std' ? n * 60 + Number(m[3] ?? 0) : n;
+    if (!minutes || minutes > 24 * 60) return false;
+    estimate = Math.round(minutes);
+  });
+
+  // Wiederholung: „jeden Montag und Donnerstag“, „alle 2 Wochen“, „täglich“ …
+  const wdRe = '(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)';
+  take(new RegExp(`\\s(jeden\\s+${wdRe}(?:\\s*(?:,|und)\\s*${wdRe})*|(?:${wdRe}s)(?:\\s*(?:,|und)\\s*${wdRe}s)*)(?=\\s)`, 'i'), (m) => {
+    const days = [...m[1].toLowerCase().matchAll(new RegExp(wdRe, 'g'))].map((x) => ((WEEKDAYS.indexOf(x[0]) + 6) % 7) + 1);
+    repeat = { freq: 'woechentlich', days: [...new Set(days)].sort() };
+  });
+  const simple: [RegExp, (m: RegExpMatchArray) => TaskRepeat][] = [
+    [/\s(alle\s+(\d{1,3})\s+tage)(?=\s)/i, (m) => ({ freq: 'taeglich', interval: Number(m[2]) })],
+    [/\s(jeden\s+tag|täglich|taeglich)(?=\s)/i, () => ({ freq: 'taeglich' })],
+    [/\s(werktags|jeden\s+werktag)(?=\s)/i, () => ({ freq: 'werktags' })],
+    [/\s(alle\s+(?:2|zwei)\s+wochen|zweiwöchentlich|zweiwoechentlich|jede\s+zweite\s+woche)(?=\s)/i, () => ({ freq: 'zweiwoechentlich' })],
+    [/\s(jede\s+woche|wöchentlich|woechentlich)(?=\s)/i, () => ({ freq: 'woechentlich' })],
+    [/\s(jeden\s+monat|monatlich)(?=\s)/i, () => ({ freq: 'monatlich' })],
+    [/\s(jedes\s+jahr|jährlich|jaehrlich)(?=\s)/i, () => ({ freq: 'jaehrlich' })],
+  ];
+  for (const [re, make] of simple) {
+    if (repeat as TaskRepeat | null) break;
+    take(re, (m) => {
+      repeat = make(m);
+    });
+  }
+  if (repeat as TaskRepeat | null) {
+    take(/\s(nach\s+erledigung)(?=\s)/i, () => {
+      repeat = { ...repeat!, afterDone: true };
+    });
+  }
 
   // Uhrzeit: 10:30, 10.30 Uhr, 10 Uhr, um 9
   take(/\s(?:um\s+)?(\d{1,2})[:.](\d{2})(?:\s*uhr)?(?=\s)/i, (m) => {
@@ -120,8 +186,11 @@ export function parseQuickAdd(input: string, today: DateStr, courses: Pick<Cours
   // Uhrzeit ohne Datum: heute (bzw. morgen, wenn die Uhrzeit heute schon vorbei wäre, ist nicht ermittelbar) → heute
   if (dueTime && !due && !evening) due = today;
 
+  const rep = repeat as TaskRepeat | null;
+  const repeatStart = rep && !due && !evening && !someday ? firstRepeatDate(rep, today) : null;
+
   const title = text.replace(/\s+/g, ' ').trim();
-  return { title, due, dueTime, priority, courseId, evening, someday };
+  return { title, due, dueTime, priority, courseId, evening, someday, repeat: rep, repeatStart, tags, estimate, listId };
 }
 
 export interface EventQuickAdd {

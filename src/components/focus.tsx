@@ -76,7 +76,7 @@ const NEXT_TEXT = { fokus: 'Nächste Runde läuft', pause: 'Zeit für eine kurze
  * (der Zustand liegt im Browser dieses Geräts).
  */
 export function FocusProvider({ children }: { children: ReactNode }) {
-  const { add } = useStore();
+  const { add, mutate } = useStore();
   const { show } = useToast();
   const [timer, setTimer] = useState<FocusTimer>(load);
   const [now, setNow] = useState(() => Date.now());
@@ -91,7 +91,11 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     }
   }, [timer]);
 
-  const save = useCallback((s: Omit<FocusSession, 'id' | 'date'>) => add('sessions', { ...s, date: today() }), [add]);
+  const save = useCallback((s: Omit<FocusSession, 'id' | 'date'>) => {
+    add('sessions', { ...s, date: today() });
+    // Gearbeitete Zeit auch an der Aufgabe merken
+    if (s.taskId) mutate((d) => ({ ...d, tasks: d.tasks.map((t) => (t.id === s.taskId ? { ...t, spent: (t.spent ?? 0) + s.minutes } : t)) }));
+  }, [add, mutate]);
 
   // Takt: Restzeit aktualisieren und Phasenwechsel erkennen
   useEffect(() => {
@@ -188,6 +192,7 @@ export function FocusPill({ hidden }: { hidden?: boolean }) {
   if (!timer.active || hidden) return null;
   const mode = focusMode(timer.config.mode);
   const course = data.courses.find((c) => c.id === timer.config.courseId);
+  const task = data.tasks.find((t) => t.id === timer.config.taskId);
   const label = timer.phase === 'fokus' ? `Fokus · ${mode.label}` : timer.phase === 'pause' ? 'Kurze Pause' : 'Lange Pause';
   return (
     <div className="focus-pill" role="status" style={{ ['--mode' as string]: timer.phase === 'fokus' ? mode.color : '#34C759' }}>
@@ -195,7 +200,7 @@ export function FocusPill({ hidden }: { hidden?: boolean }) {
         <span className="focus-pill-icon" aria-hidden>{timer.phase === 'fokus' ? mode.icon : '☕'}</span>
         <span className="focus-pill-text">
           <span className="focus-pill-label">{label}</span>
-          {course && timer.phase === 'fokus' && <span className="focus-pill-sub">{course.name}</span>}
+          {(task || course) && timer.phase === 'fokus' && <span className="focus-pill-sub">{task?.title ?? course?.name}</span>}
         </span>
         <span className="focus-pill-time">{mmss(left)}</span>
       </a>

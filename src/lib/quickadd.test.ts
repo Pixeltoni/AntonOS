@@ -18,6 +18,11 @@ describe('Schnelleingabe', () => {
       courseId: 'ana',
       evening: false,
       someday: false,
+      repeat: null,
+      repeatStart: null,
+      tags: [],
+      estimate: null,
+      listId: null,
     });
   });
 
@@ -49,7 +54,7 @@ describe('Schnelleingabe', () => {
 
   it('lässt normalen Text und unbekannte Kurse unverändert', () => {
     expect(parseQuickAdd('Version 2.0 testen #unbekannt', T, courses)).toEqual({
-      title: 'Version 2.0 testen #unbekannt', due: null, dueTime: '', priority: null, courseId: null, evening: false, someday: false,
+      title: 'Version 2.0 testen #unbekannt', due: null, dueTime: '', priority: null, courseId: null, evening: false, someday: false, repeat: null, repeatStart: null, tags: [], estimate: null, listId: null,
     });
     expect(parseQuickAdd('Programm #MA-101', T, courses).courseId).toBe('ana');
   });
@@ -78,5 +83,31 @@ describe('Schnelleingabe für Termine', () => {
   it('erkennt mehrtägige Zeiträume und nimmt sonst den gewählten Tag', () => {
     expect(parseEventQuickAdd('Skiurlaub 27.12.-2.1.', t)).toMatchObject({ title: 'Skiurlaub', start: '2026-12-27', end: '2027-01-02', startTime: '' });
     expect(parseEventQuickAdd('Blatt 3-4 abgeben !!!', t, '2026-11-02')).toMatchObject({ title: 'Blatt 3-4 abgeben', start: '2026-11-02', startTime: '', priority: 'hoch' });
+  });
+});
+
+describe('Schnelleingabe: Wiederholen, Tags, Aufwand, Listen', () => {
+  // 2026-10-28 ist ein Mittwoch
+  const T = '2026-10-28';
+  it('versteht Wiederholungen', () => {
+    const a = parseQuickAdd('Wäsche jeden Sonntag', T);
+    expect(a.title).toBe('Wäsche');
+    expect(a.repeat).toEqual({ freq: 'woechentlich', days: [7] });
+    expect(a.repeatStart).toBe('2026-11-01');
+    expect(a.due).toBeNull();
+    expect(parseQuickAdd('Sport jeden Montag und Donnerstag', T).repeat).toEqual({ freq: 'woechentlich', days: [1, 4] });
+    expect(parseQuickAdd('Pflanzen gießen alle 5 Tage nach Erledigung', T).repeat).toEqual({ freq: 'taeglich', interval: 5, afterDone: true });
+    expect(parseQuickAdd('Miete monatlich', T).repeat).toEqual({ freq: 'monatlich' });
+    expect(parseQuickAdd('Blatt alle 2 Wochen', T).repeat).toEqual({ freq: 'zweiwoechentlich' });
+    expect(parseQuickAdd('Abgabe am Freitag', T).repeat).toBeNull();
+  });
+  it('versteht Tags, Aufwand und eigene Listen', () => {
+    const a = parseQuickAdd('Bad putzen @zuhause ~1,5h #haushalt', T, [], [{ id: 'h', name: 'Haushalt' }]);
+    expect(a.title).toBe('Bad putzen');
+    expect(a.tags).toEqual(['zuhause']);
+    expect(a.estimate).toBe(90);
+    expect(a.listId).toBe('h');
+    expect(parseQuickAdd('Mails ~30m', T).estimate).toBe(30);
+    expect(parseQuickAdd('Mail an a@b.de', T).tags).toEqual([]);
   });
 });

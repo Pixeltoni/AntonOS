@@ -24,6 +24,8 @@ export interface FocusConfig {
   autoStart: boolean;
   /** Im Fokus nur passende Dashboard-Kästen zeigen */
   filterDashboard: boolean;
+  /** Aufgabe, an der gearbeitet wird */
+  taskId?: ID | null;
 }
 
 export interface FocusTimer {
@@ -102,7 +104,7 @@ export function tick(timer: FocusTimer, now: number): { timer: FocusTimer; finis
     const { timer: next, next: label } = nextPhase(t, t.endAt);
     finished.push({
       session: ended.phase === 'fokus'
-        ? { minutes: ended.config.work, courseId: ended.config.courseId, distractions: ended.distractions, mode: ended.config.mode }
+        ? { minutes: ended.config.work, courseId: ended.config.courseId, distractions: ended.distractions, mode: ended.config.mode, taskId: ended.config.taskId ?? null }
         : undefined,
       next: label,
     });
@@ -115,7 +117,7 @@ export function tick(timer: FocusTimer, now: number): { timer: FocusTimer; finis
 export function stop(timer: FocusTimer, now: number, save: boolean): { timer: FocusTimer; session?: Omit<FocusSession, 'id' | 'date'> } {
   const done = Math.round((timer.config.work * 60_000 - remainingMs(timer, now)) / 60_000);
   const session = save && timer.active && timer.phase === 'fokus' && done > 0
-    ? { minutes: done, courseId: timer.config.courseId, distractions: timer.distractions, mode: timer.config.mode }
+    ? { minutes: done, courseId: timer.config.courseId, distractions: timer.distractions, mode: timer.config.mode, taskId: timer.config.taskId ?? null }
     : undefined;
   return { timer: idleTimer(timer.config), session };
 }

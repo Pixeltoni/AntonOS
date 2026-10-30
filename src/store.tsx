@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Appearance, Collection, Data, ID, Settings } from './types';
+import type { Appearance, Collection, Data, ID, Settings, Task } from './types';
+import { repeatTasks } from './lib/tasks';
 import { defaultAppearance, defaultFinance, defaultSemester, defaultSettings, demoData } from './demo';
 import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
@@ -13,6 +14,7 @@ const SAVE_DELAY = 400;
 export const emptyData = (): Data => ({
   courses: [],
   tasks: [],
+  taskLists: [],
   notes: [],
   cards: [],
   exams: [],
@@ -157,10 +159,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const update = useCallback(<C extends Collection>(collection: C, id: ID, patch: Partial<Item<C>>) => {
-    setData((d) => ({
-      ...d,
-      [collection]: (d[collection] as Item<C>[]).map((x) => (x.id === id ? withCompletion(collection, x, patch) : x)),
-    }));
+    setData((d) => {
+      const list = (d[collection] as Item<C>[]).map((x) => (x.id === id ? withCompletion(collection, x, patch) : x));
+      // Wiederholte Aufgaben: beim Abhaken entsteht die nächste, beim Widerrufen verschwindet sie wieder
+      return { ...d, [collection]: collection === 'tasks' ? repeatTasks(d.tasks, list as Task[], id, today(), newId) : list };
+    });
   }, []);
 
   const remove = useCallback((collection: Collection, id: ID) => {
@@ -170,6 +173,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (collection === 'habits') next.habitLogs = d.habitLogs.filter((l) => l.habitId !== id);
       if (collection === 'recipes') next.meals = d.meals.map((m) => (m.recipeId === id ? { ...m, recipeId: null } : m));
       if (collection === 'trips') next.transactions = d.transactions.map((t) => (t.tripId === id ? { ...t, tripId: undefined } : t));
+      if (collection === 'taskLists') next.tasks = d.tasks.map((t) => (t.listId === id ? { ...t, listId: null } : t));
       if (collection === 'projects') next.tasks = d.tasks.map((t) => (t.projectId === id ? { ...t, projectId: null } : t));
       return next;
     });

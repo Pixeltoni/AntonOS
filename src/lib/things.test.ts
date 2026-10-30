@@ -19,6 +19,9 @@ describe('Things: Heute, Abends, Irgendwann', () => {
     expect(whenOf(task(setWhen('abends', T)), T)).toBe('abends');
     expect(whenOf(task(setWhen('irgendwann', T)), T)).toBe('irgendwann');
     expect(whenOf(task(setWhen('', T)), T)).toBe('');
+    expect(whenOf(task(setWhen('morgen', T)), T)).toBe('morgen');
+    expect(setWhen('datum', T, '2026-11-05').plannedFor).toBe('2026-11-05');
+    expect(whenOf(task(setWhen('datum', T, '2026-11-05')), T)).toBe('datum');
   });
   it('führt ein Logbuch', () => {
     const log = logbook([

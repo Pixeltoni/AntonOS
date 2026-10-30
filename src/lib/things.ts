@@ -1,7 +1,7 @@
 import type { DateStr, Task } from '../types';
 import { addDays } from './dates';
 
-export type When = '' | 'heute' | 'abends' | 'irgendwann';
+export type When = '' | 'heute' | 'abends' | 'morgen' | 'datum' | 'irgendwann';
 
 const open = (t: Task) => t.status !== 'erledigt';
 
@@ -17,13 +17,16 @@ export const inSomeday = (t: Task) => open(t) && !!t.someday;
 export function whenOf(t: Task, day: DateStr): When {
   if (t.someday) return 'irgendwann';
   if (t.plannedFor && t.plannedFor <= day) return t.evening ? 'abends' : 'heute';
+  if (t.plannedFor) return t.plannedFor === addDays(day, 1) ? 'morgen' : 'datum';
   return '';
 }
 
-/** Änderung für „Wann“ – wie das Kalender-Menü in Things */
-export function setWhen(when: When, day: DateStr): Pick<Task, 'plannedFor' | 'evening' | 'someday'> {
+/** Änderung für „Wann“ – wie das Kalender-Menü in Things; bei „datum“ der Tag `date` */
+export function setWhen(when: When, day: DateStr, date?: DateStr): Pick<Task, 'plannedFor' | 'evening' | 'someday'> {
   if (when === 'heute') return { plannedFor: day, evening: false, someday: false };
   if (when === 'abends') return { plannedFor: day, evening: true, someday: false };
+  if (when === 'morgen') return { plannedFor: addDays(day, 1), evening: false, someday: false };
+  if (when === 'datum') return { plannedFor: date && date > day ? date : addDays(day, 1), evening: false, someday: false };
   if (when === 'irgendwann') return { plannedFor: null, evening: false, someday: true };
   return { plannedFor: null, evening: false, someday: false };
 }

@@ -283,7 +283,6 @@ a.gallery-card:hover { text-decoration: none; border-color: var(--accent); }
 .cal-item:hover { text-decoration: none; }
 .cal-item.exam { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--surface)); }
 .cal-item.project { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
-.cal-item.workout { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
 .cal-item.done { text-decoration: line-through; opacity: 0.6; }
 
 /* Kalender: Ansichten, eigene Termine, Termin-Fenster */
@@ -366,7 +365,6 @@ button.cal-arrow { font-size: 1.6rem; color: var(--accent); padding: 0 6px; }
 .cal-dot { --p: var(--accent); width: 6px; height: 6px; border-radius: 50%; background: var(--p); display: inline-block; }
 .cal-dot.exam { --p: var(--danger); }
 .cal-dot.project { --p: var(--warn); }
-.cal-dot.workout { --p: var(--ok); }
 .cal-dot.task { --p: #8b5cf6; }
 .cal-dot.prio-hoch { --p: var(--danger); }
 .cal-dot.prio-mittel { --p: var(--warn); }
@@ -424,7 +422,6 @@ button.cal-arrow { font-size: 1.6rem; color: var(--accent); padding: 0 6px; }
 .tl-event .tl-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tl-event.exam { --p: var(--danger); }
 .tl-event.project { --p: var(--warn); }
-.tl-event.workout { --p: var(--ok); }
 .tl-event.task { --p: #8b5cf6; }
 .tl-event.prio-hoch { --p: var(--danger); }
 .tl-event.prio-mittel { --p: var(--warn); }
@@ -1538,7 +1535,6 @@ button.lift-day.next { background: color-mix(in srgb, var(--c) 9%, var(--surface
 .cal-item.task { --p: #9065b0; border-left-color: var(--p); background: color-mix(in srgb, var(--p) 12%, var(--surface)); }
 .cal-item.exam { --p: var(--danger); }
 .cal-item.project { --p: var(--warn); }
-.cal-item.workout { --p: var(--ok); }
 .cal-more { font-size: 0.68rem; padding: 0 2px; }
 .cal-more:hover { color: var(--text); }
 

@@ -1,3 +1,5 @@
+import { isNativeApp, nativeNotice, nativePermission } from './native';
+
 export type NotifyResult = 'ok' | 'unsupported' | 'not-allowed' | 'no-worker' | 'error';
 
 /** Wartet höchstens `ms` Millisekunden auf einen aktiven Service Worker. */
@@ -23,6 +25,10 @@ const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || 
  * notfalls direkt im Browser. Liefert, ob es geklappt hat bzw. woran es lag.
  */
 export async function showNotice(title: string, body: string, tag?: string): Promise<NotifyResult> {
+  if (isNativeApp()) {
+    if ((await nativePermission(false)) !== 'granted') return 'not-allowed';
+    return (await nativeNotice(title, body, tag)) ? 'ok' : 'error';
+  }
   if (typeof Notification === 'undefined') return 'unsupported';
   if (Notification.permission !== 'granted') return 'not-allowed';
   const icon = `${import.meta.env.BASE_URL}icons/a-192.png`;
@@ -67,6 +73,7 @@ export function notifyProblemText(result: NotifyResult): string {
 
 /** Fragt einmal nach der Erlaubnis für Mitteilungen. */
 export async function askNotifications(): Promise<NotificationPermission | 'unsupported'> {
+  if (isNativeApp()) return nativePermission(true);
   if (typeof Notification === 'undefined') return 'unsupported';
   if (Notification.permission !== 'default') return Notification.permission;
   try {

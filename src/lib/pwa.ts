@@ -1,4 +1,5 @@
 /** Hilfen für AntonOS als installierte App (PWA). */
+import { Capacitor } from '@capacitor/core';
 
 interface InstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -19,7 +20,8 @@ export function setupPwa() {
     deferred = null;
     listeners.forEach((l) => l());
   });
-  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  // In der iOS-App liegen alle Dateien schon auf dem Gerät – dort braucht es keinen Service Worker
+  if (import.meta.env.PROD && 'serviceWorker' in navigator && !Capacitor.isNativePlatform()) {
     const register = () => navigator.serviceWorker.register('./sw.js').catch(() => undefined);
     // Falls „load“ schon vorbei ist, sofort anmelden – sonst gäbe es nie einen Service Worker
     if (document.readyState === 'complete') void register();
@@ -45,7 +47,7 @@ export async function promptInstall(): Promise<boolean> {
 
 /** Läuft AntonOS gerade als installierte App (ohne Browser-Leisten)? */
 export function isStandalone(): boolean {
-  return window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+  return Capacitor.isNativePlatform() || window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 }
 
 export function isIOS(): boolean {

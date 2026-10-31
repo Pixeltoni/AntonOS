@@ -7,6 +7,7 @@ import { awards, DEFAULT_SLOT_GOAL, defaultRingGoals, ringSlots, SLOT_COLORS, SO
 import { MiniRing, RingsCard } from '../components/rings';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
 import { useToast } from '../components/toast';
+import { askNotifications } from '../lib/notify';
 import { AddButton, Sheet } from '../components/sheet';
 
 /** Abhaken bzw. wieder öffnen. Mengen-Gewohnheiten werden beim Abhaken auf das Tagesziel gesetzt. */
@@ -140,8 +141,8 @@ function RingGoalsForm() {
     setSlot(i, { source, goal: sourceHasGoal(source) ? (slots[i].source === source ? slots[i].goal : DEFAULT_SLOT_GOAL[source]) : 0 });
   const toggleReminder = async (on: boolean) => {
     set({ reminder: on });
-    if (on && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      const result = await Notification.requestPermission().catch(() => 'denied');
+    if (on) {
+      const result = await askNotifications();
       if (result !== 'granted') show('Ohne Mitteilungen erinnert dich AntonOS mit einem Hinweis in der App.');
     }
   };

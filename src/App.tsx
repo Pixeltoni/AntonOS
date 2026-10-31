@@ -43,6 +43,7 @@ import { Subscriptions } from './pages/Subscriptions';
 import { People, PersonDetail } from './pages/People';
 import { TripDetail, Trips } from './pages/Trips';
 import { useLifeReminders } from './components/reminders';
+import { useNativeNotifications } from './components/native';
 
 function useRoute(): string[] {
   const read = () => location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -164,6 +165,7 @@ function Shell() {
   useAppBadge();
   useWeeklyReviewReminder();
   useLifeReminders();
+  useNativeNotifications();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);

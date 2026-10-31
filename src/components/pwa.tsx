@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { today } from '../lib/dates';
 import { askNotifications, notifyProblemText, showNotice } from '../lib/notify';
+import { isNativeApp, nativePermission } from '../lib/native';
 import { canPromptInstall, isIOS, isStandalone, onInstallChange, parseShared, promptInstall, setBadge, type SharedContent } from '../lib/pwa';
 import { useToast } from './toast';
 
@@ -99,6 +100,10 @@ export function AppPanel() {
   const [, rerender] = useState(0);
   const [permission, setPermission] = useState<string>(() => (typeof Notification === 'undefined' ? 'unsupported' : Notification.permission));
   useEffect(() => onInstallChange(() => rerender((x) => x + 1)) as () => void, []);
+  const native = isNativeApp();
+  useEffect(() => {
+    if (native) void nativePermission(false).then(setPermission);
+  }, [native]);
   const standalone = isStandalone();
   const ios = isIOS();
 
@@ -117,12 +122,15 @@ export function AppPanel() {
     const result = await showNotice('AntonOS', 'So sieht eine Mitteilung aus.', 'test');
     if (result === 'ok') show('Test-Mitteilung gesendet. Nichts zu sehen? Dann sind Mitteilungen in den Geräte-Einstellungen aus.', undefined, 6000);
     else show(`Test fehlgeschlagen. ${notifyProblemText(result)}`, undefined, 8000);
-    if (typeof Notification !== 'undefined') setPermission(Notification.permission);
+    if (native) setPermission(await nativePermission(false));
+    else if (typeof Notification !== 'undefined') setPermission(Notification.permission);
   };
 
   return (
     <div className="col app-panel">
-      {standalone ? (
+      {native ? (
+        <p>✅ <strong>Du nutzt die iOS-App von AntonOS.</strong> Alles liegt auf dem Gerät und funktioniert auch offline.</p>
+      ) : standalone ? (
         <p>✅ <strong>AntonOS läuft als App.</strong> Es funktioniert auch offline und zeigt am Symbol, wie viele Aufgaben heute fällig sind.</p>
       ) : ios ? (
         <div className="install-steps">
@@ -149,7 +157,7 @@ export function AppPanel() {
           <br />
           <span className="muted small">
             {permission === 'granted' ? 'Erlaubt – für Termine, Vorlesungen, Ringe und den Fokus-Timer.'
-              : permission === 'denied' ? 'Blockiert – in den Geräte-Einstellungen für diese Seite erlauben.'
+              : permission === 'denied' ? (native ? 'Blockiert – in den iPhone-Einstellungen unter AntonOS → Mitteilungen erlauben.' : 'Blockiert – in den Geräte-Einstellungen für diese Seite erlauben.')
               : permission === 'unsupported' ? (ios && !standalone ? 'Auf dem iPhone erst nach dem Installieren möglich (iOS 16.4 oder neuer).' : 'Werden von diesem Browser nicht unterstützt.')
               : 'Noch nicht erlaubt.'}
           </span>
@@ -158,7 +166,9 @@ export function AppPanel() {
         {permission === 'granted' && <button type="button" onClick={test}>Testen</button>}
       </div>
       <p className="muted small">
-        Mitteilungen kommen, solange AntonOS geöffnet ist oder als App im Hintergrund läuft. Für Mitteilungen bei ganz geschlossener App bräuchte es einen eigenen Server – das kann ich bei Bedarf über Supabase ergänzen.
+        {native
+          ? 'Erinnerungen an Termine, Aufgaben, Geburtstage, Kündigungsfristen und Reisen der nächsten zwei Wochen sind beim iPhone angemeldet und kommen auch, wenn AntonOS ganz geschlossen ist.'
+          : 'Mitteilungen kommen, solange AntonOS geöffnet ist oder als App im Hintergrund läuft. Für Mitteilungen bei ganz geschlossener App gibt es die iOS-App.'}
       </p>
     </div>
   );

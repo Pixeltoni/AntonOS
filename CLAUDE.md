@@ -8,6 +8,7 @@ Funktionsübersicht für Nutzer steht in `README.md` (nur bei Bedarf lesen).
 - `npm test` – Vitest (nur `src/lib/*.test.ts`, reine Logik)
 - `npm run build` – Typecheck (`tsc --noEmit`) + Vite-Build nach `dist/`
 - `npm run dev` – Entwicklungsserver auf http://localhost:5173
+- `npm run ios` – Build + `cap sync ios` (kopiert `dist/` ins Xcode-Projekt `ios/`)
 - Vor jedem Push: `npm test` und `npm run build` müssen grün sein.
 
 ## Aufbau
@@ -30,6 +31,7 @@ Funktionsübersicht für Nutzer steht in `README.md` (nur bei Bedarf lesen).
 - Neues Dashboard-Widget: `WidgetId` (`types.ts`), `DEFAULT_DASHBOARD`/`WIDGET_LABELS` (`lib/layout.ts`), Darstellung in `pages/Dashboard.tsx`.
 - Supabase-Adresse und Publishable Key in `src/lib/cloud.ts` sind absichtlich öffentlich (RLS).
 - Deploy: Push auf Branch `Main` → GitHub Pages (`.github/workflows/deploy.yml`).
+- iOS-App: Capacitor (`capacitor.config.ts`, Projekt in `ios/`, Swift Package Manager). Anton hat keinen Mac – gebaut und zu TestFlight hochgeladen wird über `.github/workflows/ios.yml` (manuell starten, Secrets siehe Datei). Native Brücke in `src/lib/native.ts` (`isNativeApp()`), Erinnerungen werden im Voraus beim System angemeldet (`src/lib/schedule.ts`, `components/native.tsx`). Neue Erinnerungsarten dort mit gleichem `tag` wie im Web ergänzen, sonst kommen sie doppelt.
 
 ## Commits
 Kurze deutsche Überschrift, die beschreibt, was sich für Nutzer ändert (z. B. „Wochenrückblick und Stimmung“), darunter Stichpunkte.

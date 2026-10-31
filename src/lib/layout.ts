@@ -122,7 +122,7 @@ export function normalizeWidgets(stored: unknown): WidgetConfig[] {
 export const DEFAULT_SIDEBAR: NavItem[] = (
   [
     ['dashboard', 'Übersicht', 'Start'], ['kalender', 'Kalender', 'Start'], ['aufgaben', 'Aufgaben', 'Start'], ['notizen', 'Notizen', 'Start'],
-    ['gewohnheiten', 'Gewohnheiten', 'Leben'], ['wecker', 'Wecker', 'Leben'], ['rueckblick', 'Rückblick', 'Leben'], ['ziele', 'Ziele', 'Leben'], ['projekte', 'Projekte', 'Leben'],
+    ['gewohnheiten', 'Gewohnheiten', 'Leben'], ['rueckblick', 'Rückblick', 'Leben'], ['ziele', 'Ziele', 'Leben'], ['projekte', 'Projekte', 'Leben'],
     ['training', 'Training', 'Leben'], ['essen', 'Essen', 'Leben'], ['menschen', 'Menschen', 'Leben'],
     ['finanzen', 'Finanzen', 'Geld'], ['einkauf', 'Einkaufsliste', 'Geld'], ['abos', 'Abos & Verträge', 'Geld'],
     ['kurse', 'Kurse', 'Studium'], ['lernen', 'Lernkarten', 'Studium'], ['pruefungen', 'Prüfungen', 'Studium'], ['noten', 'Noten', 'Studium'],

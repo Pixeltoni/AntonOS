@@ -39,7 +39,6 @@ export const emptyData = (): Data => ({
   events: [],
   albums: [],
   tools: [],
-  alarms: [],
   settings: defaultSettings(),
   schemaVersion: SCHEMA_VERSION,
 });

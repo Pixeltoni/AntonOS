@@ -9,6 +9,7 @@ import { dueTaskReminders } from '../lib/calendar';
 import { habitSteps } from '../lib/life';
 import { categorize } from '../lib/shopping';
 import { askNotifications, notify } from '../lib/notify';
+import { joinSpeech, MAX_LISTEN_MS, SILENCE_MS, START_TIMEOUT_MS, transcriptOf } from '../lib/speech';
 import { useToast } from './toast';
 import { Icon } from './icons';
 
@@ -130,7 +131,7 @@ export function Assistant() {
   useEffect(() => {
     if (open) requestAnimationFrame(() => input.current?.focus());
     else {
-      recognition.current?.stop();
+      stopListening(true);
       setText('');
       setDone(null);
       setProblem('');
@@ -200,47 +201,93 @@ export function Assistant() {
     setText('');
   };
 
+  // Zuhören läuft weiter, bis eine Pause von SILENCE_MS kommt oder „Stopp“ gedrückt wird –
+  // auch wenn der Browser die Erkennung zwischendurch selbst beendet (dann neu starten).
+  const speech = useRef<{ stopped: boolean; cancelled: boolean; heard: string; timer?: ReturnType<typeof setTimeout>; started: number; pending: string; finish?: () => void } | null>(null);
+
+  const stopListening = (cancel = false) => {
+    const s = speech.current;
+    if (!s) return;
+    s.stopped = true;
+    s.cancelled ||= cancel;
+    clearTimeout(s.timer);
+    recognition.current?.stop();
+    // Manche Browser melden das Ende nie – dann selbst abschließen
+    setTimeout(() => speech.current === s && s.finish?.(), 1500);
+  };
+
   const listen = () => {
     const Ctor = SpeechCtor();
     if (!Ctor) return;
     if (listening) {
-      recognition.current?.stop();
+      stopListening();
       return;
     }
-    const rec = new Ctor();
-    rec.lang = 'de-DE';
-    rec.interimResults = true;
-    rec.continuous = false;
-    let finalText = '';
-    rec.onresult = (e) => {
-      let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (r.isFinal) finalText += r[0].transcript;
-        else interim += r[0].transcript;
-      }
-      setText((finalText + interim).trim());
+    const session = { stopped: false, cancelled: false, heard: '', pending: '', started: Date.now(), timer: undefined as ReturnType<typeof setTimeout> | undefined, finish: undefined as (() => void) | undefined };
+    speech.current = session;
+    const waitFor = (ms: number) => {
+      clearTimeout(session.timer);
+      session.timer = setTimeout(() => stopListening(), ms);
     };
-    rec.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') setProblem('Das Mikrofon ist nicht erlaubt – bitte in den Einstellungen des Browsers bzw. Geräts erlauben.');
-      else if (e.error === 'network') setProblem('Die Spracherkennung braucht Internet.');
-      else if (e.error !== 'no-speech' && e.error !== 'aborted') setProblem('Die Spracherkennung hat nicht geklappt – versuch es noch einmal oder tippe.');
-    };
-    rec.onend = () => {
+
+    const finish = () => {
+      if (speech.current !== session) return;
+      clearTimeout(session.timer);
       setListening(false);
       recognition.current = null;
+      speech.current = null;
+      session.heard = joinSpeech(session.heard, session.pending);
       // Gesprochenes sofort ausführen – im Popup lässt es sich prüfen und widerrufen
-      if (finalText.trim()) run(finalText.trim());
+      if (!session.cancelled && session.heard) run(session.heard);
     };
+
+    session.finish = finish;
+
+    const startRound = () => {
+      const rec = new Ctor();
+      rec.lang = 'de-DE';
+      rec.interimResults = true;
+      rec.continuous = true;
+      rec.onresult = (e) => {
+        const round = transcriptOf(e.results);
+        // Beim Beenden zählt auch, was noch vorläufig war
+        session.pending = joinSpeech(round.final, round.interim);
+        setText(joinSpeech(session.heard, session.pending));
+        waitFor(SILENCE_MS);
+      };
+      rec.onerror = (e) => {
+        if (e.error === 'no-speech' || e.error === 'aborted') return;
+        session.stopped = true;
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') setProblem('Das Mikrofon ist nicht erlaubt – bitte in den Einstellungen des Browsers bzw. Geräts erlauben.');
+        else if (e.error === 'network') setProblem('Die Spracherkennung braucht Internet.');
+        else setProblem('Die Spracherkennung hat nicht geklappt – versuch es noch einmal oder tippe.');
+      };
+      rec.onend = () => {
+        session.heard = joinSpeech(session.heard, session.pending);
+        session.pending = '';
+        if (!session.stopped && Date.now() - session.started < MAX_LISTEN_MS) {
+          try {
+            startRound();
+            return;
+          } catch {
+            // dann eben fertig
+          }
+        }
+        finish();
+      };
+      recognition.current = rec;
+      rec.start();
+    };
+
     setProblem('');
     setDone(null);
     setText('');
-    recognition.current = rec;
     setListening(true);
+    waitFor(START_TIMEOUT_MS);
     try {
-      rec.start();
+      startRound();
     } catch {
-      setListening(false);
+      finish();
     }
   };
 
@@ -264,7 +311,7 @@ export function Assistant() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && (e.preventDefault(), close())}
-            placeholder={listening ? 'Ich höre zu …' : 'Was soll ich eintragen?'}
+            placeholder={listening ? 'Ich höre zu … (Pause oder ■ = fertig)' : 'Was soll ich eintragen?'}
             aria-label="Was soll ich eintragen?"
             autoComplete="off"
             enterKeyHint="send"

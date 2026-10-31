@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CalendarDays, CheckSquare, ChevronDown, Keyboard, Moon, Pencil, Search, X } from 'lucide-react';
 import { useStore } from '../store';
-import type { ID, Task } from '../types';
+import type { Task } from '../types';
 import { addDays, formatDate, parseDate, today } from '../lib/dates';
 import { TaskEmpty, TaskForm, TaskList } from '../components/TaskList';
 import { useTaskActions, useTaskUI, visibleTaskIds } from '../components/taskui';
 import { useCalendarEntries } from '../components/calendar';
-import { ProgressPie } from '../components/ui';
-import { deadlineLabel, inSomeday, inToday, logbook } from '../lib/things';
+import { inSomeday, inToday, logbook } from '../lib/things';
 import { collectTags, doneToday, formatMinutes, freeMinutes, groupUpcoming, matchesQuery, upcomingDate } from '../lib/tasks';
 import { isTimedOn, onDay, sortEntries, toMin } from '../lib/calendar';
 
-type ListId = 'heute' | 'geplant' | 'alle' | 'markiert' | 'irgendwann' | 'erledigt' | `kurs:${string}` | 'ohne-kurs' | `liste:${string}` | `projekt:${string}`;
+type ListId = 'heute' | 'geplant' | 'alle' | 'markiert' | 'irgendwann' | 'erledigt' | `kurs:${string}` | 'ohne-kurs' | `liste:${string}`;
 
 interface SmartList {
   id: ListId;
@@ -28,6 +27,8 @@ const svg = (d: ReactNode) => (
 );
 
 const open = (t: Task) => t.status !== 'erledigt';
+/** Aufgaben eines Projekts stehen nur im Projekte-Tab */
+const inTab = (t: Task) => !t.projectId;
 
 export const SMART_LISTS: SmartList[] = [
   { id: 'heute', label: 'Heute', color: '#007AFF', drop: 'smart:heute', icon: svg(<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" />), filter: (t, d) => inToday(t, d) },
@@ -97,22 +98,16 @@ export function Tasks() {
   const looseList = { id: 'ohne-kurs' as ListId, label: 'Ohne Liste', color: '#8E8E93', filter: (x: Task) => open(x) && x.courseId === null && !x.listId, drop: 'course:' };
   const allLists = [...courseLists, ...ownLists, looseList];
   const projects = data.projects.filter((p) => p.status !== 'abgeschlossen');
-  const projectShare = (id: ID) => {
-    const all = data.tasks.filter((x) => x.projectId === id);
-    return all.length ? all.filter((x) => !open(x)).length / all.length : 0;
-  };
   const smart = SMART_LISTS.find((l) => l.id === listId);
   const userList = allLists.find((l) => l.id === listId);
   const ownList = ownLists.find((l) => l.id === listId)?.list;
-  const project = listId.startsWith('projekt:') ? data.projects.find((p) => p.id === listId.slice(8)) : undefined;
-  const title = smart?.label ?? userList?.label ?? project?.title ?? 'Aufgaben';
+  const title = smart?.label ?? userList?.label ?? 'Aufgaben';
   const color = smart?.color ?? userList?.color ?? '#007AFF';
-  const baseTasks = data.tasks.filter((task) =>
-    smart ? smart.filter(task, t) : userList ? userList.filter(task) : project ? open(task) && task.projectId === project.id : open(task),
-  );
+  const pool = data.tasks.filter(inTab);
+  const baseTasks = pool.filter((task) => (smart ? smart.filter(task, t) : userList ? userList.filter(task) : open(task)));
   const tags = collectTags(baseTasks);
   const tasks = baseTasks.filter((x) => matchesQuery(x, query) && (!tag || (x.tags ?? []).includes(tag)));
-  const count = (fn: (task: Task) => boolean) => data.tasks.filter(fn).length;
+  const count = (fn: (task: Task) => boolean) => pool.filter(fn).length;
   const showCourse = !listId.startsWith('kurs:') && !listId.startsWith('liste:');
 
   // Tastatur: Pfeile, Leertaste, N, T, E, M, F, Entf, ?
@@ -225,20 +220,6 @@ export function Tasks() {
             <button type="button" className="rem-list-btn rem-add-list" onClick={() => setNewList({ name: '', color: LIST_COLORS[data.taskLists.length % LIST_COLORS.length] })}>+ Liste hinzufügen</button>
           )}
         </div>
-        {projects.length > 0 && (
-          <>
-            <h2 className="rem-side-title">Projekte</h2>
-            <div className="rem-lists">
-              {projects.map((p) => (
-                <button key={p.id} type="button" className={`rem-list-btn ${listId === `projekt:${p.id}` ? 'active' : ''}`} onClick={() => setListId(`projekt:${p.id}`)} aria-pressed={listId === `projekt:${p.id}`} data-drop={`project:${p.id}`}>
-                  <ProgressPie share={projectShare(p.id)} size={22} />
-                  <span className="grow">{p.title}</span>
-                  <span className="muted">{count((task) => open(task) && task.projectId === p.id)}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
         <button type="button" className="rem-help-btn muted small" onClick={() => setHelp(true)}><Keyboard size={14} aria-hidden /> Tastenkürzel</button>
       </aside>
 
@@ -276,12 +257,6 @@ export function Tasks() {
             </button>
           </div>
         )}
-        {project && (
-          <p className="muted small rem-project-meta">
-            <ProgressPie share={projectShare(project.id)} size={14} /> {Math.round(projectShare(project.id) * 100)} % erledigt
-            {project.due && <> · {deadlineLabel(project.due, t)}</>} · <a href={`#/projekte/${project.id}`}>Projekt öffnen</a>
-          </p>
-        )}
 
         <div className="rem-filter">
           <label className="rem-search">
@@ -301,7 +276,6 @@ export function Tasks() {
         {listId !== 'erledigt' && (
           <TaskForm
             courseId={listId.startsWith('kurs:') ? listId.slice(5) : null}
-            projectId={project?.id ?? null}
             defaults={{
               flagged: listId === 'markiert',
               plannedFor: listId === 'heute' ? t : undefined,
@@ -322,16 +296,6 @@ export function Tasks() {
               <TaskList tasks={g.tasks} sortable={false} />
             </div>
           ))
-        ) : project && (project.sections?.length ?? 0) > 0 ? (
-          <>
-            <TaskList tasks={tasks.filter((x) => !x.section || !project.sections!.includes(x.section))} showCourse />
-            {project.sections!.map((sec) => (
-              <div key={sec} className="rem-group">
-                <h3>{sec}</h3>
-                <TaskList tasks={tasks.filter((x) => x.section === sec)} />
-              </div>
-            ))}
-          </>
         ) : (
           <TaskList tasks={tasks} showCourse={showCourse} emptyText={query || tag ? 'Nichts gefunden.' : undefined} />
         )}
@@ -395,7 +359,7 @@ function TodayView({ tasks, filtered, entries }: { tasks: Task[]; filtered: bool
   const t = today();
   const overdue = tasks.filter((x) => x.due !== null && x.due < t);
   const rest = tasks.filter((x) => !overdue.includes(x));
-  const done = doneToday(data.tasks, t).filter((x) => !filtered || tasks.includes(x));
+  const done = doneToday(data.tasks.filter(inTab), t).filter((x) => !filtered || tasks.includes(x));
   const total = tasks.length + done.length;
   const planned = tasks.reduce((s, x) => s + (x.estimate ?? 0), 0);
   const now = new Date();

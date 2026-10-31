@@ -43,8 +43,6 @@ import { Subscriptions } from './pages/Subscriptions';
 import { People, PersonDetail } from './pages/People';
 import { TripDetail, Trips } from './pages/Trips';
 import { useLifeReminders } from './components/reminders';
-import { AlarmRinger } from './components/alarm';
-import { Alarms } from './pages/Alarms';
 
 function useRoute(): string[] {
   const read = () => location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -89,8 +87,6 @@ function Page({ route }: { route: string[] }) {
       return param ? <ProjectDetail id={param} /> : <Projects />;
     case 'gewohnheiten':
       return <Habits />;
-    case 'wecker':
-      return <Alarms />;
     case 'finanzen':
       return <Finance />;
     case 'einkauf':
@@ -266,7 +262,6 @@ function Shell() {
       <Spotlight />
       <Assistant />
       <ShareSheet />
-      <AlarmRinger />
     </div>
   );
 }

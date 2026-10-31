@@ -1,5 +1,5 @@
 import {
-  AlarmClock, BookOpen, Cake, Calendar, CreditCard, Plane, Users, UtensilsCrossed, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
+  BookOpen, Cake, Calendar, CreditCard, Plane, Users, UtensilsCrossed, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
   LayoutGrid, ListChecks, MessageCircleHeart, Music, NotebookPen, Pencil, Receipt, Repeat, Rocket, Search, Settings, ShoppingCart,
   Smile, Sparkles, Target, Timer, Tv, Wallet, WandSparkles, Zap, type LucideIcon,
 } from 'lucide-react';
@@ -12,7 +12,6 @@ export const PAGE_ICONS: Record<string, LucideIcon> = {
   aufgaben: ListChecks,
   notizen: NotebookPen,
   gewohnheiten: Repeat,
-  wecker: AlarmClock,
   rueckblick: Smile,
   ziele: Target,
   projekte: Rocket,

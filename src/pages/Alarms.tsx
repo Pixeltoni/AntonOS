@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react';
 import { useStore } from '../store';
-import type { Alarm, AlarmSound, ID } from '../types';
-import { CHALLENGES, daysLabel, defaultAlarm, nextRing, spotifyUri, untilLabel, WEEKDAYS, youtubeId } from '../lib/alarm';
+import type { Alarm, AlarmChallenge, AlarmSound, ID } from '../types';
+import {
+  bedtimeFor, CHALLENGES, cycleTimes, defaultAlarm, defaultSleep, durationLabel, hhmm, isPaused, isPunctual, isSkipping, memoryLength, nextAlarm, nextRing,
+  quickAlarm, repeatLabel, shakeTarget, skipNext, SLEEP_GOALS, SNOOZE_MINUTES, snoozeOf, spotifyUri, untilLabel, WAKE_CHECK_MINUTES, wakeStats, youtubeId,
+} from '../lib/alarm';
+import { addDays, parseDate, today } from '../lib/dates';
 import { isMobile } from '../lib/notify';
 import { deleteSoundFile, QrScanner, saveSoundFile, SYNC_EVENT, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
 import { isNativeApp, nativeAlarmPermission, type AlarmPermission } from '../lib/native';
@@ -102,15 +106,129 @@ function SpotifyPicker({ value, name, onPick }: { value: string; name?: string; 
 
 type Draft = Omit<Alarm, 'id'>;
 
+const WEEKDAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const ROW = 36;
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+const two = (n: number) => String(n).padStart(2, '0');
+
+/** Eine Spalte des Drehrads: wischen oder tippen, rastet auf ganze Werte ein */
+function WheelColumn({ values, value, onChange, label }: { values: number[]; value: number; onChange: (v: number) => void; label: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  const settle = useRef(0);
+  const index = Math.max(0, values.indexOf(value));
+  useEffect(() => {
+    const el = box.current;
+    if (el && Math.round(el.scrollTop / ROW) !== index) el.scrollTo({ top: index * ROW });
+  }, [index]);
+  const onScroll = () => {
+    clearTimeout(settle.current);
+    settle.current = window.setTimeout(() => {
+      const el = box.current;
+      if (!el) return;
+      const i = Math.min(values.length - 1, Math.max(0, Math.round(el.scrollTop / ROW)));
+      if (values[i] !== value) onChange(values[i]);
+    }, 90);
+  };
+  return (
+    <div
+      ref={box}
+      className="wheel-col"
+      role="listbox"
+      aria-label={label}
+      tabIndex={0}
+      onScroll={onScroll}
+      onKeyDown={(e) => {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        const i = (index + (e.key === 'ArrowUp' ? -1 : 1) + values.length) % values.length;
+        onChange(values[i]);
+      }}
+    >
+      {values.map((v) => (
+        <button key={v} type="button" role="option" aria-selected={v === value} className={v === value ? 'on' : ''} tabIndex={-1} onClick={() => onChange(v)}>
+          {two(v)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Uhrzeit zum Drehen wie im iPhone-Wecker */
+function WheelTime({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h, m] = value.split(':').map(Number);
+  return (
+    <div className="wheel">
+      <WheelColumn values={HOURS} value={h || 0} onChange={(v) => onChange(`${two(v)}:${two(m || 0)}`)} label="Stunde" />
+      <span className="wheel-colon" aria-hidden>:</span>
+      <WheelColumn values={MINUTES} value={m || 0} onChange={(v) => onChange(`${two(h || 0)}:${two(v)}`)} label="Minute" />
+    </div>
+  );
+}
+
+function NavRow({ label, value, onClick }: { label: string; value: string; onClick: () => void }) {
+  return (
+    <li>
+      <button type="button" className="ios-row" onClick={onClick}>
+        <span>{label}</span>
+        <span className="ios-row-value">{value}</span>
+        <span className="ios-chevron" aria-hidden>›</span>
+      </button>
+    </li>
+  );
+}
+
+function SwitchRow({ label, hint, checked, onChange, children }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void; children?: ReactNode }) {
+  return (
+    <li>
+      <label className="ios-row">
+        <span className="grow">
+          {label}
+          {hint && <span className="ios-row-hint">{hint}</span>}
+        </span>
+        <input type="checkbox" className="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      </label>
+      {checked && children}
+    </li>
+  );
+}
+
+function CheckRow({ label, hint, on, onClick }: { label: string; hint?: string; on: boolean; onClick: () => void }) {
+  return (
+    <li>
+      <button type="button" className="ios-row" aria-pressed={on} onClick={onClick}>
+        <span className="grow">
+          {label}
+          {hint && <span className="ios-row-hint">{hint}</span>}
+        </span>
+        <span className="ios-check" aria-hidden>{on ? '✓' : ''}</span>
+      </button>
+    </li>
+  );
+}
+
+type SubPage = 'wiederholen' | 'ton' | 'aufgabe';
+
+const challengeLabel = (a: Draft) => {
+  const c = CHALLENGES.find((x) => x.id === a.challenge)?.label ?? 'Rechnen';
+  if (a.challenge === 'rechnen') return `${c}, ${a.rounds}×`;
+  if (a.challenge === 'schuetteln') return `${c}, ${shakeTarget(a.level)}×`;
+  if (a.challenge === 'memory') return `${c}, ${memoryLength(a.level)} Farben`;
+  return c;
+};
+
 function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID; native: boolean; onClose: () => void }) {
   const { add, update, remove } = useStore();
   const [a, setA] = useState<Draft>(initial);
+  const [page, setPage] = useState<SubPage | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [hint, setHint] = useState('');
   const set = (patch: Partial<Draft>) => setA((x) => ({ ...x, ...patch }));
   const toggleDay = (d: number) => set({ days: a.days.includes(d) ? a.days.filter((x) => x !== d) : [...a.days, d].sort() });
+  const snooze = snoozeOf(a);
+  const now = new Date();
 
   const problem = (): string => {
     if (!/^\d\d:\d\d$/.test(a.time)) return 'Bitte eine Uhrzeit wählen.';
@@ -118,128 +236,244 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
     if (a.sound === 'youtube' && !youtubeId(a.soundUrl)) return 'Bitte einen gültigen YouTube-Link einfügen.';
     if (a.sound === 'spotify' && !spotifyUri(a.soundUrl)) return 'Bitte einen Song, ein Album oder eine Playlist aus Spotify wählen.';
     if (a.challenge === 'qr' && !a.qr) return 'Bitte zuerst einen QR-Code scannen.';
+    if (a.days.length === 0 && a.date && a.date < today()) return 'Das Datum liegt in der Vergangenheit.';
     return '';
   };
 
   const save = async () => {
     const p = problem();
-    if (p) return setError(p);
+    if (p) {
+      setPage(null);
+      return setError(p);
+    }
     unlockAlarmAudio();
-    const final: Draft = { ...a, label: a.label.trim(), phrase: a.phrase.trim(), enabled: true, armedAt: Date.now(), soundName: file?.name ?? a.soundName };
+    const changed = a.time !== initial.time || a.days.join() !== initial.days.join();
+    const final: Draft = {
+      ...a,
+      label: a.label.trim(),
+      phrase: a.phrase.trim(),
+      enabled: true,
+      armedAt: Date.now(),
+      soundName: file?.name ?? a.soundName,
+      date: a.days.length === 0 ? a.date || undefined : undefined,
+      // Neue Uhrzeit oder Tage: „Nur den nächsten auslassen“ gilt nicht mehr
+      skip: changed ? undefined : a.skip,
+    };
     const alarmId = id ?? add('alarms', final);
     if (id) update('alarms', id, final);
     if (file) await saveSoundFile(alarmId, file).catch(() => setError('Die Datei ließ sich nicht speichern.'));
     onClose();
   };
 
-  return (
-    <Sheet title={id ? 'Wecker bearbeiten' : 'Neuer Wecker'} submitLabel={id ? 'Sichern' : 'Hinzufügen'} onClose={onClose} onSubmit={() => void save()}>
-      <input className="alarm-time-input" type="time" value={a.time} onChange={(e) => set({ time: e.target.value })} aria-label="Weckzeit" required />
-      <label>Name<input value={a.label} placeholder="z. B. Uni" onChange={(e) => set({ label: e.target.value })} /></label>
-      <div className="stack-tight">
-        <span className="muted small">Wiederholen: {daysLabel(a.days)}</span>
-        <div className="alarm-days">
-          {WEEKDAYS.map((w, i) => (
-            <button key={w} type="button" className={a.days.includes(i + 1) ? 'selected' : ''} aria-pressed={a.days.includes(i + 1)} onClick={() => toggleDay(i + 1)}>{w}</button>
+  const back = (title: string) => (
+    <button type="button" className="ios-back" onClick={() => setPage(null)}>‹ Wecker <span className="muted">· {title}</span></button>
+  );
+
+  let body: ReactNode;
+  if (page === 'wiederholen') {
+    body = (
+      <>
+        {back('Wiederholen')}
+        <div className="chip-row">
+          {[
+            { label: 'Werktags', days: [1, 2, 3, 4, 5] },
+            { label: 'Wochenende', days: [6, 7] },
+            { label: 'Täglich', days: [1, 2, 3, 4, 5, 6, 7] },
+            { label: 'Einmalig', days: [] },
+          ].map((p) => (
+            <button key={p.label} type="button" className={`alarm-chip${a.days.join() === p.days.join() ? ' selected' : ''}`} onClick={() => set({ days: p.days })}>{p.label}</button>
           ))}
         </div>
-      </div>
-
-      <div className="stack-tight">
-        <span className="muted small">Klang</span>
-        <div className="segmented">
-          {SOUNDS.map((s) => <button key={s.id} type="button" className={a.sound === s.id ? 'selected' : ''} onClick={() => s.id !== a.sound && set(s.id === initial.sound ? { sound: s.id, soundUrl: initial.soundUrl, soundName: initial.soundName } : { sound: s.id, soundUrl: '', soundName: undefined })}>{s.label}</button>)}
-        </div>
-        {a.sound === 'ton' && <span className="muted small">Lauter Piepton – klappt am zuverlässigsten, auch im Lautlos-Modus.</span>}
+        <ul className="ios-group">
+          {WEEKDAY_NAMES.map((w, i) => <CheckRow key={w} label={`Jeden ${w}`} on={a.days.includes(i + 1)} onClick={() => toggleDay(i + 1)} />)}
+        </ul>
+        {a.days.length === 0 && (
+          <ul className="ios-group">
+            <li>
+              <label className="ios-row">
+                <span className="grow">An einem bestimmten Tag<span className="ios-row-hint">Leer = beim nächsten Mal</span></span>
+                <input type="date" value={a.date ?? ''} min={today()} onChange={(e) => set({ date: e.target.value || undefined })} />
+              </label>
+            </li>
+          </ul>
+        )}
+      </>
+    );
+  } else if (page === 'ton') {
+    body = (
+      <>
+        {back('Ton')}
+        <ul className="ios-group">
+          {SOUNDS.map((s) => (
+            <CheckRow
+              key={s.id}
+              label={s.label}
+              hint={{ ton: 'Lauter Piepton, am zuverlässigsten', datei: 'Eigene Audiodatei von diesem Gerät', youtube: 'Video im Wecker-Fenster', spotify: 'Song oder Playlist aus deinem Konto' }[s.id]}
+              on={a.sound === s.id}
+              onClick={() => s.id !== a.sound && set(s.id === initial.sound ? { sound: s.id, soundUrl: initial.soundUrl, soundName: initial.soundName } : { sound: s.id, soundUrl: '', soundName: undefined })}
+            />
+          ))}
+        </ul>
         {a.sound === 'datei' && (
-          <>
+          <div className="stack-tight">
             <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label="Audiodatei" />
             <span className="muted small">{file?.name ?? a.soundName ?? 'Noch keine Datei.'} Die Datei bleibt nur auf diesem Gerät gespeichert.</span>
-          </>
+          </div>
         )}
         {a.sound === 'youtube' && (
-          <>
+          <div className="stack-tight">
             <input value={a.soundUrl} placeholder="https://youtu.be/…" inputMode="url" onChange={(e) => set({ soundUrl: e.target.value })} aria-label="YouTube-Link" />
-            <span className="muted small">Das Video läuft im Wecker-Fenster. Blockiert das Handy den Ton, klingelt stattdessen der Standard-Ton.</span>
-          </>
+            <span className="muted small">Blockiert das Handy den Ton, klingelt stattdessen der Standard-Ton.</span>
+          </div>
         )}
         {a.sound === 'spotify' && (
-          <>
+          <div className="stack-tight">
             <SpotifyPicker value={spotifyUri(a.soundUrl) ? a.soundUrl : ''} name={a.soundName} onPick={(uri, name) => set({ soundUrl: uri, soundName: name })} />
-            <span className="muted small">Spielt über die Spotify-App auf deinem Handy (Premium nötig). Findet Spotify kein Gerät, klingelt der Standard-Ton.</span>
-          </>
+            <span className="muted small">Spielt über die Spotify-App (Premium nötig). Findet Spotify kein Gerät, klingelt der Standard-Ton.</span>
+          </div>
         )}
-      </div>
-
-      <div className="stack-tight">
-        <span className="muted small">Aufgabe zum Abschalten</span>
-        <div className="segmented">
-          {CHALLENGES.map((c) => <button key={c.id} type="button" className={a.challenge === c.id ? 'selected' : ''} onClick={() => set({ challenge: c.id })}>{c.label}</button>)}
-        </div>
-        {a.challenge === 'rechnen' && (
+        <ul className="ios-group">
+          <SwitchRow label="Sanft lauter werden" hint="Beginnt leise, nach 45 Sekunden voll laut" checked={!!a.fadeIn} onChange={(v) => set({ fadeIn: v })} />
+          {a.sound === 'spotify' && <SwitchRow label="Musik danach weiterlaufen lassen" hint="Nach dem Ausschalten leiser weiter" checked={!!a.keepMusic} onChange={(v) => set({ keepMusic: v })} />}
+        </ul>
+        <span className="muted small">Am gesperrten iPhone klingelt immer der laute iPhone-Weckton. Dein Klang und das sanfte Lauterwerden gelten, solange AntonOS offen ist. Im Browser am iPhone lässt sich die Lautstärke nicht regeln, Spotify klappt je nach Gerät.</span>
+      </>
+    );
+  } else if (page === 'aufgabe') {
+    body = (
+      <>
+        {back('Aufgabe')}
+        <ul className="ios-group">
+          {CHALLENGES.map((c) => <CheckRow key={c.id} label={c.label} hint={c.hint} on={a.challenge === c.id} onClick={() => set({ challenge: c.id as AlarmChallenge })} />)}
+        </ul>
+        {(a.challenge === 'rechnen' || a.challenge === 'schuetteln' || a.challenge === 'memory') && (
           <div className="row wrap">
             <label className="grow">Schwierigkeit
               <select value={a.level} onChange={(e) => set({ level: Number(e.target.value) as 1 | 2 | 3 })}>
-                <option value={1}>Leicht (34 + 27)</option>
-                <option value={2}>Mittel (7 × 13 + 21)</option>
-                <option value={3}>Schwer (23 × 17)</option>
+                {a.challenge === 'rechnen' && <><option value={1}>Leicht (34 + 27)</option><option value={2}>Mittel (7 × 13 + 21)</option><option value={3}>Schwer (23 × 17)</option></>}
+                {a.challenge === 'schuetteln' && <><option value={1}>Leicht ({shakeTarget(1)}-mal)</option><option value={2}>Mittel ({shakeTarget(2)}-mal)</option><option value={3}>Schwer ({shakeTarget(3)}-mal)</option></>}
+                {a.challenge === 'memory' && <><option value={1}>Leicht ({memoryLength(1)} Farben)</option><option value={2}>Mittel ({memoryLength(2)} Farben)</option><option value={3}>Schwer ({memoryLength(3)} Farben)</option></>}
               </select>
             </label>
-            <label>Anzahl<input type="number" min={1} max={10} value={a.rounds} onChange={(e) => set({ rounds: Math.min(10, Math.max(1, Number(e.target.value) || 1)) })} /></label>
+            {a.challenge === 'rechnen' && <label>Anzahl<input type="number" min={1} max={10} value={a.rounds} onChange={(e) => set({ rounds: Math.min(10, Math.max(1, Number(e.target.value) || 1)) })} /></label>}
           </div>
         )}
-        {a.challenge === 'text' && (
-          <label>Eigener Satz<input value={a.phrase} placeholder="leer = jedes Mal ein zufälliger Satz" onChange={(e) => set({ phrase: e.target.value })} /></label>
-        )}
+        {a.challenge === 'text' && <label>Eigener Satz<input value={a.phrase} placeholder="leer = jedes Mal ein zufälliger Satz" onChange={(e) => set({ phrase: e.target.value })} /></label>}
         {a.challenge === 'qr' && (
-          <>
-            {scanning ? (
-              <QrScanner onResult={(text) => { set({ qr: text }); setScanning(false); }} />
-            ) : (
-              <button type="button" onClick={() => setScanning(true)}>{a.qr ? 'Anderen Code scannen' : 'QR-Code scannen'}</button>
-            )}
-            <span className="muted small">
-              {a.qr ? '✓ Code hinterlegt. ' : ''}Nimm einen QR-Code, der weit weg vom Bett hängt – z. B. ausgedruckt im Bad oder auf einer Packung in der Küche.
-            </span>
-          </>
+          <div className="stack-tight">
+            {scanning ? <QrScanner onResult={(text) => { set({ qr: text }); setScanning(false); }} /> : <button type="button" onClick={() => setScanning(true)}>{a.qr ? 'Anderen Code scannen' : 'QR-Code scannen'}</button>}
+            <span className="muted small">{a.qr ? '✓ Code hinterlegt. ' : ''}Nimm einen QR-Code, der weit weg vom Bett hängt – z. B. im Bad oder auf einer Packung in der Küche.</span>
+          </div>
         )}
+        {a.challenge === 'schuetteln' && <span className="muted small">Meldet das Gerät keine Bewegung (z. B. am PC), kommt stattdessen eine Rechenaufgabe.</span>}
         <span className="muted small">
           {a.challenge === 'keine'
-            ? 'Ohne Aufgabe: „Stopp“ bzw. „Ausschalten“ schaltet ihn sofort aus.'
-            : `Nach „Ausschalten“ hast du ${a.challenge === 'qr' ? '60' : '15'} Sekunden – jede Eingabe setzt die Zeit zurück. Sonst klingelt er wieder.`}
+            ? 'Ohne Aufgabe: „Stopp“ schaltet ihn sofort aus.'
+            : `Nach „Stopp“ hast du ${a.challenge === 'qr' ? '60' : a.challenge === 'schuetteln' || a.challenge === 'memory' ? '30' : '15'} Sekunden – jede Eingabe setzt die Zeit zurück. Sonst klingelt er wieder.`}
         </span>
-      </div>
+      </>
+    );
+  } else {
+    const cycles = cycleTimes(now);
+    body = (
+      <>
+        <WheelTime value={a.time} onChange={(time) => set({ time })} />
+        <div className="cycle-row">
+          <span className="muted small">Jetzt ins Bett? Aufwachen am Ende eines Schlafzyklus:</span>
+          <div className="chip-row">
+            {cycles.map((c) => (
+              <button key={c.cycles} type="button" className={`alarm-chip${a.time === hhmm(c.at) ? ' selected' : ''}`} onClick={() => set({ time: hhmm(c.at) })} title={`${c.cycles} Zyklen · ${durationLabel(c.cycles * 90)} Schlaf`}>
+                {hhmm(c.at)} <span className="muted">{durationLabel(c.cycles * 90).replace(' 0 Min.', '')}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <ul className="ios-group">
+          <NavRow label="Wiederholen" value={repeatLabel(a)} onClick={() => setPage('wiederholen')} />
+          <li>
+            <label className="ios-row">
+              <span>Name</span>
+              <input className="ios-row-input" value={a.label} placeholder="Wecker" onChange={(e) => set({ label: e.target.value })} />
+            </label>
+          </li>
+          <NavRow label="Ton" value={soundLabel(a as Alarm)} onClick={() => setPage('ton')} />
+          <NavRow label="Aufgabe" value={challengeLabel(a)} onClick={() => setPage('aufgabe')} />
+        </ul>
+        <ul className="ios-group">
+          <SwitchRow label="Schlummern" checked={snooze.on} onChange={(v) => set({ snooze: v, snoozeMinutes: a.snoozeMinutes ?? 9, snoozeMax: a.snoozeMax ?? 3 })}>
+            <div className="ios-sub">
+              <label>Dauer
+                <select value={snooze.minutes} onChange={(e) => set({ snoozeMinutes: Number(e.target.value) })}>
+                  {SNOOZE_MINUTES.map((m) => <option key={m} value={m}>{m} Min.</option>)}
+                </select>
+              </label>
+              <label>Höchstens
+                <select value={snooze.max} onChange={(e) => set({ snoozeMax: Number(e.target.value) })}>
+                  {[1, 2, 3, 5, 10].map((m) => <option key={m} value={m}>{m}-mal</option>)}
+                </select>
+              </label>
+            </div>
+          </SwitchRow>
+          <SwitchRow label="Sanft lauter werden" checked={!!a.fadeIn} onChange={(v) => set({ fadeIn: v })} />
+          <SwitchRow label="Wach-Check" hint="Fragt nach dem Ausschalten, ob du wach bist – sonst klingelt er wieder" checked={!!a.wakeCheck} onChange={(v) => set({ wakeCheck: v, wakeCheckMinutes: a.wakeCheckMinutes ?? 5 })}>
+            <div className="ios-sub">
+              <label>Fragen nach
+                <select value={a.wakeCheckMinutes ?? 5} onChange={(e) => set({ wakeCheckMinutes: Number(e.target.value) })}>
+                  {WAKE_CHECK_MINUTES.map((m) => <option key={m} value={m}>{m} Min.</option>)}
+                </select>
+              </label>
+            </div>
+          </SwitchRow>
+          <SwitchRow label="Guten-Morgen-Bildschirm" hint="Termine, Aufgaben und Gewohnheiten nach dem Ausschalten" checked={a.morning !== false} onChange={(v) => set({ morning: v })} />
+        </ul>
+        {error && <p className="alert">{error}</p>}
+        {hint && <p className="alert update">{hint}</p>}
+        <ul className="ios-group">
+          <li><button type="button" className="ios-row ios-action" onClick={() => { const p = problem(); if (p) setError(p); else testAlarm({ ...a, id: id ?? 'test', qr: a.qr }); }}>Hier testen</button></li>
+          {native && (
+            <li>
+              <button
+                type="button"
+                className="ios-row ios-action"
+                onClick={() => {
+                  const p = problem();
+                  if (p) return setError(p);
+                  testNativeAlarm({ ...a, id: id ?? 'test' })
+                    .then((s) => setHint(`Der iPhone-Wecker klingelt in ${s} Sekunden – sperr ruhig das Handy.`))
+                    .catch(() => setError('Der iPhone-Wecker ließ sich nicht stellen.'));
+                }}
+              >
+                Am iPhone testen
+              </button>
+            </li>
+          )}
+          {id && a.days.length > 0 && initial.enabled && (
+            <li>
+              <button type="button" className="ios-row ios-action" onClick={() => set(isSkipping({ ...a, id }, now) ? { skip: undefined } : skipNext({ ...a, id, enabled: true }, now))}>
+                {isSkipping({ ...a, id }, now) ? `Auslassen am ${parseDate(a.skip!).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' })} aufheben` : 'Nur den nächsten auslassen'}
+              </button>
+            </li>
+          )}
+          {id && (
+            <li><button type="button" className="ios-row ios-action danger-text" onClick={() => { if (confirm('Wecker löschen?')) { remove('alarms', id); void deleteSoundFile(id); onClose(); } }}>Wecker löschen</button></li>
+          )}
+        </ul>
+      </>
+    );
+  }
 
-      {error && <p className="alert">{error}</p>}
-      {hint && <p className="alert update">{hint}</p>}
-      <div className="row between">
-        <button type="button" onClick={() => { const p = problem(); if (p) setError(p); else testAlarm({ ...a, id: id ?? 'test', qr: a.qr }); }}>Testen</button>
-        {native && (
-          <button
-            type="button"
-            onClick={() => {
-              const p = problem();
-              if (p) return setError(p);
-              testNativeAlarm({ ...a, id: id ?? 'test' })
-                .then((s) => setHint(`Der iPhone-Wecker klingelt in ${s} Sekunden – sperr ruhig das Handy. Danach „Stopp“ oder „Aufgabe lösen“ tippen.`))
-                .catch(() => setError('Der iPhone-Wecker ließ sich nicht stellen.'));
-            }}
-          >
-            Am iPhone testen
-          </button>
-        )}
-        {id && (
-          <button type="button" className="danger" onClick={() => { if (confirm('Wecker löschen?')) { remove('alarms', id); void deleteSoundFile(id); onClose(); } }}>Löschen</button>
-        )}
-      </div>
+  return (
+    <Sheet title={id ? 'Wecker bearbeiten' : 'Neuer Wecker'} submitLabel="Sichern" onClose={onClose} onSubmit={() => void save()}>
+      <div className="alarm-sheet">{body}</div>
     </Sheet>
   );
 }
 
-/** Uhr über den ganzen Bildschirm; der Bildschirm bleibt an, damit der Wecker klingeln kann. */
+/** Uhr wie iOS StandBy: groß, gedimmt und rot, damit sie nachts nicht blendet. Der Bildschirm bleibt an. */
 function NightMode({ alarms, onClose }: { alarms: Alarm[]; onClose: () => void }) {
   const [now, setNow] = useState(() => new Date());
   const [awake, setAwake] = useState(true);
+  const [dim, setDim] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     type Lock = { release: () => Promise<void> };
@@ -258,21 +492,109 @@ function NightMode({ alarms, onClose }: { alarms: Alarm[]; onClose: () => void }
       lock?.release().catch(() => undefined);
     };
   }, []);
-  const next = alarms.map((a) => ({ a, at: nextRing(a, now) })).filter((x) => x.at).sort((x, y) => x.at!.getTime() - y.at!.getTime())[0];
+  const next = nextAlarm(alarms, now);
   return (
-    <div className="alarm-night" role="dialog" aria-modal="true" aria-label="Nachtmodus">
-      <span className="alarm-night-clock">{now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
-      <span>{next ? `⏰ ${next.a.time} · ${untilLabel(next.at!, now)}` : 'Kein Wecker an'}</span>
-      <span className="small">
-        {awake ? 'Bildschirm bleibt an. Handy ans Ladekabel und AntonOS offen lassen.' : 'Dieses Handy kann den Bildschirm nicht wach halten – stell die automatische Sperre in den Einstellungen auf „Nie“.'}
+    <div className={`alarm-night dim-${dim}`} role="dialog" aria-modal="true" aria-label="Nachtmodus" onClick={() => setDim((d) => (d + 1) % 3)}>
+      <span className="alarm-night-date">{now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+      <span className="alarm-night-clock">{hhmm(now)}</span>
+      <span className="alarm-night-next">{next ? `⏰ ${next.alarm.time} · ${untilLabel(next.at, now)}` : 'Kein Wecker an'}</span>
+      <span className="small alarm-night-hint">
+        {awake ? 'Tippen dimmt die Uhr. Handy ans Ladekabel und AntonOS offen lassen.' : 'Dieses Handy kann den Bildschirm nicht wach halten – stell die automatische Sperre auf „Nie“.'}
       </span>
-      <button type="button" onClick={onClose}>Beenden</button>
+      <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }}>Beenden</button>
     </div>
   );
 }
 
+/** Zeile der Weckerliste: nach links wischen zeigt „Auslassen“ und „Löschen“ */
+function AlarmRow({ alarm, now, onEdit }: { alarm: Alarm; now: Date; onEdit: () => void }) {
+  const { update, remove } = useStore();
+  const [dx, setDx] = useState(0);
+  const touch = useRef<{ x: number; y: number; base: number; swiping: boolean } | null>(null);
+  const OPEN = -150;
+  const next = nextRing(alarm, now);
+  const skipping = isSkipping(alarm, now);
+  const paused = isPaused(alarm, now);
+  const fmt = (d: string) => parseDate(d).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' });
+  const status = !alarm.enabled ? '' : paused ? `Pausiert bis ${fmt(alarm.pausedUntil!)}` : skipping ? `Lässt ${fmt(alarm.skip!)} aus` : next ? untilLabel(next, now) : '';
+
+  const onStart = (e: TouchEvent) => (touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, base: dx, swiping: false });
+  const onMove = (e: TouchEvent) => {
+    const t = touch.current;
+    if (!t) return;
+    const mx = e.touches[0].clientX - t.x;
+    if (!t.swiping && Math.abs(mx) > 8 && Math.abs(mx) > Math.abs(e.touches[0].clientY - t.y)) t.swiping = true;
+    if (t.swiping) setDx(Math.min(0, Math.max(OPEN - 30, t.base + mx)));
+  };
+  const onEnd = () => {
+    if (touch.current?.swiping) setDx((d) => (d < OPEN / 2 ? OPEN : 0));
+    touch.current = null;
+  };
+
+  return (
+    <li className={`alarm-item${alarm.enabled ? '' : ' off'}`}>
+      <div className="alarm-actions" aria-hidden={dx === 0}>
+        {alarm.days.length > 0 && alarm.enabled && (
+          <button type="button" className="alarm-act-skip" tabIndex={dx === 0 ? -1 : 0} onClick={() => { update('alarms', alarm.id, skipping ? { skip: undefined } : skipNext(alarm, now)); setDx(0); }}>
+            {skipping ? 'Nicht auslassen' : 'Auslassen'}
+          </button>
+        )}
+        <button type="button" className="alarm-act-delete" tabIndex={dx === 0 ? -1 : 0} onClick={() => { remove('alarms', alarm.id); void deleteSoundFile(alarm.id); }}>Löschen</button>
+      </div>
+      <div className="alarm-slide" style={{ transform: `translateX(${dx}px)`, transition: touch.current?.swiping ? 'none' : undefined }} onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd}>
+        <button type="button" className="alarm-row grow" onClick={() => (dx ? setDx(0) : onEdit())}>
+          <span className="alarm-row-time">{alarm.time}</span>
+          <span className="alarm-row-sub">
+            {[alarm.label, repeatLabel(alarm), CHALLENGES.find((c) => c.id === alarm.challenge)?.label].filter(Boolean).join(' · ')}
+          </span>
+          {status && <span className={`alarm-row-status${paused || skipping ? ' warn' : ''}`}>{status}</span>}
+        </button>
+        <input
+          type="checkbox"
+          className="switch"
+          checked={alarm.enabled}
+          onChange={(e) => {
+            if (e.target.checked) unlockAlarmAudio();
+            update('alarms', alarm.id, { enabled: e.target.checked, armedAt: Date.now() });
+          }}
+          aria-label={`Wecker ${alarm.time} ${alarm.enabled ? 'ausschalten' : 'einschalten'}`}
+        />
+      </div>
+    </li>
+  );
+}
+
+function WakeStatsPanel() {
+  const { data } = useStore();
+  if (data.wakeLogs.length === 0) return null;
+  const s = wakeStats(data.wakeLogs, new Date());
+  return (
+    <Panel title="Aufstehen">
+      <div className="wake-stats">
+        <div><strong>{s.avgWake ?? '–'}</strong><span>Ø aufgestanden</span></div>
+        <div><strong>{String(s.avgSnoozes).replace('.', ',')}</strong><span>Ø geschlummert</span></div>
+        <div><strong>{s.streak}</strong><span>pünktlich in Folge</span></div>
+      </div>
+      <ul className="wake-days">
+        {s.recent.slice(0, 7).map((l) => {
+          const late = Math.max(0, Math.round((l.offAt - l.ringAt) / 60_000));
+          return (
+            <li key={l.id}>
+              <span className={`wake-dot${isPunctual(l) ? ' ok' : ''}`} aria-label={isPunctual(l) ? 'pünktlich' : 'spät'} />
+              <span className="grow">{parseDate(l.date).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' })}</span>
+              <span className="muted small">{l.snoozes > 0 ? `${l.snoozes}× geschlummert · ` : ''}{late > 0 ? `+${late} Min.` : 'sofort'}</span>
+              <strong className="wake-time">{hhmm(new Date(l.offAt))}</strong>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="muted small">Pünktlich heißt: nicht geschlummert und spätestens 10 Minuten nach dem Klingeln aus. Gezählt wird, wenn du den Wecker in AntonOS ausschaltest.</p>
+    </Panel>
+  );
+}
+
 export function Alarms() {
-  const { data, update } = useStore();
+  const { data, add, updateSettings, mutate } = useStore();
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<ID | null>(null);
   const [night, setNight] = useState(false);
@@ -296,40 +618,85 @@ export function Alarms() {
     return () => window.removeEventListener(SYNC_EVENT, onSync);
   }, []);
 
+  const sleep = data.settings.sleep ?? defaultSleep();
+  const setSleep = (patch: Partial<typeof sleep>) => updateSettings({ sleep: { ...sleep, ...patch } });
+  const next = nextAlarm(data.alarms, now);
+  const bed = next ? bedtimeFor(next.at, sleep.goal) : null;
+  const pausedUntil = data.alarms.map((a) => (isPaused(a, now) ? a.pausedUntil! : '')).sort().at(-1) ?? '';
+  const pauseAll = (until: string) => mutate((d) => ({ ...d, alarms: d.alarms.map((a) => ({ ...a, pausedUntil: until || undefined })) }));
+  const asleepIn = next ? (next.at.getTime() - now.getTime()) / 60_000 - 15 : 0;
+
   return (
     <>
       <PageHeader title="Wecker" subtitle="Aufstehen mit Aufgabe" actions={<AddButton label="Neuer Wecker" onClick={() => setAdding(true)} />} />
-      {!mobile && <p className="alert update">Der Wecker klingelt nur am Handy. Hier kannst du ihn einstellen und mit „Testen“ ausprobieren.</p>}
-      <Panel title="Deine Wecker">
-        {alarms.length === 0 ? <Empty>Noch kein Wecker. Tippe auf +.</Empty> : (
-          <ul className="list alarm-list">
-            {alarms.map((a) => {
-              const next = nextRing(a, now);
-              return (
-                <li key={a.id} className={a.enabled ? '' : 'off'}>
-                  <button type="button" className="alarm-row grow" onClick={() => setEditingId(a.id)}>
-                    <span className="alarm-row-time">{a.time}</span>
-                    <span className="muted small">
-                      {[a.label, daysLabel(a.days), CHALLENGES.find((c) => c.id === a.challenge)?.label, soundLabel(a)].filter(Boolean).join(' · ')}
-                      {next ? ` · ${untilLabel(next, now)}` : ''}
-                    </span>
-                  </button>
-                  <input
-                    type="checkbox"
-                    className="switch"
-                    checked={a.enabled}
-                    onChange={(e) => {
-                      if (e.target.checked) unlockAlarmAudio();
-                      update('alarms', a.id, { enabled: e.target.checked, armedAt: Date.now() });
-                    }}
-                    aria-label={`Wecker ${a.time} ${a.enabled ? 'ausschalten' : 'einschalten'}`}
-                  />
-                </li>
-              );
-            })}
-          </ul>
+      {!mobile && <p className="alert update">Der Wecker klingelt nur am Handy. Hier kannst du ihn einstellen und mit „Hier testen“ ausprobieren.</p>}
+
+      <section className="alarm-next">
+        {next ? (
+          <>
+            <span className="alarm-next-label">Nächster Wecker</span>
+            <strong>
+              {next.at.toLocaleDateString('de-DE', { weekday: 'long' })} {next.alarm.time}
+              <span className="muted"> · {untilLabel(next.at, now)}</span>
+            </strong>
+            <span className="muted small">
+              {bed && bed > now
+                ? `Für ${durationLabel(sleep.goal)} Schlaf um ${hhmm(bed)} ins Bett.`
+                : `Wenn du jetzt schläfst: ${durationLabel(Math.max(0, asleepIn))} Schlaf.`}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="alarm-next-label">Nächster Wecker</span>
+            <strong>Kein Wecker an</strong>
+          </>
         )}
+        {pausedUntil && (
+          <span className="alarm-paused">
+            Alle Wecker pausiert bis {parseDate(pausedUntil).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' })}
+            <button type="button" className="link-btn" onClick={() => pauseAll('')}>Fortsetzen</button>
+          </span>
+        )}
+      </section>
+
+      <div className="alarm-quick">
+        <span className="muted small">Power-Nap</span>
+        {[20, 30, 60].map((m) => (
+          <button key={m} type="button" className="alarm-chip" onClick={() => { unlockAlarmAudio(); add('alarms', quickAlarm(m, new Date())); }}>
+            in {m} Min.
+          </button>
+        ))}
+      </div>
+
+      {alarms.length === 0 ? <Panel><Empty>Noch kein Wecker. Tippe auf +.</Empty></Panel> : (
+        <ul className="alarm-list">
+          {alarms.map((a) => <AlarmRow key={a.id} alarm={a} now={now} onEdit={() => setEditingId(a.id)} />)}
+        </ul>
+      )}
+      {mobile && alarms.length > 0 && <p className="muted small alarm-swipe-hint">Nach links wischen zum Auslassen oder Löschen.</p>}
+
+      <Panel title="Schlaf">
+        <ul className="ios-group flush">
+          <li>
+            <label className="ios-row">
+              <span className="grow">Schlafziel</span>
+              <select value={sleep.goal} onChange={(e) => setSleep({ goal: Number(e.target.value) })}>
+                {SLEEP_GOALS.map((g) => <option key={g} value={g}>{durationLabel(g)}</option>)}
+              </select>
+            </label>
+          </li>
+          <SwitchRow label="Erinnerung zur Schlafenszeit" hint="Mitteilung, wenn es Zeit fürs Bett ist" checked={sleep.remind} onChange={(v) => setSleep({ remind: v })} />
+          <li>
+            <label className="ios-row">
+              <span className="grow">Alle Wecker pausieren bis<span className="ios-row-hint">z. B. für den Urlaub</span></span>
+              <input type="date" value={pausedUntil} min={today()} max={addDays(today(), 365)} onChange={(e) => pauseAll(e.target.value)} />
+            </label>
+          </li>
+        </ul>
       </Panel>
+
+      <WakeStatsPanel />
+
       {isNativeApp() && real !== null && real !== 'unavailable' && (
         <Panel title="Echter iPhone-Wecker">
           {native && failed > 0 && (
@@ -338,8 +705,8 @@ export function Alarms() {
           {native ? (
             <p className="small">
               Deine Wecker sind als echte iPhone-Wecker gestellt: Sie klingeln laut, auch wenn das Handy gesperrt ist, im Lautlos-Modus und bei „Nicht stören“.
-              Tippst du auf <strong>Stopp</strong>, bleibt er eine Minute still – löst du in der Zeit die Aufgabe in AntonOS nicht, klingelt er wieder.
-              <strong> Aufgabe lösen</strong> öffnet AntonOS direkt bei der Aufgabe. Am Sperrbildschirm klingelt der iPhone-Weckton; dein gewählter Klang spielt, solange AntonOS offen ist.
+              Mit Schlummern zeigt das iPhone <strong>Schlummern</strong> statt „Aufgabe lösen“ – nach <strong>Stopp</strong> kommt dann eine Mitteilung, die AntonOS bei der Aufgabe öffnet.
+              Löst du die Aufgabe nicht innerhalb einer Minute, klingelt er wieder. Ausgelassene und pausierte Wecker stellt AntonOS als einzelne Termine für die nächsten zwei Wochen – öffne die App ab und zu.
             </p>
           ) : real === 'denied' ? (
             <p className="small">AntonOS darf keine Wecker stellen. Erlaube es unter Einstellungen → Apps → AntonOS → Wecker, dann klingeln sie auch bei gesperrtem Handy.</p>
@@ -359,6 +726,9 @@ export function Alarms() {
           </p>
           <button type="button" className="primary" onClick={() => { unlockAlarmAudio(); setNight(true); }}>Nachtmodus starten</button>
         </Panel>
+      )}
+      {!mobile && (
+        <button type="button" className="link-btn" onClick={() => setNight(true)}>Nachtmodus ansehen</button>
       )}
       {adding && <AlarmSheet initial={defaultAlarm()} native={native} onClose={() => setAdding(false)} />}
       {editing && <AlarmSheet key={editing.id} id={editing.id} initial={editing} native={native} onClose={() => setEditingId(null)} />}

@@ -88,7 +88,7 @@ enum AlarmScheduler {
         if snooze > 0 {
             secondary = AntonAlarmSnoozeIntent(alarmID: id.uuidString, title: title, withTask: withTask, seconds: snooze, maxCount: snoozeMax, sound: sound ?? "")
         } else if withTask {
-            secondary = AntonAlarmOpenIntent(alarmID: id.uuidString)
+            secondary = AntonAlarmOpenIntent(alarmID: id.uuidString, sound: sound ?? "")
         } else {
             secondary = nil
         }
@@ -96,7 +96,7 @@ enum AlarmScheduler {
             countdownDuration: nil,
             schedule: schedule,
             attributes: attributes(title: title, withTask: withTask, snooze: snooze > 0),
-            stopIntent: withTask ? AntonAlarmStopIntent(alarmID: id.uuidString) : nil,
+            stopIntent: withTask ? AntonAlarmStopIntent(alarmID: id.uuidString, sound: sound ?? "") : nil,
             secondaryIntent: secondary,
             sound: alertSound(sound)
         )
@@ -120,7 +120,7 @@ enum AlarmScheduler {
         let count = AlarmStore.snoozes(jsId)
         if count >= maxCount {
             // Genug geschlummert: mit Aufgabe wie „Stopp“, sonst gleich wieder klingeln – ohne Schlummern
-            if withTask { return await handleStop(alarmID: alarmID, notify: true) }
+            if withTask { return await handleStop(alarmID: alarmID, notify: true, sound: sound) }
             try? AlarmManager.shared.stop(id: UUID(uuidString: alarmID) ?? UUID())
             try? await ringAgain(in: 5, jsId: jsId, title: title, withTask: false, sound: sound)
             return
@@ -153,11 +153,11 @@ enum AlarmScheduler {
     }
 
     /// Nach „Stopp“ oder „Aufgabe lösen“: Aufgabe merken und Nachklingeln planen.
-    static func handleStop(alarmID: String, notify: Bool) async {
+    static func handleStop(alarmID: String, notify: Bool, sound: String = "") async {
         let jsId = AlarmStore.map[alarmID] ?? ""
         try? AlarmManager.shared.stop(id: UUID(uuidString: alarmID) ?? UUID())
         AlarmStore.markStopped(alarmID: alarmID)
-        try? await ringAgain(in: afterStopSeconds, jsId: jsId, title: "Wecker – Aufgabe noch offen")
+        try? await ringAgain(in: afterStopSeconds, jsId: jsId, title: "Wecker – Aufgabe noch offen", sound: sound)
         NotificationCenter.default.post(name: AlarmStore.stoppedNotification, object: nil)
         if notify {
             let content = UNMutableNotificationContent()
@@ -180,11 +180,14 @@ struct AntonAlarmStopIntent: LiveActivityIntent {
     @Parameter(title: "Wecker")
     var alarmID: String
 
-    init() { alarmID = "" }
-    init(alarmID: String) { self.alarmID = alarmID }
+    @Parameter(title: "Ton")
+    var sound: String
+
+    init() { alarmID = ""; sound = "" }
+    init(alarmID: String, sound: String = "") { self.alarmID = alarmID; self.sound = sound }
 
     func perform() async throws -> some IntentResult {
-        await AlarmScheduler.handleStop(alarmID: alarmID, notify: true)
+        await AlarmScheduler.handleStop(alarmID: alarmID, notify: true, sound: sound)
         return .result()
     }
 }
@@ -242,11 +245,14 @@ struct AntonAlarmOpenIntent: LiveActivityIntent {
     @Parameter(title: "Wecker")
     var alarmID: String
 
-    init() { alarmID = "" }
-    init(alarmID: String) { self.alarmID = alarmID }
+    @Parameter(title: "Ton")
+    var sound: String
+
+    init() { alarmID = ""; sound = "" }
+    init(alarmID: String, sound: String = "") { self.alarmID = alarmID; self.sound = sound }
 
     func perform() async throws -> some IntentResult {
-        await AlarmScheduler.handleStop(alarmID: alarmID, notify: false)
+        await AlarmScheduler.handleStop(alarmID: alarmID, notify: false, sound: sound)
         return .result()
     }
 }

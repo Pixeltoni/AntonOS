@@ -1,7 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
 import type { WidgetVariant } from '../types';
-import { api, handleRedirect, loadToken, login, logout, accessToken, redirectUri } from '../lib/spotify';
+import { App as NativeApp } from '@capacitor/app';
+import { api, completeLogin, handleRedirect, isNativeCallback, loadToken, login, logout, accessToken, parseCallback, redirectUri } from '../lib/spotify';
+import { isNativeApp } from '../lib/native';
 import { safeImageSrc, spotifyEmbedUrl } from '../lib/life';
 import { Empty, Panel } from './ui';
 
@@ -79,6 +81,25 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       .catch((e: Error) => setError(e.message));
   }, [clientId]);
 
+  // iOS-App: Spotify leitet auf antonos://spotify-callback zurück, das System reicht die Adresse hierher
+  useEffect(() => {
+    if (!clientId || !isNativeApp()) return;
+    const handle = NativeApp.addListener('appUrlOpen', ({ url }) => {
+      if (!isNativeCallback(url)) return;
+      void import('@capacitor/browser').then(({ Browser }) => Browser.close()).catch(() => undefined);
+      location.hash = '#/musik';
+      completeLogin(clientId, parseCallback(url.slice(url.indexOf('?'))))
+        .then((done) => {
+          if (done) {
+            setError('');
+            setConnected(true);
+          }
+        })
+        .catch((e: Error) => setError(e.message));
+    });
+    return () => void handle.then((h) => h.remove());
+  }, [clientId]);
+
   const fail = useCallback((e: unknown) => {
     setError(e instanceof Error ? e.message : String(e));
     if (!loadToken()) setConnected(false);
@@ -102,9 +123,10 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer);
   }, [connected, clientId, refresh, fail]);
 
-  // Web Playback SDK: macht diesen Browser zu einem Spotify-Gerät (nur mit Premium)
+  // Web Playback SDK: macht diesen Browser zu einem Spotify-Gerät (nur mit Premium).
+  // In der iOS-App fehlt dem WebView der Kopierschutz dafür – dort steuert AntonOS nur andere Geräte.
   useEffect(() => {
-    if (!connected || !clientId || profile?.product !== 'premium') return;
+    if (!connected || !clientId || profile?.product !== 'premium' || isNativeApp()) return;
     let cancelled = false;
     const setup = () => {
       if (cancelled || !window.Spotify) return;
@@ -220,6 +242,11 @@ function Setup() {
             <button type="button" onClick={() => navigator.clipboard?.writeText(uri)}>Kopieren</button>
           </div>
         </li>
+        {isNativeApp() && (
+          <li>
+            Nutzt du AntonOS auch im Browser? Dann trage dort zusätzlich die Adresse ein, die AntonOS im Browser hier anzeigt – eine Spotify-App kann mehrere Redirect URIs haben.
+          </li>
+        )}
         <li>Wähle bei den APIs <strong>Web API</strong> und <strong>Web Playback SDK</strong> aus und speichere.</li>
         <li>Kopiere die <strong>Client ID</strong> aus den Einstellungen der App hier hinein:</li>
       </ol>
@@ -233,7 +260,22 @@ function Setup() {
         <input className="grow" placeholder="Client ID" value={id} onChange={(e) => setId(e.target.value)} aria-label="Spotify Client ID" />
         <button className="primary" type="submit" disabled={!/^[a-f0-9]{32}$/i.test(id.trim())}>Speichern</button>
       </form>
-      <p className="muted small">Die Client ID ist nicht geheim. Dein Login-Token bleibt nur in diesem Browser und wird nicht ins Backup übernommen.</p>
+      <p className="muted small">Die Client ID ist nicht geheim. Dein Login-Token bleibt nur auf diesem Gerät und wird nicht ins Backup übernommen.</p>
+    </div>
+  );
+}
+
+/** In der App braucht die Spotify-App im Dashboard eine zweite Redirect URI. */
+function NativeRedirectHint() {
+  const uri = redirectUri();
+  return (
+    <div className="muted small">
+      Klappt der Login in der App nicht („Invalid redirect URI“)? Trage im{' '}
+      <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer">Spotify Developer Dashboard</a> bei deiner App zusätzlich diese Redirect URI ein:
+      <div className="row">
+        <code className="grow">{uri}</code>
+        <button type="button" onClick={() => navigator.clipboard?.writeText(uri)}>Kopieren</button>
+      </div>
     </div>
   );
 }
@@ -538,6 +580,7 @@ export function SpotifyPlayer({ compact = false, variant = 'standard' }: { compa
       <div className="col">
         <button className="spotify-btn" onClick={s.connect}>Mit Spotify verbinden</button>
         {s.error && <p className="danger small">{s.error}</p>}
+        {isNativeApp() && <NativeRedirectHint />}
         <Embed />
       </div>,
     );

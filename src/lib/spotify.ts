@@ -2,7 +2,12 @@
  * Verbindung mit Spotify über den Authorization-Code-Flow mit PKCE.
  * Das funktioniert ohne Server: Der Browser holt sich das Token direkt bei Spotify.
  * Tokens liegen getrennt von den übrigen Daten und landen nie in Backups.
+ *
+ * In der iOS-App öffnet sich der Login in einem Safari-Fenster innerhalb der App.
+ * Spotify leitet danach auf `antonos://spotify-callback` zurück (URL-Schema in Info.plist),
+ * das System gibt die Adresse an die App weiter und `completeLogin` holt das Token.
  */
+import { Capacitor } from '@capacitor/core';
 
 const TOKEN_KEY = 'antonos:spotify-token';
 const VERIFIER_KEY = 'antonos:spotify-verifier';
@@ -27,9 +32,32 @@ export interface Token {
   expiresAt: number;
 }
 
-/** Die Adresse, zu der Spotify nach dem Login zurückleitet (ohne #-Route). */
-export function redirectUri(): string {
-  return location.origin + location.pathname;
+/** Rückleitungs-Adresse der iOS-App – muss so im Spotify Developer Dashboard stehen. */
+export const NATIVE_REDIRECT_URI = 'antonos://spotify-callback';
+
+const isNative = (): boolean => Capacitor.isNativePlatform();
+
+/** Die Adresse, zu der Spotify nach dem Login zurückleitet (im Web ohne #-Route). */
+export function redirectUri(native = isNative()): string {
+  return native ? NATIVE_REDIRECT_URI : location.origin + location.pathname;
+}
+
+/** Ist das die Rückleitung von Spotify in die iOS-App? */
+export function isNativeCallback(url: string): boolean {
+  return url === NATIVE_REDIRECT_URI || url.startsWith(`${NATIVE_REDIRECT_URI}?`) || url.startsWith(`${NATIVE_REDIRECT_URI}/?`);
+}
+
+export type Callback = { code: string; state: string } | { error: string; state: string } | null;
+
+/** Liest code bzw. error und state aus dem Query-Teil der Rückleitung. */
+export function parseCallback(search: string): Callback {
+  const params = new URLSearchParams(search);
+  const state = params.get('state');
+  if (state === null) return null;
+  const code = params.get('code');
+  if (code) return { code, state };
+  const error = params.get('error');
+  return error ? { error, state } : null;
 }
 
 export function base64url(bytes: Uint8Array): string {
@@ -85,12 +113,18 @@ export function logout() {
   saveToken(null);
 }
 
-/** Leitet zum Spotify-Login weiter. */
+/**
+ * Ablage für Verifier und State während des Logins. Im Web reicht sessionStorage;
+ * in der App muss es localStorage sein, falls iOS die App während des Logins beendet.
+ */
+const flowStorage = (): Storage => (isNative() ? localStorage : sessionStorage);
+
+/** Leitet zum Spotify-Login weiter (in der App: Safari-Fenster über der App). */
 export async function login(clientId: string) {
   const verifier = randomString(64);
   const state = randomString(16);
-  safeSet(sessionStorage, VERIFIER_KEY, verifier);
-  safeSet(sessionStorage, STATE_KEY, state);
+  safeSet(flowStorage(), VERIFIER_KEY, verifier);
+  safeSet(flowStorage(), STATE_KEY, state);
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
@@ -100,7 +134,11 @@ export async function login(clientId: string) {
     code_challenge: await codeChallenge(verifier),
     state,
   });
-  location.assign(`https://accounts.spotify.com/authorize?${params}`);
+  const url = `https://accounts.spotify.com/authorize?${params}`;
+  if (isNative()) {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url, presentationStyle: 'popover' });
+  } else location.assign(url);
 }
 
 async function requestToken(body: Record<string, string>): Promise<Token> {
@@ -122,30 +160,32 @@ async function requestToken(body: Record<string, string>): Promise<Token> {
 }
 
 /**
- * Verarbeitet die Rückleitung von Spotify (?code=…), falls vorhanden.
+ * Verarbeitet die Rückleitung von Spotify im Web (?code=…), falls vorhanden.
  * Gibt true zurück, wenn ein Login abgeschlossen wurde.
  */
 export async function handleRedirect(clientId: string): Promise<boolean> {
-  const params = new URLSearchParams(location.search);
-  const code = params.get('code');
-  const error = params.get('error');
-  if (!code && !error) return false;
+  const callback = parseCallback(location.search);
   // Nur Rückleitungen verarbeiten, die wir selbst gestartet haben (nicht z. B. den Login der Synchronisierung)
-  if (!params.has('state') || !safeGet(sessionStorage, STATE_KEY)) return false;
+  if (!callback || !safeGet(flowStorage(), STATE_KEY)) return false;
 
   // URL aufräumen und zur Musikseite springen
   history.replaceState(null, '', `${location.pathname}#/musik`);
   // replaceState löst kein hashchange aus – der Router soll die Musikseite aber anzeigen
   window.dispatchEvent(new HashChangeEvent('hashchange'));
-  if (error) throw new Error(error === 'access_denied' ? 'Du hast den Zugriff abgelehnt.' : `Spotify meldet: ${error}`);
+  return completeLogin(clientId, callback);
+}
 
-  const verifier = safeGet(sessionStorage, VERIFIER_KEY);
-  const state = safeGet(sessionStorage, STATE_KEY);
-  safeSet(sessionStorage, VERIFIER_KEY, null);
-  safeSet(sessionStorage, STATE_KEY, null);
-  if (!verifier || !state || params.get('state') !== state) throw new Error('Login konnte nicht zugeordnet werden. Bitte noch einmal verbinden.');
+/** Tauscht den Code aus der Rückleitung gegen ein Token (Web und App). */
+export async function completeLogin(clientId: string, callback: Callback): Promise<boolean> {
+  if (!callback) return false;
+  const verifier = safeGet(flowStorage(), VERIFIER_KEY);
+  const state = safeGet(flowStorage(), STATE_KEY);
+  safeSet(flowStorage(), VERIFIER_KEY, null);
+  safeSet(flowStorage(), STATE_KEY, null);
+  if ('error' in callback) throw new Error(callback.error === 'access_denied' ? 'Du hast den Zugriff abgelehnt.' : `Spotify meldet: ${callback.error}`);
+  if (!verifier || !state || callback.state !== state) throw new Error('Login konnte nicht zugeordnet werden. Bitte noch einmal verbinden.');
 
-  await requestToken({ grant_type: 'authorization_code', code: code!, redirect_uri: redirectUri(), client_id: clientId, code_verifier: verifier });
+  await requestToken({ grant_type: 'authorization_code', code: callback.code, redirect_uri: redirectUri(), client_id: clientId, code_verifier: verifier });
   return true;
 }
 
@@ -181,7 +221,8 @@ export async function api<T>(clientId: string, path: string, init: RequestInit =
     try {
       const body = (await res.json()) as { error?: { message?: string; reason?: string } };
       if (body.error?.reason === 'PREMIUM_REQUIRED') message = 'Für die Steuerung brauchst du Spotify Premium.';
-      else if (body.error?.reason === 'NO_ACTIVE_DEVICE') message = 'Kein aktives Gerät. Starte die Wiedergabe „Hier im Browser“ oder öffne Spotify auf einem Gerät.';
+      else if (body.error?.reason === 'NO_ACTIVE_DEVICE')
+        message = isNative() ? 'Kein aktives Gerät. Öffne kurz die Spotify-App, dann lässt sie sich von hier steuern.' : 'Kein aktives Gerät. Starte die Wiedergabe „Hier im Browser“ oder öffne Spotify auf einem Gerät.';
       else if (body.error?.message) message = body.error.message;
     } catch {
       // keine JSON-Antwort

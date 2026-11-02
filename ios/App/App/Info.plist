@@ -8,6 +8,17 @@
 	<string>de</string>
 	<key>CFBundleDisplayName</key>
         <string>AntonOS</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.github.pixeltoni.antonos</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>antonos</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

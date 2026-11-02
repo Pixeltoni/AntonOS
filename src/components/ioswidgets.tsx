@@ -1,0 +1,82 @@
+import { useEffect, useRef } from 'react';
+import { App as NativeApp } from '@capacitor/app';
+import { useStore } from '../store';
+import { AntonWidgets, isNativeApp } from '../lib/native';
+import { parseWidgetActions, parseWidgetLink, resolveWidgetActions, widgetSnapshot } from '../lib/widgets';
+import { useCalendarEntries } from './calendar';
+import { openAssistant } from './assistant';
+import { useFocus } from './focus';
+
+/**
+ * Nur in der iOS-App: hält die Widgets auf dem Homescreen aktuell, übernimmt dort
+ * abgehakte Einträge und öffnet Links aus Widgets und Kontrollzentrum.
+ */
+export function useNativeWidgets() {
+  const { data, add, update, remove } = useStore();
+  const entries = useCalendarEntries();
+  const focus = useFocus();
+  const latest = useRef({ data, entries, focus });
+  latest.current = { data, entries, focus };
+  /** Bis zu diesem Zeitpunkt (ms) sind Aktionen aus dem Widget übernommen */
+  const applied = useRef(0);
+
+  const push = () => {
+    const { data, entries } = latest.current;
+    return AntonWidgets.update({ snapshot: JSON.stringify(widgetSnapshot(data, entries, new Date())), applied: applied.current });
+  };
+  const pushRef = useRef(push);
+  pushRef.current = push;
+
+  // Stand ablegen – kurz gewartet, damit schnelles Tippen nicht jedes Mal neu zeichnet
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const timer = setTimeout(() => void pushRef.current().catch(() => undefined), 1200);
+    return () => clearTimeout(timer);
+  }, [data, entries]);
+
+  useEffect(() => {
+    if (!isNativeApp()) return;
+
+    // Im Widget Abgehaktes übernehmen; der Effekt oben legt danach den neuen Stand ab
+    const takeActions = async () => {
+      try {
+        const { actions } = await AntonWidgets.takeActions();
+        const list = parseWidgetActions(JSON.parse(actions || '[]'));
+        const ops = resolveWidgetActions(latest.current.data, list);
+        for (const op of ops) {
+          if (op.op === 'update') update(op.collection, op.id, op.patch as never);
+          else if (op.op === 'add') add(op.collection, op.item);
+          else remove(op.collection, op.id);
+        }
+        applied.current = Math.max(applied.current, ...list.map((a) => a.at));
+        // Nichts geändert (oder neuer Tag): trotzdem frisch ablegen
+        if (ops.length === 0) await pushRef.current();
+      } catch {
+        // ältere App-Version ohne Widgets
+      }
+    };
+
+    const openLink = (url: string) => {
+      const link = parseWidgetLink(url);
+      if (!link) return;
+      if (link.type === 'page') location.hash = link.hash;
+      else if (link.type === 'assistant') setTimeout(openAssistant, 300);
+      else {
+        location.hash = '#/fokus';
+        const { focus } = latest.current;
+        if (!focus.timer.running) focus.start();
+      }
+    };
+
+    void takeActions();
+    void NativeApp.getLaunchUrl().then((launch) => launch?.url && openLink(launch.url)).catch(() => undefined);
+    const resume = NativeApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void takeActions();
+    });
+    const urls = NativeApp.addListener('appUrlOpen', ({ url }) => openLink(url));
+    return () => {
+      void resume.then((h) => h.remove());
+      void urls.then((h) => h.remove());
+    };
+  }, [add, update, remove]);
+}

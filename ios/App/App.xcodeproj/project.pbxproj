@@ -25,7 +25,37 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		A1A1A1A12F00000300000001 /* AntonWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000002 /* AntonWidgets.swift */; };
+		A1A1A1A12F00000300000012 /* AntonOSWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000011 /* AntonOSWidgets.swift */; };
+		A1A1A1A12F00000300000014 /* WidgetData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000013 /* WidgetData.swift */; };
+		A1A1A1A12F00000300000016 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000015 /* WidgetIntents.swift */; };
+		A1A1A1A12F00000300000018 /* AntonOSControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000017 /* AntonOSControls.swift */; };
+		A1A1A1A12F00000300000028 /* AntonOSWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000010 /* AntonOSWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1A1A1A12F00000300000025 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1A1A1A12F00000300000021;
+			remoteInfo = AntonOSWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A1A1A1A12F00000300000027 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1A1A1A12F00000300000028 /* AntonOSWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -48,6 +78,15 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		A1A1A1A12F00000300000002 /* AntonWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntonWidgets.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000300000003 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
+		A1A1A1A12F00000300000010 /* AntonOSWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AntonOSWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1A1A1A12F00000300000011 /* AntonOSWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntonOSWidgets.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000300000013 /* WidgetData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetData.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000300000015 /* WidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetIntents.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000300000017 /* AntonOSControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntonOSControls.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000300000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AntonOSWidgets.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,6 +98,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1A1A1A12F00000300000023 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -67,6 +113,7 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				A1A1A1A12F00000300000020 /* AntonOSWidgets */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -75,6 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				A1A1A1A12F00000300000010 /* AntonOSWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -85,6 +133,8 @@
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				A1A1A1A12F00000100000002 /* AntonAlarm.swift */,
+				A1A1A1A12F00000300000002 /* AntonWidgets.swift */,
+				A1A1A1A12F00000300000003 /* App.entitlements */,
 				A1A1A1A12F00000200000002 /* antonos-aufgang.wav */,
 				A1A1A1A12F00000200000004 /* antonos-marimba.wav */,
 				A1A1A1A12F00000200000006 /* antonos-glocke.wav */,
@@ -104,6 +154,19 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		A1A1A1A12F00000300000020 /* AntonOSWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				A1A1A1A12F00000300000011 /* AntonOSWidgets.swift */,
+				A1A1A1A12F00000300000013 /* WidgetData.swift */,
+				A1A1A1A12F00000300000015 /* WidgetIntents.swift */,
+				A1A1A1A12F00000300000017 /* AntonOSControls.swift */,
+				A1A1A1A12F00000300000019 /* Info.plist */,
+				A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */,
+			);
+			path = AntonOSWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -114,10 +177,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				A1A1A1A12F00000300000027 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A1A1A1A12F00000300000026 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -126,6 +191,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A1A1A1A12F00000300000021 /* AntonOSWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1A1A1A12F00000300000029 /* Build configuration list for PBXNativeTarget "AntonOSWidgets" */;
+			buildPhases = (
+				A1A1A1A12F00000300000022 /* Sources */,
+				A1A1A1A12F00000300000023 /* Frameworks */,
+				A1A1A1A12F00000300000024 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AntonOSWidgets;
+			productName = AntonOSWidgets;
+			productReference = A1A1A1A12F00000300000010 /* AntonOSWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -139,6 +221,10 @@
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
+						ProvisioningStyle = Automatic;
+					};
+					A1A1A1A12F00000300000021 = {
+						CreatedOnToolsVersion = 26.0;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -160,6 +246,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				A1A1A1A12F00000300000021 /* AntonOSWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -187,6 +274,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1A1A1A12F00000300000024 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -196,10 +290,30 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				A1A1A1A12F00000100000001 /* AntonAlarm.swift in Sources */,
+				A1A1A1A12F00000300000001 /* AntonWidgets.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1A1A1A12F00000300000022 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1A1A1A12F00000300000012 /* AntonOSWidgets.swift in Sources */,
+				A1A1A1A12F00000300000014 /* WidgetData.swift in Sources */,
+				A1A1A1A12F00000300000016 /* WidgetIntents.swift in Sources */,
+				A1A1A1A12F00000300000018 /* AntonOSControls.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1A1A1A12F00000300000026 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1A1A1A12F00000300000021 /* AntonOSWidgets */;
+			targetProxy = A1A1A1A12F00000300000025 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -337,6 +451,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -364,6 +479,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -379,6 +495,58 @@
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.pixeltoni.antonos;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A1A1A1A12F0000030000002A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = AntonOSWidgets/AntonOSWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AntonOSWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.pixeltoni.antonos.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1A1A1A12F0000030000002B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = AntonOSWidgets/AntonOSWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AntonOSWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.pixeltoni.antonos.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -401,6 +569,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1A1A1A12F00000300000029 /* Build configuration list for PBXNativeTarget "AntonOSWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1A1A1A12F0000030000002A /* Debug */,
+				A1A1A1A12F0000030000002B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -44,6 +44,7 @@ import { People, PersonDetail } from './pages/People';
 import { TripDetail, Trips } from './pages/Trips';
 import { useLifeReminders } from './components/reminders';
 import { useNativeNotifications } from './components/native';
+import { useNativeWidgets } from './components/ioswidgets';
 import { AlarmRinger } from './components/alarm';
 import { Alarms } from './pages/Alarms';
 
@@ -170,6 +171,7 @@ function Shell() {
   useWeeklyReviewReminder();
   useLifeReminders();
   useNativeNotifications();
+  useNativeWidgets();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);

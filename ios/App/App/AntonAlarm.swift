@@ -13,6 +13,7 @@ import AlarmKit
 class AntonBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(AntonAlarmPlugin())
+        bridge?.registerPluginInstance(AntonWidgetsPlugin())
     }
 }
 

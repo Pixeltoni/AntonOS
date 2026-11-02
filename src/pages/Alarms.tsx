@@ -6,7 +6,7 @@ import {
   quickAlarm, repeatLabel, shakeTarget, skipNext, SLEEP_GOALS, SNOOZE_MINUTES, snoozeOf, spotifyUri, untilLabel, WAKE_CHECK_MINUTES, wakeStats, youtubeId,
 } from '../lib/alarm';
 import { addDays, parseDate, today } from '../lib/dates';
-import { TONES, toneOf } from '../lib/tones';
+import { SONGS, TONES, toneLabel, toneOf } from '../lib/tones';
 import { clampClipStart, CLIP_SECONDS, maxClipStart, mmss } from '../lib/clip';
 import { isMobile } from '../lib/notify';
 import { audioDuration, deleteSoundFile, loadSoundFile, previewClip, previewTone, QrScanner, removeNativeClip, saveNativeClip, saveSoundFile, SYNC_EVENT, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
@@ -21,12 +21,12 @@ const soundLabel = (a: Pick<Alarm, 'tone' | 'sound' | 'soundName'>) => {
   if (a.sound === 'datei') return a.soundName || 'Eigenes Lied';
   if (a.sound === 'spotify') return a.soundName ? `Spotify: ${a.soundName}` : 'Spotify';
   if (a.sound === 'youtube') return 'YouTube';
-  return TONES.find((x) => x.id === toneOf(a.tone))?.label ?? 'Weckton';
+  return toneLabel(a.tone);
 };
 
 const SOUND_CHOICES: { id: AlarmSound; label: string; hint: string }[] = [
   { id: 'ton', label: 'Weckton', hint: 'Einer der Töne unten – am zuverlässigsten' },
-  { id: 'datei', label: 'Eigenes Lied', hint: 'Audiodatei, z. B. MP3 – ein Ausschnitt wird zum echten Weckton' },
+  { id: 'datei', label: 'Eigenes Lied', hint: 'Audiodatei, z. B. MP3 – ein 29-Sekunden-Ausschnitt' },
   { id: 'spotify', label: 'Spotify', hint: 'Song, Album oder Playlist (Premium)' },
   { id: 'youtube', label: 'YouTube', hint: 'Link zu einem Video' },
 ];
@@ -381,7 +381,7 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
               <button type="button" className="tone-preview" onClick={() => void songBlob().then((b) => b && previewClip(b, start))}>▶ Ausschnitt anhören</button>
             )}
             <span className="muted small">
-              Die {CLIP_SECONDS} Sekunden ab {mmss(start)} werden zum Weckton – {native ? 'sie klingeln auch am gesperrten iPhone' : 'in der iOS-App klingeln sie auch am gesperrten iPhone'}. Länger lässt Apple einen Weckton nicht spielen, danach wiederholt er sich. Das Lied bleibt nur auf diesem Gerät gespeichert.
+              Die {CLIP_SECONDS} Sekunden ab {mmss(start)} klingeln bei offener App. Am gesperrten iPhone nimmt iOS selbst gewählte Dateien nicht an – dort klingelt der Ersatzton unten. Soll ein Lied auch dort klingeln, muss es fest in die App eingebaut werden (wie „What Once Was“). Das Lied bleibt nur auf diesem Gerät gespeichert.
             </span>
           </div>
         )}
@@ -406,7 +406,7 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
         )}
         <span className="ios-caption">{song ? (native && a.sound !== 'datei' ? 'Ton am gesperrten iPhone' : 'Ersatzton, falls das Lied nicht klappt') : 'Weckton'}</span>
         <ul className="ios-group">
-          {TONES.map((t) => (
+          {[...SONGS.map((x) => ({ ...x, hint: native ? `${x.hint} · dein Lied` : `${x.hint} · klingt nur in der iOS-App` })), ...TONES].map((t) => (
             <li key={t.id}>
               <button type="button" className="ios-row" aria-pressed={toneOf(a.tone) === t.id} onClick={() => { set({ tone: t.id }); previewTone(t.id); }}>
                 <span className="tone-play" aria-hidden>▶</span>

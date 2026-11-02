@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alarmSoundFile, NATIVE_TONE_SECONDS, TONES, toneFile, toneLoop, toneOf, toneWav } from './tones';
+import { alarmSoundFile, isSong, SONGS, synthTone, toneLabel, NATIVE_TONE_SECONDS, TONES, toneFile, toneLoop, toneOf, toneWav } from './tones';
 
 describe('Wecktöne', () => {
   it('jeder Ton ist hörbar und nicht übersteuert', () => {
@@ -24,5 +24,15 @@ describe('Wecktöne', () => {
     expect(alarmSoundFile({ id: 'x1', sound: 'datei', tone: 'glocke' })).toBe('antonos-eigen-x1.wav|antonos-glocke.wav');
     expect(alarmSoundFile({ id: 'x1', sound: 'spotify', tone: 'glocke' })).toBe('antonos-glocke.wav');
     expect(alarmSoundFile({ id: 'x1', sound: 'ton', tone: undefined })).toBe('antonos-aufgang.wav');
+  });
+  it('eigene Lieder: gültiger Ton, Datei im App-Paket, im Browser der Standardton', () => {
+    const id = SONGS[0].id;
+    expect(isSong(id)).toBe(true);
+    expect(toneOf(id)).toBe(id);
+    expect(toneFile(id)).toBe(`antonos-${id}.wav`);
+    expect(synthTone(id)).toBe('aufgang');
+    expect(synthTone('glocke')).toBe('glocke');
+    expect(toneLabel(id)).toBe(SONGS[0].label);
+    expect(toneLabel('gibtsnicht')).toBe('Sonnenaufgang');
   });
 });

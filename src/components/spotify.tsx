@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { useStore } from '../store';
 import type { WidgetVariant } from '../types';
 import { App as NativeApp } from '@capacitor/app';
-import { api, completeLogin, handleRedirect, isNativeCallback, loadToken, login, logout, accessToken, parseCallback, redirectUri } from '../lib/spotify';
+import { api, completeLogin, deviceIcon, handleRedirect, isNativeCallback, loadToken, login, logout, accessToken, parseCallback, pickDevice, redirectUri, spotifyAppUri, SpotifyError, type Device } from '../lib/spotify';
 import { isNativeApp } from '../lib/native';
 import { safeImageSrc, spotifyEmbedUrl } from '../lib/life';
 import { Empty, Panel } from './ui';
@@ -17,7 +17,7 @@ interface PlaybackState {
   context: PlaybackContext | null;
   progress_ms: number | null;
   item: Track | null;
-  device: { id: string | null; name: string; volume_percent: number | null };
+  device: { id: string | null; name: string; type?: string; volume_percent: number | null };
   shuffle_state: boolean;
 }
 interface Playlist { id: string; name: string; uri: string; images: Image[] | null; tracks?: { total: number }; items?: { total: number } }
@@ -51,7 +51,15 @@ interface SpotifyCtx {
   command(action: () => Promise<unknown>): Promise<void>;
   playContext(uri: string): Promise<void>;
   playHere(): Promise<void>;
-  refresh(): Promise<void>;
+  /** Wiedergabe fortsetzen oder starten – sucht bei Bedarf selbst ein Gerät. */
+  resume(): Promise<void>;
+  /** Wiedergabe auf ein anderes Gerät schieben. */
+  transfer(id: string): Promise<void>;
+  /** Spotify-App öffnen (optional direkt mit Playlist/Album). */
+  openApp(uri?: string | null): void;
+  devices: Device[];
+  loadDevices(): Promise<Device[]>;
+  refresh(): Promise<PlaybackState | null>;
 }
 
 const Ctx = createContext<SpotifyCtx | null>(null);
@@ -71,7 +79,10 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [devices, setDevices] = useState<Device[]>([]);
   const player = useRef<SdkPlayer | null>(null);
+  /** In der App: Was nach dem Öffnen der Spotify-App abgespielt werden soll, sobald AntonOS wieder vorne ist. */
+  const pending = useRef<{ body: Record<string, unknown> | null; at: number } | null>(null);
 
   // Rückkehr vom Spotify-Login verarbeiten
   useEffect(() => {
@@ -105,23 +116,113 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     if (!loadToken()) setConnected(false);
   }, []);
 
-  const refresh = useCallback(async () => {
-    if (!clientId || !loadToken()) return;
+  const refresh = useCallback(async (): Promise<PlaybackState | null> => {
+    if (!clientId || !loadToken()) return null;
     try {
-      setState(await api<PlaybackState>(clientId, '/me/player?additional_types=episode'));
+      const next = await api<PlaybackState>(clientId, '/me/player?additional_types=episode');
+      setState(next);
+      return next;
     } catch (e) {
       fail(e);
+      return null;
     }
   }, [clientId, fail]);
+
+  const loadDevices = useCallback(async (): Promise<Device[]> => {
+    if (!clientId || !loadToken()) return [];
+    try {
+      const list = (await api<{ devices: Device[] }>(clientId, '/me/player/devices'))?.devices ?? [];
+      setDevices(list);
+      return list;
+    } catch {
+      return [];
+    }
+  }, [clientId]);
+
+  const openApp = useCallback((uri?: string | null) => {
+    // In der App reicht iOS spotify:-Adressen an die Spotify-App weiter
+    if (isNativeApp()) location.href = spotifyAppUri(uri);
+    else window.open(uri ? `https://open.spotify.com/${uri.split(':').slice(1).join('/')}` : 'https://open.spotify.com/', '_blank', 'noopener');
+  }, []);
+
+  /**
+   * Startet die Wiedergabe (body null = fortsetzen). Ist kein Gerät aktiv, sucht AntonOS selbst eins;
+   * findet es keins, öffnet es in der App die Spotify-App und spielt nach der Rückkehr weiter.
+   */
+  const start = useCallback(
+    async (body: Record<string, unknown> | null, allowOpen = true) => {
+      const send = (device?: string | null) =>
+        api(clientId, `/me/player/play${device ? `?device_id=${device}` : ''}`, { method: 'PUT', body: body ? JSON.stringify(body) : undefined });
+      if (state?.device?.id) {
+        try {
+          await send();
+          return;
+        } catch (e) {
+          if (!(e instanceof SpotifyError) || e.status !== 404) throw e;
+        }
+      }
+      const target = deviceId ?? pickDevice(await loadDevices(), isNativeApp())?.id;
+      if (target) {
+        await send(target);
+        return;
+      }
+      if (isNativeApp() && allowOpen) {
+        pending.current = { body, at: Date.now() };
+        openApp(typeof body?.context_uri === 'string' ? body.context_uri : null);
+        return;
+      }
+      throw new Error(
+        isNativeApp()
+          ? 'Spotify ist noch auf keinem Gerät bereit. Tippe in der Spotify-App einmal auf Play, dann übernimmt AntonOS.'
+          : 'Kein aktives Gerät. Starte die Wiedergabe „Hier im Browser“ oder öffne Spotify auf einem Gerät.',
+      );
+    },
+    [clientId, state?.device?.id, deviceId, loadDevices, openApp],
+  );
 
   // Profil laden und Wiedergabe regelmäßig abfragen
   useEffect(() => {
     if (!connected || !clientId) return;
     api<Profile>(clientId, '/me').then(setProfile).catch(fail);
     refresh();
+    loadDevices();
     const timer = setInterval(() => document.visibilityState === 'visible' && refresh(), 4000);
     return () => clearInterval(timer);
-  }, [connected, clientId, refresh, fail]);
+  }, [connected, clientId, refresh, loadDevices, fail]);
+
+  // Beim Zurückkehren (Tab oder App wieder vorne) sofort aktualisieren statt auf den nächsten Takt zu warten
+  const startRef = useRef(start);
+  startRef.current = start;
+  useEffect(() => {
+    if (!connected || !clientId) return;
+    const back = async () => {
+      const now = await refresh();
+      void loadDevices();
+      const wanted = pending.current;
+      pending.current = null;
+      // Nach dem Ausflug in die Spotify-App: dort Gewähltes weiterspielen, falls noch nichts läuft
+      if (!wanted || Date.now() - wanted.at > 3 * 60_000 || now?.is_playing) return;
+      // Die Spotify-App braucht nach dem Start einen Moment, bis sie als Gerät auftaucht
+      for (const wait of [800, 2000, 4000]) {
+        await new Promise((r) => setTimeout(r, wait));
+        try {
+          await startRef.current(wanted.body, false);
+          setError('');
+          setTimeout(() => void refresh(), 600);
+          return;
+        } catch (e) {
+          if (wait === 4000) setError(e instanceof Error ? e.message : String(e));
+        }
+      }
+    };
+    const onVisible = () => document.visibilityState === 'visible' && void back();
+    document.addEventListener('visibilitychange', onVisible);
+    const handle = isNativeApp() ? NativeApp.addListener('appStateChange', ({ isActive }) => isActive && void back()) : null;
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      void handle?.then((h) => h.remove());
+    };
+  }, [connected, clientId, refresh, loadDevices]);
 
   // Web Playback SDK: macht diesen Browser zu einem Spotify-Gerät (nur mit Premium).
   // In der iOS-App fehlt dem WebView der Kopierschutz dafür – dort steuert AntonOS nur andere Geräte.
@@ -187,11 +288,22 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
   const playContext = useCallback(
     async (uri: string) => {
       await player.current?.activateElement();
-      // Läuft gerade nichts, im Browser abspielen (falls verfügbar)
-      const target = state?.device?.id ? '' : deviceId ? `?device_id=${deviceId}` : '';
-      await command(() => api(clientId, `/me/player/play${target}`, { method: 'PUT', body: JSON.stringify({ context_uri: uri }) }));
+      await command(() => start({ context_uri: uri }));
     },
-    [clientId, deviceId, state?.device?.id, command],
+    [start, command],
+  );
+
+  const resume = useCallback(async () => {
+    if (deviceId && !state?.device?.id) return playHere();
+    await command(() => start(null));
+  }, [deviceId, state?.device?.id, playHere, start, command]);
+
+  const transfer = useCallback(
+    async (id: string) => {
+      await command(() => api(clientId, '/me/player', { method: 'PUT', body: JSON.stringify({ device_ids: [id], play: true }) }));
+      setTimeout(() => void loadDevices(), 800);
+    },
+    [clientId, command, loadDevices],
   );
 
   const value: SpotifyCtx = {
@@ -216,6 +328,11 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     command,
     playContext,
     playHere,
+    resume,
+    transfer,
+    openApp,
+    devices,
+    loadDevices,
     refresh,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -283,7 +400,8 @@ function NativeRedirectHint() {
 function Embed() {
   const { data } = useStore();
   const embed = spotifyEmbedUrl(data.settings.spotifyUrl);
-  if (!embed) return null;
+  // In der iPhone-App spielt die eingebettete Playlist nur 30-Sekunden-Ausschnitte – dort lieber die Spotify-App
+  if (!embed || isNativeApp()) return null;
   return <iframe title="Spotify-Playlist" src={embed} className="spotify" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />;
 }
 
@@ -312,8 +430,8 @@ export function NowPlaying({ mini = false }: { mini?: boolean }) {
           <button onClick={() => call('/me/player/previous')} disabled={busy || !state} aria-label="Zurück">⏮</button>
           <button
             className="primary"
-            onClick={() => (state ? call(playing ? '/me/player/pause' : '/me/player/play', 'PUT') : s.playHere())}
-            disabled={busy || (!state && !deviceId)}
+            onClick={() => (playing ? call('/me/player/pause', 'PUT') : s.resume())}
+            disabled={busy}
             aria-label={playing ? 'Pause' : 'Abspielen'}
           >
             {playing ? '⏸' : '▶'}
@@ -475,9 +593,15 @@ export function SpotifyCard({ rows: maxRows = 5 }: { rows?: number }) {
         <div className="sp-meta">
           <strong className="sp-title">{ctx?.name ?? 'Spotify'}</strong>
           <span className="sp-sub">{track ? track.artists.map((a) => a.name).join(', ') : 'Gerade läuft nichts'}</span>
-          <a className="sp-save" href={link} target="_blank" rel="noopener noreferrer">
-            <span aria-hidden>⊕</span> Auf Spotify öffnen
-          </a>
+          {isNativeApp() ? (
+            <button type="button" className="sp-save" onClick={() => s.openApp(state?.context?.uri ?? track?.uri)}>
+              <span aria-hidden>⊕</span> In Spotify öffnen
+            </button>
+          ) : (
+            <a className="sp-save" href={link} target="_blank" rel="noopener noreferrer">
+              <span aria-hidden>⊕</span> Auf Spotify öffnen
+            </a>
+          )}
         </div>
         <SpotifyLogo />
       </div>
@@ -491,8 +615,8 @@ export function SpotifyCard({ rows: maxRows = 5 }: { rows?: number }) {
           <button className="sp-btn" onClick={() => call('/me/player/next')} disabled={busy || !state} aria-label="Weiter">⏭</button>
           <button
             className="sp-play"
-            onClick={() => (state ? call(playing ? '/me/player/pause' : '/me/player/play', 'PUT') : s.playHere())}
-            disabled={busy || (!state && !deviceId)}
+            onClick={() => (playing ? call('/me/player/pause', 'PUT') : s.resume())}
+            disabled={busy}
             aria-label={playing ? 'Pause' : 'Abspielen'}
           >
             {playing ? '❚❚' : '▶'}
@@ -520,11 +644,57 @@ export function SpotifyCard({ rows: maxRows = 5 }: { rows?: number }) {
       )}
 
       <div className="sp-foot">
-        <span>{state?.device ? `🔊 ${state.device.name}` : 'Kein aktives Gerät'}</span>
+        <span>{state?.device ? `${deviceIcon(state.device.type ?? '')} ${state.device.name}` : 'Kein aktives Gerät'}</span>
         {deviceId && state?.device?.id !== deviceId && (
           <button className="link" onClick={() => s.playHere()}>Hier im Browser abspielen</button>
         )}
+        {isNativeApp() && !state?.device && (
+          <button className="link" onClick={() => s.openApp()}>Spotify öffnen</button>
+        )}
       </div>
+    </div>
+  );
+}
+
+/** Geräte zum Hin- und Herschieben der Wiedergabe (Spotify Connect). */
+function Devices() {
+  const s = useSpotify();
+  const activeId = s.state?.device?.id ?? null;
+  const list = s.devices.filter((d) => d.id);
+  return (
+    <div className="col">
+      <div className="row between">
+        <h3>Geräte</h3>
+        <button className="link small" onClick={() => void s.loadDevices()} disabled={s.busy}>Aktualisieren</button>
+      </div>
+      {list.length === 0 ? (
+        <p className="muted small">
+          Gerade ist kein Gerät online. Öffne Spotify auf deinem Handy, Laptop oder Lautsprecher{isNativeApp() ? '' : ' oder spiele hier im Browser ab'}.
+          {isNativeApp() && (
+            <>
+              {' '}
+              <button className="link" onClick={() => s.openApp()}>Spotify öffnen</button>
+            </>
+          )}
+        </p>
+      ) : (
+        <div className="row wrap">
+          {list.map((d) => {
+            const active = d.id === activeId || (!activeId && d.is_active);
+            return (
+              <button
+                key={d.id}
+                className={active ? 'primary' : ''}
+                disabled={s.busy || d.is_restricted || active}
+                onClick={() => void s.transfer(d.id!)}
+                title={active ? 'Spielt hier' : `Wiedergabe auf ${d.name} übertragen`}
+              >
+                {deviceIcon(d.type)} {d.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -592,10 +762,11 @@ export function SpotifyPlayer({ compact = false, variant = 'standard' }: { compa
       <SpotifyCard rows={compact ? (variant === 'kompakt' ? 0 : variant === 'detail' ? 10 : 5) : 10} />
       {s.error && <p className="danger small">{s.error}</p>}
       {s.profile && !premium && (
-        <p className="muted small">Ohne Spotify Premium erlaubt Spotify keine Steuerung von außen. Du kannst aber die eingebettete Playlist nutzen.</p>
+        <p className="muted small">Ohne Spotify Premium erlaubt Spotify keine Steuerung von außen. {isNativeApp() ? 'Spiel deine Musik direkt in der Spotify-App ab.' : 'Du kannst aber die eingebettete Playlist nutzen.'}</p>
       )}
       {!compact && (
         <>
+          <Devices />
           <h3>Deine Playlists</h3>
           <Playlists />
           <div className="row between">
@@ -605,6 +776,9 @@ export function SpotifyPlayer({ compact = false, variant = 'standard' }: { compa
         </>
       )}
       {!premium && <Embed />}
+      {!premium && isNativeApp() && (
+        <button onClick={() => s.openApp()}>Spotify-App öffnen</button>
+      )}
     </div>
   );
 }

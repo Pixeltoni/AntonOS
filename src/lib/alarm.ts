@@ -12,9 +12,13 @@ export const solveSeconds = (challenge: AlarmChallenge) => (challenge === 'qr' ?
 
 export const CHALLENGES: { id: AlarmChallenge; label: string; hint: string }[] = [
   { id: 'rechnen', label: 'Rechnen', hint: 'Matheaufgaben lösen' },
-  { id: 'text', label: 'Text abtippen', hint: 'Einen Satz fehlerfrei eingeben' },
-  { id: 'qr', label: 'QR-Code scannen', hint: 'Einen hinterlegten Code scannen, z. B. im Bad' },
+  { id: 'text', label: 'Text', hint: 'Einen Satz fehlerfrei eingeben' },
+  { id: 'qr', label: 'QR-Code', hint: 'Einen hinterlegten Code scannen, z. B. im Bad' },
+  { id: 'keine', label: 'Keine', hint: 'Einfach ausschalten' },
 ];
+
+/** Muss man zum Abschalten etwas lösen? */
+export const hasTask = (alarm: Pick<Alarm, 'challenge'>) => alarm.challenge !== 'keine';
 
 export const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
@@ -231,6 +235,8 @@ export interface NativeAlarm {
   minute: number;
   /** 1 = Montag … 7 = Sonntag; leer = einmalig */
   days: number[];
+  /** false = „Stopp“ schaltet ihn einfach aus */
+  task: boolean;
 }
 
 export const alarmTitle = (alarm: Pick<Alarm, 'label'>) => alarm.label.trim() || 'Wecker';
@@ -241,7 +247,7 @@ export function nativeAlarms(alarms: Alarm[]): NativeAlarm[] {
     .filter((a) => a.enabled && /^\d\d:\d\d$/.test(a.time))
     .map((a) => {
       const [hour, minute] = a.time.split(':').map(Number);
-      return { id: a.id, title: alarmTitle(a), hour, minute, days: [...new Set(a.days)].filter((d) => d >= 1 && d <= 7).sort() };
+      return { id: a.id, title: alarmTitle(a), hour, minute, days: [...new Set(a.days)].filter((d) => d >= 1 && d <= 7).sort(), task: hasTask(a) };
     })
     .sort((x, y) => x.id.localeCompare(y.id));
 }
@@ -251,3 +257,15 @@ export function nativeAlarms(alarms: Alarm[]): NativeAlarm[] {
  * Während der Aufgabe: Restzeit plus Puffer, damit das offene AntonOS zuerst klingelt.
  */
 export const nativeRingAgainSeconds = (phase: 'klingelt' | 'aufgabe', secondsLeft: number) => (phase === 'aufgabe' ? Math.max(0, secondsLeft) + 15 : 30);
+
+/**
+ * Einmalige Wecker, deren Weckzeit seit dem Einschalten schon vorbei ist – das iPhone hat sie
+ * bereits geklingelt, sie werden ausgeschaltet (sonst würde er am nächsten Tag erneut gestellt).
+ */
+export function expiredOneShots(alarms: Alarm[], now: Date): Alarm[] {
+  return alarms.filter((a) => {
+    if (!a.enabled || a.days.length > 0) return false;
+    const ring = nextRing(a, new Date(a.armedAt));
+    return !!ring && ring <= now;
+  });
+}

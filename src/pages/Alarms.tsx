@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import type { Alarm, AlarmSound, ID } from '../types';
 import { CHALLENGES, daysLabel, defaultAlarm, nextRing, spotifyUri, untilLabel, WEEKDAYS, youtubeId } from '../lib/alarm';
@@ -6,6 +6,8 @@ import { isMobile } from '../lib/notify';
 import { deleteSoundFile, QrScanner, saveSoundFile, SYNC_EVENT, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
 import { isNativeApp, nativeAlarmPermission, type AlarmPermission } from '../lib/native';
 import { useSpotify } from '../components/spotify';
+import { api } from '../lib/spotify';
+import { safeImageSrc } from '../lib/life';
 import { Empty, PageHeader, Panel } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
 
@@ -16,13 +18,92 @@ const SOUNDS: { id: AlarmSound; label: string }[] = [
   { id: 'spotify', label: 'Spotify' },
 ];
 
-const soundLabel = (a: Alarm) => (a.sound === 'datei' ? a.soundName || 'Eigene Datei' : SOUNDS.find((s) => s.id === a.sound)?.label ?? 'Standard');
+const soundLabel = (a: Alarm) =>
+  a.sound === 'datei' ? a.soundName || 'Eigene Datei' : a.sound === 'spotify' && a.soundName ? `Spotify: ${a.soundName}` : SOUNDS.find((s) => s.id === a.sound)?.label ?? 'Standard';
+
+interface SpotifyItem { uri: string; name: string; detail: string; image: string | null }
+interface Img { url: string }
+interface ApiPlaylist { uri: string; name: string; images: Img[] | null; owner?: { display_name?: string } }
+interface ApiTrack { uri: string; name: string; artists: { name: string }[]; album: { images: Img[] } }
+interface ApiAlbum { uri: string; name: string; artists: { name: string }[]; images: Img[] }
+
+const fromPlaylist = (p: ApiPlaylist): SpotifyItem => ({ uri: p.uri, name: p.name, detail: 'Playlist', image: p.images?.[0]?.url ?? null });
+const fromTrack = (t: ApiTrack): SpotifyItem => ({ uri: t.uri, name: t.name, detail: `Song · ${t.artists.map((x) => x.name).join(', ')}`, image: t.album.images.at(-1)?.url ?? null });
+const fromAlbum = (a: ApiAlbum): SpotifyItem => ({ uri: a.uri, name: a.name, detail: `Album · ${a.artists.map((x) => x.name).join(', ')}`, image: a.images.at(-1)?.url ?? null });
+
+/** Song, Album oder Playlist aus dem verbundenen Spotify-Konto wählen – deine Playlists oder per Suche */
+function SpotifyPicker({ value, name, onPick }: { value: string; name?: string; onPick: (uri: string, name: string) => void }) {
+  const { clientId, connected } = useSpotify();
+  const [query, setQuery] = useState('');
+  const [items, setItems] = useState<SpotifyItem[] | null>(null);
+  const [error, setError] = useState('');
+  const seq = useRef(0);
+
+  useEffect(() => {
+    if (!connected || !clientId) return;
+    const q = query.trim();
+    const my = ++seq.current;
+    const timer = setTimeout(
+      () => {
+        setError('');
+        const load = q
+          ? api<{ tracks?: { items: (ApiTrack | null)[] }; playlists?: { items: (ApiPlaylist | null)[] }; albums?: { items: (ApiAlbum | null)[] } }>(
+              clientId,
+              `/search?type=track,playlist,album&limit=8&q=${encodeURIComponent(q)}`,
+            ).then((r) => [
+              ...(r?.tracks?.items ?? []).filter((x): x is ApiTrack => !!x).map(fromTrack),
+              ...(r?.playlists?.items ?? []).filter((x): x is ApiPlaylist => !!x).map(fromPlaylist),
+              ...(r?.albums?.items ?? []).filter((x): x is ApiAlbum => !!x).map(fromAlbum),
+            ])
+          : api<{ items: (ApiPlaylist | null)[] }>(clientId, '/me/playlists?limit=50').then((r) => (r?.items ?? []).filter((x): x is ApiPlaylist => !!x).map(fromPlaylist));
+        load
+          .then((list) => my === seq.current && setItems(list))
+          .catch(() => my === seq.current && (setItems([]), setError('Spotify ist gerade nicht erreichbar.')));
+      },
+      q ? 350 : 0,
+    );
+    return () => clearTimeout(timer);
+  }, [query, connected, clientId]);
+
+  if (!connected) {
+    return <p className="muted small">Verbinde zuerst unter <a href="#/musik">Musik</a> dein Spotify-Konto – dann wählst du hier einen Song oder eine Playlist.</p>;
+  }
+  return (
+    <div className="stack-tight">
+      {value && <span className="small">✓ Gewählt: <strong>{name || 'Spotify-Titel'}</strong></span>}
+      <input type="search" value={query} placeholder="Song, Album oder Playlist suchen" onChange={(e) => setQuery(e.target.value)} aria-label="Spotify durchsuchen" />
+      <span className="muted small">{query.trim() ? 'Suchergebnisse' : 'Deine Playlists'}</span>
+      {error && <p className="alert">{error}</p>}
+      {items === null ? (
+        <p className="muted small">Lade …</p>
+      ) : items.length === 0 ? (
+        <p className="muted small">Nichts gefunden.</p>
+      ) : (
+        <ul className="alarm-spotify">
+          {items.map((it) => {
+            const img = safeImageSrc(it.image ?? undefined);
+            return (
+              <li key={it.uri}>
+                <button type="button" className={it.uri === value ? 'selected' : ''} aria-pressed={it.uri === value} onClick={() => onPick(it.uri, it.name)}>
+                  {img ? <img src={img} alt="" loading="lazy" /> : <span className="alarm-spotify-cover">🎵</span>}
+                  <span className="grow">
+                    <span className="alarm-spotify-name">{it.name}</span>
+                    <span className="muted small">{it.detail}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 type Draft = Omit<Alarm, 'id'>;
 
 function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID; native: boolean; onClose: () => void }) {
   const { add, update, remove } = useStore();
-  const spotify = useSpotify();
   const [a, setA] = useState<Draft>(initial);
   const [file, setFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -35,7 +116,7 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
     if (!/^\d\d:\d\d$/.test(a.time)) return 'Bitte eine Uhrzeit wählen.';
     if (a.sound === 'datei' && !file && !a.soundName) return 'Bitte eine Audiodatei auswählen.';
     if (a.sound === 'youtube' && !youtubeId(a.soundUrl)) return 'Bitte einen gültigen YouTube-Link einfügen.';
-    if (a.sound === 'spotify' && !spotifyUri(a.soundUrl)) return 'Bitte einen Spotify-Link zu einem Song, Album oder einer Playlist einfügen.';
+    if (a.sound === 'spotify' && !spotifyUri(a.soundUrl)) return 'Bitte einen Song, ein Album oder eine Playlist aus Spotify wählen.';
     if (a.challenge === 'qr' && !a.qr) return 'Bitte zuerst einen QR-Code scannen.';
     return '';
   };
@@ -67,7 +148,7 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
       <div className="stack-tight">
         <span className="muted small">Klang</span>
         <div className="segmented">
-          {SOUNDS.map((s) => <button key={s.id} type="button" className={a.sound === s.id ? 'selected' : ''} onClick={() => set({ sound: s.id })}>{s.label}</button>)}
+          {SOUNDS.map((s) => <button key={s.id} type="button" className={a.sound === s.id ? 'selected' : ''} onClick={() => s.id !== a.sound && set(s.id === initial.sound ? { sound: s.id, soundUrl: initial.soundUrl, soundName: initial.soundName } : { sound: s.id, soundUrl: '', soundName: undefined })}>{s.label}</button>)}
         </div>
         {a.sound === 'ton' && <span className="muted small">Lauter Piepton – klappt am zuverlässigsten, auch im Lautlos-Modus.</span>}
         {a.sound === 'datei' && (
@@ -84,10 +165,8 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
         )}
         {a.sound === 'spotify' && (
           <>
-            <input value={a.soundUrl} placeholder="https://open.spotify.com/track/…" inputMode="url" onChange={(e) => set({ soundUrl: e.target.value })} aria-label="Spotify-Link" />
-            <span className="muted small">
-              Spielt über die Spotify-App auf deinem Handy (Premium nötig). {spotify.connected ? 'Spotify ist verbunden.' : <>Erst unter <a href="#/musik">Musik</a> mit Spotify verbinden.</>} Findet Spotify kein Gerät, klingelt der Standard-Ton.
-            </span>
+            <SpotifyPicker value={spotifyUri(a.soundUrl) ? a.soundUrl : ''} name={a.soundName} onPick={(uri, name) => set({ soundUrl: uri, soundName: name })} />
+            <span className="muted small">Spielt über die Spotify-App auf deinem Handy (Premium nötig). Findet Spotify kein Gerät, klingelt der Standard-Ton.</span>
           </>
         )}
       </div>
@@ -124,7 +203,11 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
             </span>
           </>
         )}
-        <span className="muted small">Nach „Ausschalten“ hast du {a.challenge === 'qr' ? '60' : '15'} Sekunden – jede Eingabe setzt die Zeit zurück. Sonst klingelt er wieder.</span>
+        <span className="muted small">
+          {a.challenge === 'keine'
+            ? 'Ohne Aufgabe: „Stopp“ bzw. „Ausschalten“ schaltet ihn sofort aus.'
+            : `Nach „Ausschalten“ hast du ${a.challenge === 'qr' ? '60' : '15'} Sekunden – jede Eingabe setzt die Zeit zurück. Sonst klingelt er wieder.`}
+        </span>
       </div>
 
       {error && <p className="alert">{error}</p>}

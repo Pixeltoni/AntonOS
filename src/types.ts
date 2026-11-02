@@ -601,7 +601,8 @@ export interface FocusSession {
   taskId?: ID | null;
 }
 
-export type AlarmChallenge = 'rechnen' | 'text' | 'qr';
+/** keine = einfach ausschalten */
+export type AlarmChallenge = 'rechnen' | 'text' | 'qr' | 'keine';
 /** Standard-Ton, eigene Audiodatei (nur auf diesem Gerät), YouTube oder Spotify */
 export type AlarmSound = 'ton' | 'datei' | 'youtube' | 'spotify';
 
@@ -618,7 +619,7 @@ export interface Alarm {
   sound: AlarmSound;
   /** YouTube- bzw. Spotify-Link */
   soundUrl: string;
-  /** Name der eigenen Audiodatei (die Datei selbst liegt nur auf dem Gerät) */
+  /** Name der eigenen Audiodatei (die Datei selbst liegt nur auf dem Gerät) bzw. des Spotify-Titels */
   soundName?: string;
   challenge: AlarmChallenge;
   /** Rechnen: 1 leicht, 2 mittel, 3 schwer */

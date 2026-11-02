@@ -46,25 +46,25 @@ enum AlarmScheduler {
     /// So lange nach „Stopp“ bleibt es still – danach klingelt der Wecker wieder, wenn die Aufgabe nicht gelöst ist.
     static let afterStopSeconds: TimeInterval = 60
 
-    static func attributes(title: String) -> AlarmAttributes<AntonAlarmMetadata> {
+    static func attributes(title: String, withTask: Bool) -> AlarmAttributes<AntonAlarmMetadata> {
         let stop = AlarmButton(text: "Stopp", textColor: .white, systemImageName: "stop.fill")
         let task = AlarmButton(text: "Aufgabe lösen", textColor: .white, systemImageName: "brain.head.profile")
         let alert = AlarmPresentation.Alert(
             title: LocalizedStringResource(stringLiteral: title),
             stopButton: stop,
-            secondaryButton: task,
-            secondaryButtonBehavior: .custom
+            secondaryButton: withTask ? task : nil,
+            secondaryButtonBehavior: withTask ? .custom : nil
         )
         return AlarmAttributes(presentation: AlarmPresentation(alert: alert), metadata: AntonAlarmMetadata(), tintColor: .blue)
     }
 
-    static func schedule(id: UUID, title: String, schedule: Alarm.Schedule) async throws {
+    static func schedule(id: UUID, title: String, schedule: Alarm.Schedule, withTask: Bool = true) async throws {
         let config = AlarmManager.AlarmConfiguration<AntonAlarmMetadata>(
             countdownDuration: nil,
             schedule: schedule,
-            attributes: attributes(title: title),
-            stopIntent: AntonAlarmStopIntent(alarmID: id.uuidString),
-            secondaryIntent: AntonAlarmOpenIntent(alarmID: id.uuidString),
+            attributes: attributes(title: title, withTask: withTask),
+            stopIntent: withTask ? AntonAlarmStopIntent(alarmID: id.uuidString) : nil,
+            secondaryIntent: withTask ? AntonAlarmOpenIntent(alarmID: id.uuidString) : nil,
             sound: .default
         )
         _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
@@ -232,12 +232,13 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
                 for item in list {
                     guard let jsId = item["id"] as? String, let hour = (item["hour"] as? NSNumber)?.intValue, let minute = (item["minute"] as? NSNumber)?.intValue else { continue }
                     let title = item["title"] as? String ?? "Wecker"
+                    let withTask = item["task"] as? Bool ?? true
                     let days = (item["days"] as? JSArray ?? []).compactMap { ($0 as? NSNumber)?.intValue }.compactMap(AlarmScheduler.weekday)
                     let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
                     let schedule = Alarm.Schedule.relative(.init(time: time, repeats: days.isEmpty ? .never : .weekly(days)))
                     let id = UUID()
                     do {
-                        try await AlarmScheduler.schedule(id: id, title: title, schedule: schedule)
+                        try await AlarmScheduler.schedule(id: id, title: title, schedule: schedule, withTask: withTask)
                         map[id.uuidString] = jsId
                     } catch {
                         failed += 1

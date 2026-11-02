@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { Alarm } from '../types';
 import { alarmTitle, alarmTone, defaultAlarm, dueAlarms, expiredOneShots, hasTask, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, silence, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
-import { api } from '../lib/spotify';
+import { api, pickDevice, type Device } from '../lib/spotify';
 import { isMobile, notify } from '../lib/notify';
 import { useSpotify } from './spotify';
 import { App as NativeApp } from '@capacitor/app';
@@ -45,12 +45,13 @@ const audio = () => (element ??= Object.assign(new Audio(), { preload: 'auto' })
 
 let toneSrc: string | null = null;
 const tone = () => (toneSrc ??= URL.createObjectURL(new Blob([alarmTone()], { type: 'audio/wav' })));
+let silentSrc: string | null = null;
 
 /** Muss aus einem Tippen heraus aufgerufen werden: schaltet die Wiedergabe für später frei. */
 export function unlockAlarmAudio() {
   const el = audio();
   if (!el.paused) return;
-  el.src = URL.createObjectURL(new Blob([silence()], { type: 'audio/wav' }));
+  el.src = (silentSrc ??= URL.createObjectURL(new Blob([silence()], { type: 'audio/wav' })));
   el.loop = false;
   el.play().then(() => el.pause()).catch(() => undefined);
 }
@@ -102,15 +103,12 @@ function loadYouTube(): Promise<YTNamespace> {
 
 /* ---------- Spotify ---------- */
 
-interface Device { id: string | null; type: string; is_active: boolean }
-
 /** Spielt auf dem aktiven Spotify-Gerät, sonst bevorzugt auf einem Handy */
 async function startSpotify(clientId: string, link: string) {
   const target = spotifyUri(link);
   if (!target) throw new Error('Ungültiger Spotify-Link');
   const res = await api<{ devices: Device[] }>(clientId, '/me/player/devices');
-  const devices = (res?.devices ?? []).filter((d) => d.id);
-  const device = devices.find((d) => d.is_active) ?? devices.find((d) => d.type === 'Smartphone') ?? devices[0];
+  const device = pickDevice(res?.devices ?? [], true);
   if (!device) throw new Error('Kein Spotify-Gerät gefunden');
   const body = target.kind === 'track' ? { uris: [target.uri] } : { context_uri: target.uri };
   await api(clientId, `/me/player/play?device_id=${device.id}`, { method: 'PUT', body: JSON.stringify(body) });
@@ -577,7 +575,7 @@ export function AlarmRinger() {
   useEffect(() => {
     if (!isNativeApp()) return;
     const take = async () => {
-      const stopped = await AntonAlarm.takeStopped().catch(() => ({}) as { id?: string });
+      const stopped = await AntonAlarm.takeStopped().catch(() => ({}) as { id?: string; at?: number });
       if (stopped.id === undefined) return;
       const saved = alarmsRef.current.find((a) => a.id === stopped.id);
       // Test geht vor: auch ein gespeicherter Wecker wird beim Testen nicht ausgeschaltet, und es gilt der Entwurf
@@ -613,14 +611,19 @@ export function AlarmRinger() {
   const watchNative = !!ringing && isNativeApp() && nativeState === 'granted' && (!!ringing.native || !ringing.test);
   useEffect(() => {
     if (!watchNative) return;
+    // Nur neu stellen, wenn sich der Zeitpunkt merklich verschiebt (während der Aufgabe bleibt er gleich)
+    let planned = 0;
     const beat = () => {
       const r = ringingRef.current;
       if (!r) return;
       const seconds = nativeRingAgainSeconds(r.phase, (r.deadline - Date.now()) / 1000);
-      void AntonAlarm.ringIn({ seconds, id: r.alarm.id, title: alarmTitle(r.alarm) }).catch(() => undefined);
+      const at = Date.now() + seconds * 1000;
+      if (Math.abs(at - planned) < 2000) return;
+      planned = at;
+      void AntonAlarm.ringIn({ seconds, id: r.alarm.id, title: alarmTitle(r.alarm) }).catch(() => (planned = 0));
     };
     beat();
-    const id = setInterval(beat, 5000);
+    const id = setInterval(beat, 10_000);
     return () => clearInterval(id);
   }, [watchNative, ringingId, ringingPhase]);
 

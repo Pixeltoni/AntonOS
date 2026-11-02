@@ -215,13 +215,14 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
         }
       }
     };
+    // In der iOS-App reicht appStateChange (visibilitychange käme zusätzlich und würde doppelt laden)
+    if (isNativeApp()) {
+      const handle = NativeApp.addListener('appStateChange', ({ isActive }) => isActive && void back());
+      return () => void handle.then((h) => h.remove());
+    }
     const onVisible = () => document.visibilityState === 'visible' && void back();
     document.addEventListener('visibilitychange', onVisible);
-    const handle = isNativeApp() ? NativeApp.addListener('appStateChange', ({ isActive }) => isActive && void back()) : null;
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      void handle?.then((h) => h.remove());
-    };
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [connected, clientId, refresh, loadDevices]);
 
   // Web Playback SDK: macht diesen Browser zu einem Spotify-Gerät (nur mit Premium).

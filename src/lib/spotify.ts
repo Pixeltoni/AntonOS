@@ -245,3 +245,56 @@ export function parseBody<T>(text: string): T | null {
     return null;
   }
 }
+
+/* ---------- Geräte (Spotify Connect) ---------- */
+
+export interface Device {
+  id: string | null;
+  name: string;
+  type: string;
+  is_active: boolean;
+  is_restricted: boolean;
+  volume_percent?: number | null;
+}
+
+/**
+ * Wählt das Gerät, auf dem die Wiedergabe starten soll, wenn gerade keins aktiv ist:
+ * das aktive, sonst ein Handy (in der App meist das eigene iPhone), sonst das erste steuerbare.
+ */
+export function pickDevice(devices: Device[], preferPhone = false): Device | null {
+  const usable = devices.filter((d) => d.id && !d.is_restricted);
+  return (
+    usable.find((d) => d.is_active) ??
+    (preferPhone ? usable.find((d) => d.type.toLowerCase() === 'smartphone') : undefined) ??
+    usable[0] ??
+    null
+  );
+}
+
+/** Symbol für eine Geräteart von Spotify. */
+export function deviceIcon(type: string): string {
+  switch (type.toLowerCase()) {
+    case 'smartphone':
+      return '📱';
+    case 'computer':
+      return '💻';
+    case 'tablet':
+      return '📲';
+    case 'speaker':
+    case 'avr':
+    case 'stb':
+      return '🔈';
+    case 'tv':
+    case 'castvideo':
+      return '📺';
+    case 'automobile':
+      return '🚗';
+    default:
+      return '🎧';
+  }
+}
+
+/** Öffnet-Adresse für die Spotify-App, z. B. spotify:playlist:… (sonst einfach die App). */
+export function spotifyAppUri(uri?: string | null): string {
+  return uri && /^spotify:[a-z]+:[A-Za-z0-9]+$/.test(uri) ? uri : 'spotify:';
+}

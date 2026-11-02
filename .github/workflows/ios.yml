@@ -15,6 +15,22 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
+      - name: Secrets prüfen
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          missing=""
+          for name in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Diese Secrets fehlen oder sind leer:$missing – eintragen unter Settings → Secrets and variables → Actions → Reiter „Secrets“ → „New repository secret“ (nicht bei „Variables“ und nicht als Environment-Secret)."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

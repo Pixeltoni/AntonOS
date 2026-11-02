@@ -298,3 +298,8 @@ export function deviceIcon(type: string): string {
 export function spotifyAppUri(uri?: string | null): string {
   return uri && /^spotify:[a-z]+:[A-Za-z0-9]+$/.test(uri) ? uri : 'spotify:';
 }
+
+/** Das Handy in der Geräteliste (in der App: dieses iPhone). */
+export function findPhone(devices: Device[]): Device | null {
+  return devices.find((d) => d.id && !d.is_restricted && d.type.toLowerCase() === 'smartphone') ?? null;
+}

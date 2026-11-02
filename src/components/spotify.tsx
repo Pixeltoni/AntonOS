@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { useStore } from '../store';
 import type { WidgetVariant } from '../types';
 import { App as NativeApp } from '@capacitor/app';
-import { api, completeLogin, deviceIcon, handleRedirect, isNativeCallback, loadToken, login, logout, accessToken, parseCallback, pickDevice, redirectUri, spotifyAppUri, SpotifyError, type Device } from '../lib/spotify';
+import { api, completeLogin, deviceIcon, handleRedirect, isNativeCallback, loadToken, login, logout, accessToken, parseCallback, findPhone, pickDevice, redirectUri, spotifyAppUri, SpotifyError, type Device } from '../lib/spotify';
 import { isNativeApp } from '../lib/native';
 import { safeImageSrc, spotifyEmbedUrl } from '../lib/life';
 import { Empty, Panel } from './ui';
@@ -57,6 +57,8 @@ interface SpotifyCtx {
   transfer(id: string): Promise<void>;
   /** Spotify-App öffnen (optional direkt mit Playlist/Album). */
   openApp(uri?: string | null): void;
+  /** Nur in der App: auf dem eigenen iPhone abspielen. */
+  playOnPhone(): Promise<void>;
   devices: Device[];
   loadDevices(): Promise<Device[]>;
   refresh(): Promise<PlaybackState | null>;
@@ -82,7 +84,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
   const [devices, setDevices] = useState<Device[]>([]);
   const player = useRef<SdkPlayer | null>(null);
   /** In der App: Was nach dem Öffnen der Spotify-App abgespielt werden soll, sobald AntonOS wieder vorne ist. */
-  const pending = useRef<{ body: Record<string, unknown> | null; at: number } | null>(null);
+  const pending = useRef<{ body: Record<string, unknown> | null; at: number; phone?: boolean } | null>(null);
 
   // Rückkehr vom Spotify-Login verarbeiten
   useEffect(() => {
@@ -200,8 +202,29 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       void loadDevices();
       const wanted = pending.current;
       pending.current = null;
+      if (!wanted || Date.now() - wanted.at > 3 * 60_000) return;
+      // „Dieses iPhone“ gewählt: Wiedergabe aufs iPhone holen, sobald es als Gerät auftaucht
+      if (wanted.phone) {
+        if (now?.is_playing && now.device.type?.toLowerCase() === 'smartphone') return;
+        for (const wait of [800, 2000, 4000]) {
+          await new Promise((r) => setTimeout(r, wait));
+          const phone = findPhone(await loadDevices());
+          if (!phone?.id) continue;
+          try {
+            await api(clientId, '/me/player', { method: 'PUT', body: JSON.stringify({ device_ids: [phone.id], play: true }) });
+            setError('');
+            setTimeout(() => void refresh(), 600);
+            setTimeout(() => void loadDevices(), 900);
+          } catch (e) {
+            setError(e instanceof Error ? e.message : String(e));
+          }
+          return;
+        }
+        setError('Das iPhone hat sich bei Spotify noch nicht gemeldet. Tippe in der Spotify-App einmal auf Play, dann erscheint es hier.');
+        return;
+      }
       // Nach dem Ausflug in die Spotify-App: dort Gewähltes weiterspielen, falls noch nichts läuft
-      if (!wanted || Date.now() - wanted.at > 3 * 60_000 || now?.is_playing) return;
+      if (now?.is_playing) return;
       // Die Spotify-App braucht nach dem Start einen Moment, bis sie als Gerät auftaucht
       for (const wait of [800, 2000, 4000]) {
         await new Promise((r) => setTimeout(r, wait));
@@ -223,6 +246,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       void handle?.then((h) => h.remove());
     };
   }, [connected, clientId, refresh, loadDevices]);
+
 
   // Web Playback SDK: macht diesen Browser zu einem Spotify-Gerät (nur mit Premium).
   // In der iOS-App fehlt dem WebView der Kopierschutz dafür – dort steuert AntonOS nur andere Geräte.
@@ -306,6 +330,18 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     [clientId, command, loadDevices],
   );
 
+  /** In der App: Wiedergabe aufs eigene iPhone holen – notfalls über einen kurzen Abstecher in die Spotify-App. */
+  const playOnPhone = useCallback(async () => {
+    const phone = findPhone(await loadDevices());
+    if (phone?.id) {
+      await command(() => api(clientId, '/me/player', { method: 'PUT', body: JSON.stringify({ device_ids: [phone.id], play: true }) }));
+      setTimeout(() => void loadDevices(), 800);
+      return;
+    }
+    pending.current = { body: null, at: Date.now(), phone: true };
+    openApp(state?.context?.uri ?? null);
+  }, [clientId, command, loadDevices, openApp, state?.context?.uri]);
+
   const value: SpotifyCtx = {
     clientId,
     connected,
@@ -331,6 +367,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     resume,
     transfer,
     openApp,
+    playOnPhone,
     devices,
     loadDevices,
     refresh,
@@ -661,13 +698,20 @@ function Devices() {
   const s = useSpotify();
   const activeId = s.state?.device?.id ?? null;
   const list = s.devices.filter((d) => d.id);
+  // iOS meldet das iPhone bei Spotify nur, solange die Spotify-App aktiv ist – deshalb ein fester Knopf
+  const phoneListed = list.some((d) => d.type.toLowerCase() === 'smartphone');
+  const phoneButton = isNativeApp() && !phoneListed && (
+    <button disabled={s.busy} onClick={() => void s.playOnPhone()} title="Öffnet kurz Spotify, danach spielt die Musik auf diesem iPhone">
+      📱 Dieses iPhone
+    </button>
+  );
   return (
     <div className="col">
       <div className="row between">
         <h3>Geräte</h3>
         <button className="link small" onClick={() => void s.loadDevices()} disabled={s.busy}>Aktualisieren</button>
       </div>
-      {list.length === 0 ? (
+      {list.length === 0 && !phoneButton ? (
         <p className="muted small">
           Gerade ist kein Gerät online. Öffne Spotify auf deinem Handy, Laptop oder Lautsprecher{isNativeApp() ? '' : ' oder spiele hier im Browser ab'}.
           {isNativeApp() && (
@@ -679,6 +723,7 @@ function Devices() {
         </p>
       ) : (
         <div className="row wrap">
+          {phoneButton}
           {list.map((d) => {
             const active = d.id === activeId || (!activeId && d.is_active);
             return (

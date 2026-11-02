@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deviceIcon, pickDevice, spotifyAppUri, type Device } from './spotify';
+import { deviceIcon, findPhone, pickDevice, spotifyAppUri, type Device } from './spotify';
 
 const dev = (over: Partial<Device>): Device => ({ id: 'x', name: 'Gerät', type: 'Computer', is_active: false, is_restricted: false, ...over });
 
@@ -17,6 +17,11 @@ describe('Gerätewahl', () => {
   it('überspringt gesperrte Geräte und solche ohne ID', () => {
     expect(pickDevice([dev({ id: null }), dev({ id: 'r', is_restricted: true }), dev({ id: 'ok' })])?.id).toBe('ok');
     expect(pickDevice([])).toBeNull();
+  });
+
+  it('findet das Handy', () => {
+    expect(findPhone([dev({ id: 'laptop' }), dev({ id: 'iphone', type: 'Smartphone' })])?.id).toBe('iphone');
+    expect(findPhone([dev({ id: 'laptop' })])).toBeNull();
   });
 
   it('liefert Symbole und App-Adressen', () => {

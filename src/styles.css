@@ -2087,4 +2087,10 @@ input.switch:checked::after { transform: translateX(20px); }
 .sheet-body .ios-sub label { font-size: 0.85rem; }
 .ios-row input[type=date] { max-width: 48%; flex: none; }
 .ios-caption { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 -0.5rem 0.9rem; }
+label.tone-file { display: flex; align-items: center; justify-content: center; padding: 0.7rem 1rem; border-radius: 12px; background: var(--card, var(--surface)); border: 1px solid var(--border); font-weight: 600; color: #FF9500; cursor: pointer; }
+.tone-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+label.tone-clip { color: var(--text); display: flex; flex-direction: column; gap: 0.35rem; }
+.tone-clip input[type="range"] { width: 100%; accent-color: #FF9500; }
+.tone-preview { align-self: flex-start; }
+.ios-note { margin: 0; padding: 0.7rem 0.9rem; border-radius: 12px; background: color-mix(in srgb, #FF9500 10%, transparent); font-size: 0.85rem; line-height: 1.4; }
 .tone-play { width: 28px; height: 28px; flex: none !important; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, #FF9500 16%, transparent); color: #FF9500; font-size: 0.7rem; }

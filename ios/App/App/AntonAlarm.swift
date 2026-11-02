@@ -77,10 +77,13 @@ enum AlarmScheduler {
     }
 
     /// `snooze`: Schlummer-Dauer in Sekunden (0 = kein Schlummern), `snoozeMax`: höchste Anzahl
-    /// Eigener Weckton aus dem App-Paket (z. B. „antonos-aufgang.wav“), sonst der iPhone-Weckton
-    static func alertSound(_ name: String?) -> AlertConfiguration.AlertSound {
-        guard let name, !name.isEmpty, Bundle.main.url(forResource: name, withExtension: nil) != nil else { return .default }
-        return .named(name)
+    /// Weckton: erster vorhandener aus „a.wav|b.wav“ – aus dem App-Paket (Standardtöne) oder
+    /// Library/Sounds (eigene Lieder), sonst der iPhone-Weckton
+    static func alertSound(_ names: String?) -> AlertConfiguration.AlertSound {
+        for name in (names ?? "").split(separator: "|").map(String.init) where !name.isEmpty {
+            if Bundle.main.url(forResource: name, withExtension: nil) != nil || SoundFiles.exists(name) { return .named(name) }
+        }
+        return .default
     }
 
     static func schedule(id: UUID, title: String, schedule: Alarm.Schedule, withTask: Bool = true, snooze: Int = 0, snoozeMax: Int = 3, sound: String? = nil) async throws {
@@ -270,6 +273,8 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "ringIn", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "solved", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "takeStopped", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveSound", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "removeSound", returnType: CAPPluginReturnPromise),
     ]
 
     private var observer: NSObjectProtocol?
@@ -406,10 +411,57 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve()
     }
 
+    /// Eigenes Lied als Weckton speichern: `{ name, data }` (WAV als Base64) nach Library/Sounds
+    @objc func saveSound(_ call: CAPPluginCall) {
+        guard let name = call.getString("name"), let base64 = call.getString("data"), let data = Data(base64Encoded: base64) else {
+            return call.reject("Ton fehlt")
+        }
+        do {
+            try SoundFiles.save(name, data: data)
+            call.resolve()
+        } catch {
+            call.reject("Ton ließ sich nicht speichern")
+        }
+    }
+
+    @objc func removeSound(_ call: CAPPluginCall) {
+        if let name = call.getString("name") { SoundFiles.remove(name) }
+        call.resolve()
+    }
+
     /// Gestoppter Wecker mit offener Aufgabe (einmal abholen): { id, at } oder leer
     @objc func takeStopped(_ call: CAPPluginCall) {
         guard let pending = AlarmStore.defaults.dictionary(forKey: AlarmStore.pendingKey) else { return call.resolve([:]) }
         AlarmStore.defaults.removeObject(forKey: AlarmStore.pendingKey)
         call.resolve(["id": pending["id"] as? String ?? "", "at": pending["at"] as? Double ?? 0, "snoozes": pending["snoozes"] as? Int ?? 0])
+    }
+}
+
+/// Eigene Wecktöne in Library/Sounds – dort sucht iOS nach Tönen, die nicht im App-Paket liegen.
+enum SoundFiles {
+    static var folder: URL {
+        FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0].appendingPathComponent("Sounds", isDirectory: true)
+    }
+
+    /// Nur einfache Dateinamen, keine Pfade
+    static func url(_ name: String) -> URL? {
+        guard !name.isEmpty, !name.contains("/"), !name.hasPrefix(".") else { return nil }
+        return folder.appendingPathComponent(name)
+    }
+
+    static func exists(_ name: String) -> Bool {
+        guard let url = url(name) else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    static func save(_ name: String, data: Data) throws {
+        guard let url = url(name) else { throw CocoaError(.fileWriteInvalidFileName) }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try data.write(to: url, options: .atomic)
+    }
+
+    static func remove(_ name: String) {
+        guard let url = url(name) else { return }
+        try? FileManager.default.removeItem(at: url)
     }
 }

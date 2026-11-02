@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react';
 import { useStore } from '../store';
-import type { Alarm, AlarmChallenge, ID } from '../types';
+import type { Alarm, AlarmChallenge, AlarmSound, ID } from '../types';
 import {
   bedtimeFor, CHALLENGES, cycleTimes, defaultAlarm, defaultSleep, durationLabel, hhmm, isPaused, isPunctual, isSkipping, memoryLength, nextAlarm, nextRing,
-  quickAlarm, repeatLabel, shakeTarget, skipNext, SLEEP_GOALS, SNOOZE_MINUTES, snoozeOf, spotifyUri, untilLabel, WAKE_CHECK_MINUTES, wakeStats,
+  quickAlarm, repeatLabel, shakeTarget, skipNext, SLEEP_GOALS, SNOOZE_MINUTES, snoozeOf, spotifyUri, untilLabel, WAKE_CHECK_MINUTES, wakeStats, youtubeId,
 } from '../lib/alarm';
 import { addDays, parseDate, today } from '../lib/dates';
 import { TONES, toneOf } from '../lib/tones';
+import { clampClipStart, CLIP_SECONDS, maxClipStart, mmss } from '../lib/clip';
 import { isMobile } from '../lib/notify';
-import { deleteSoundFile, previewTone, QrScanner, SYNC_EVENT, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
+import { audioDuration, deleteSoundFile, loadSoundFile, previewClip, previewTone, QrScanner, removeNativeClip, saveNativeClip, saveSoundFile, SYNC_EVENT, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
 import { isNativeApp, nativeAlarmPermission, type AlarmPermission } from '../lib/native';
 import { useSpotify } from '../components/spotify';
 import { api } from '../lib/spotify';
@@ -17,9 +18,18 @@ import { Empty, PageHeader, Panel } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
 
 const soundLabel = (a: Pick<Alarm, 'tone' | 'sound' | 'soundName'>) => {
-  const t = TONES.find((x) => x.id === toneOf(a.tone))?.label ?? 'Weckton';
-  return a.sound === 'spotify' ? `${t} + Spotify` : t;
+  if (a.sound === 'datei') return a.soundName || 'Eigenes Lied';
+  if (a.sound === 'spotify') return a.soundName ? `Spotify: ${a.soundName}` : 'Spotify';
+  if (a.sound === 'youtube') return 'YouTube';
+  return TONES.find((x) => x.id === toneOf(a.tone))?.label ?? 'Weckton';
 };
+
+const SOUND_CHOICES: { id: AlarmSound; label: string; hint: string }[] = [
+  { id: 'ton', label: 'Weckton', hint: 'Einer der Töne unten – am zuverlässigsten' },
+  { id: 'datei', label: 'Eigenes Lied', hint: 'Audiodatei, z. B. MP3 – ein Ausschnitt wird zum echten Weckton' },
+  { id: 'spotify', label: 'Spotify', hint: 'Song, Album oder Playlist (Premium)' },
+  { id: 'youtube', label: 'YouTube', hint: 'Link zu einem Video' },
+];
 
 interface SpotifyItem { uri: string; name: string; detail: string; image: string | null }
 interface Img { url: string }
@@ -220,6 +230,9 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [hint, setHint] = useState('');
+  // Eigenes Lied: neu gewählte Datei und Länge (für den Ausschnitt)
+  const [file, setFile] = useState<File | null>(null);
+  const [duration, setDuration] = useState(0);
   const set = (patch: Partial<Draft>) => setA((x) => ({ ...x, ...patch }));
   const toggleDay = (d: number) => set({ days: a.days.includes(d) ? a.days.filter((x) => x !== d) : [...a.days, d].sort() });
   const snooze = snoozeOf(a);
@@ -228,6 +241,8 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
   const problem = (): string => {
     if (!/^\d\d:\d\d$/.test(a.time)) return 'Bitte eine Uhrzeit wählen.';
     if (a.sound === 'spotify' && !spotifyUri(a.soundUrl)) return 'Bitte einen Song, ein Album oder eine Playlist aus Spotify wählen.';
+    if (a.sound === 'datei' && !file && !(initial.sound === 'datei' && initial.soundName)) return 'Bitte ein Lied (Audiodatei) auswählen.';
+    if (a.sound === 'youtube' && !youtubeId(a.soundUrl)) return 'Bitte einen gültigen YouTube-Link einfügen.';
     if (a.challenge === 'qr' && !a.qr) return 'Bitte zuerst einen QR-Code scannen.';
     if (a.days.length === 0 && a.date && parseDate(a.date).getTime() + (Number(a.time.slice(0, 2)) * 60 + Number(a.time.slice(3))) * 60_000 <= Date.now()) {
       return a.date < today() ? 'Das Datum liegt in der Vergangenheit.' : 'Diese Uhrzeit ist heute schon vorbei – wähle eine spätere Zeit oder einen anderen Tag.';
@@ -249,18 +264,60 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
       phrase: a.phrase.trim(),
       enabled: true,
       armedAt: Date.now(),
-      // Ältere Wecker mit Datei oder YouTube klingeln jetzt mit dem Weckton
-      sound: a.sound === 'spotify' ? 'spotify' : 'ton',
       tone: toneOf(a.tone),
+      soundUrl: a.sound === 'spotify' || a.sound === 'youtube' ? a.soundUrl.trim() : '',
+      soundName: a.sound === 'ton' ? undefined : a.soundName,
+      clipStart: a.sound === 'datei' ? Math.max(0, Math.round(a.clipStart ?? 0)) : undefined,
       date: a.days.length === 0 ? a.date || undefined : undefined,
       // Neue Uhrzeit oder Tage: „Nur den nächsten auslassen“ gilt nicht mehr
       skip: changed ? undefined : a.skip,
     };
-    if (id) {
-      update('alarms', id, final);
-      if (initial.sound === 'datei') void deleteSoundFile(id);
-    } else add('alarms', final);
+    const alarmId = id ?? add('alarms', final);
+    if (id) update('alarms', id, final);
+    if (final.sound === 'datei') {
+      const problems: string[] = [];
+      if (file) await saveSoundFile(alarmId, file).catch(() => problems.push('Das Lied ließ sich auf diesem Gerät nicht speichern.'));
+      // iOS-App: Ausschnitt als echten Weckton ablegen (neu bei neuem Lied oder anderem Start)
+      if (native && (file || final.clipStart !== initial.clipStart || initial.sound !== 'datei')) {
+        const blob = file ?? (await loadSoundFile(alarmId).catch(() => undefined));
+        if (blob) await saveNativeClip(alarmId, blob, final.clipStart ?? 0).catch(() => problems.push('Der Ausschnitt fürs gesperrte iPhone ließ sich nicht erstellen – dort klingelt der Weckton.'));
+      }
+      if (problems.length) alert(problems.join('\n'));
+    } else if (id && initial.sound === 'datei') {
+      void deleteSoundFile(id);
+      void removeNativeClip(id);
+    }
     onClose();
+  };
+
+  // Eigenes Lied: Länge der gespeicherten Datei für den Ausschnitt-Regler
+  useEffect(() => {
+    if (page !== 'ton' || a.sound !== 'datei' || file || !id || initial.sound !== 'datei') return;
+    let cancelled = false;
+    void loadSoundFile(id).then((blob) => blob && audioDuration(blob)).then((d) => !cancelled && d && setDuration(d)).catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [page, a.sound, file, id, initial.sound]);
+
+  const pickFile = (f: File | null) => {
+    setFile(f);
+    setDuration(0);
+    if (!f) return;
+    set({ soundName: f.name.replace(/\.[^.]+$/, ''), clipStart: 0 });
+    void audioDuration(f).then(setDuration);
+  };
+  const songBlob = async () => file ?? (id && initial.sound === 'datei' ? await loadSoundFile(id).catch(() => undefined) : undefined);
+  const chooseSound = (sound: AlarmSound) => {
+    if (sound === a.sound) return;
+    const same = sound === initial.sound;
+    set({
+      sound,
+      soundUrl: same ? initial.soundUrl : '',
+      soundName: same ? initial.soundName : sound === 'datei' && file ? file.name.replace(/\.[^.]+$/, '') : undefined,
+      // Lieder laufen nach dem Stopp standardmäßig weiter – am iPhone kommen Spotify und YouTube erst dann
+      keepMusic: sound === 'ton' ? a.keepMusic : (a.keepMusic ?? true),
+    });
   };
 
   const back = (title: string) => (
@@ -298,11 +355,56 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
       </>
     );
   } else if (page === 'ton') {
-    const music = a.sound === 'spotify';
+    const song = a.sound !== 'ton';
+    const start = clampClipStart(a.clipStart, duration || CLIP_SECONDS);
     body = (
       <>
         {back('Ton')}
-        <span className="ios-caption">Weckton</span>
+        <span className="ios-caption">Klingelt mit</span>
+        <ul className="ios-group">
+          {SOUND_CHOICES.map((c) => <CheckRow key={c.id} label={c.label} hint={c.hint} on={a.sound === c.id} onClick={() => chooseSound(c.id)} />)}
+        </ul>
+        {a.sound === 'datei' && (
+          <div className="stack-tight">
+            <label className="tone-file">
+              <input type="file" accept="audio/*" onChange={(e) => pickFile(e.target.files?.[0] ?? null)} aria-label="Lied auswählen" />
+              <span>{file || a.soundName ? 'Anderes Lied wählen' : 'Lied auswählen'}</span>
+            </label>
+            {(file || a.soundName) && <span className="small">✓ <strong>{a.soundName || file?.name}</strong>{duration ? <span className="muted"> · {mmss(duration)}</span> : null}</span>}
+            {duration > CLIP_SECONDS + 1 && (
+              <label className="tone-clip">
+                <span>Ausschnitt <strong>{mmss(start)} – {mmss(start + CLIP_SECONDS)}</strong></span>
+                <input type="range" min={0} max={maxClipStart(duration)} step={1} value={start} onChange={(e) => set({ clipStart: Number(e.target.value) })} aria-label="Start des Ausschnitts" />
+              </label>
+            )}
+            {(file || a.soundName) && (
+              <button type="button" className="tone-preview" onClick={() => void songBlob().then((b) => b && previewClip(b, start))}>▶ Ausschnitt anhören</button>
+            )}
+            <span className="muted small">
+              Die {CLIP_SECONDS} Sekunden ab {mmss(start)} werden zum Weckton – {native ? 'sie klingeln auch am gesperrten iPhone' : 'in der iOS-App klingeln sie auch am gesperrten iPhone'}. Länger lässt Apple einen Weckton nicht spielen, danach wiederholt er sich. Das Lied bleibt nur auf diesem Gerät gespeichert.
+            </span>
+          </div>
+        )}
+        {a.sound === 'spotify' && (
+          <div className="stack-tight">
+            <SpotifyPicker value={spotifyUri(a.soundUrl) ? a.soundUrl : ''} name={a.soundName} onPick={(uri, name) => set({ soundUrl: uri, soundName: name })} />
+            <span className="muted small">Spielt über die Spotify-App (Premium nötig). Ist Spotify vorher zu, öffne es einmal kurz, damit das Handy als Gerät auftaucht.</span>
+          </div>
+        )}
+        {a.sound === 'youtube' && (
+          <div className="stack-tight">
+            <input value={a.soundUrl} placeholder="https://youtu.be/…" inputMode="url" onChange={(e) => set({ soundUrl: e.target.value })} aria-label="YouTube-Link" />
+            <span className="muted small">Das Video läuft im Wecker-Fenster.</span>
+          </div>
+        )}
+        {(a.sound === 'spotify' || a.sound === 'youtube') && (
+          <p className="ios-note">
+            {native
+              ? 'Spotify und YouTube kann das iPhone nicht als Weckton abspielen – Apple lässt dafür nur Dateien aus der App zu. Am gesperrten iPhone klingelt deshalb zuerst der Ton unten, nach dem Stopp startet dein Lied. Bei offener App spielt es sofort.'
+              : 'Spielt, solange AntonOS offen ist. In der iOS-App klingelt am gesperrten iPhone zuerst der Ton unten, nach dem Stopp startet dein Lied.'}
+          </p>
+        )}
+        <span className="ios-caption">{song ? (native && a.sound !== 'datei' ? 'Ton am gesperrten iPhone' : 'Ersatzton, falls das Lied nicht klappt') : 'Weckton'}</span>
         <ul className="ios-group">
           {TONES.map((t) => (
             <li key={t.id}>
@@ -317,22 +419,11 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
             </li>
           ))}
         </ul>
-        <span className="muted small">Tippen spielt den Ton kurz vor. Er klingelt auch am gesperrten iPhone, im Lautlos-Modus und bei „Nicht stören“.</span>
+        {!song && <span className="muted small">Tippen spielt den Ton kurz vor. Er klingelt auch am gesperrten iPhone, im Lautlos-Modus und bei „Nicht stören“.</span>}
         <ul className="ios-group">
           <SwitchRow label="Sanft lauter werden" hint="Bei offener App: beginnt leise, nach 45 Sekunden voll laut" checked={!!a.fadeIn} onChange={(v) => set({ fadeIn: v })} />
-          <SwitchRow
-            label="Danach Musik von Spotify"
-            hint="Startet, sobald du den Wecker stoppst – läuft während der Aufgabe und danach weiter"
-            checked={music}
-            onChange={(v) => set(v ? { sound: 'spotify', soundUrl: initial.sound === 'spotify' ? initial.soundUrl : '', soundName: initial.sound === 'spotify' ? initial.soundName : undefined } : { sound: 'ton', soundUrl: '', soundName: undefined })}
-          />
+          {song && <SwitchRow label="Lied nach dem Stopp weiterspielen" hint="Läuft während der Aufgabe – Spotify auch danach" checked={!!a.keepMusic} onChange={(v) => set({ keepMusic: v })} />}
         </ul>
-        {music && (
-          <div className="stack-tight">
-            <SpotifyPicker value={spotifyUri(a.soundUrl) ? a.soundUrl : ''} name={a.soundName} onPick={(uri, name) => set({ soundUrl: uri, soundName: name })} />
-            <span className="muted small">Spielt über die Spotify-App (Premium nötig). Ist Spotify vorher zu, öffne es einmal kurz, damit das iPhone als Gerät auftaucht.</span>
-          </div>
-        )}
       </>
     );
   } else if (page === 'aufgabe') {
@@ -425,7 +516,13 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
         {error && <p className="alert">{error}</p>}
         {hint && <p className="alert update">{hint}</p>}
         <ul className="ios-group">
-          <li><button type="button" className="ios-row ios-action" onClick={() => { const p = problem(); if (p) setError(p); else testAlarm({ ...a, id: id ?? 'test', qr: a.qr }); }}>Hier testen</button></li>
+          <li><button type="button" className="ios-row ios-action" onClick={() => {
+            const p = problem();
+            if (p) return setError(p);
+            // Neu gewähltes Lied: zum Testen unter eigener ID ablegen, das gespeicherte bleibt
+            if (a.sound === 'datei' && file) void saveSoundFile('test', file).then(() => testAlarm({ ...a, id: 'test', qr: a.qr }));
+            else testAlarm({ ...a, id: id ?? 'test', qr: a.qr });
+          }}>Hier testen</button></li>
           {native && (
             <li>
               <button
@@ -434,7 +531,10 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
                 onClick={() => {
                   const p = problem();
                   if (p) return setError(p);
-                  testNativeAlarm({ ...a, id: id ?? 'test' })
+                  const testId = id ?? 'test';
+                  const clip = a.sound === 'datei' ? songBlob().then((b) => (b ? saveNativeClip(testId, b, a.clipStart ?? 0) : undefined)).catch(() => undefined) : Promise.resolve();
+                  clip
+                    .then(() => testNativeAlarm({ ...a, id: testId }))
                     .then((s) => setHint(`Der iPhone-Wecker klingelt in ${s} Sekunden – sperr ruhig das Handy.`))
                     .catch(() => setError('Der iPhone-Wecker ließ sich nicht stellen.'));
                 }}
@@ -451,7 +551,7 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
             </li>
           )}
           {id && (
-            <li><button type="button" className="ios-row ios-action danger-text" onClick={() => { if (confirm('Wecker löschen?')) { remove('alarms', id); void deleteSoundFile(id); onClose(); } }}>Wecker löschen</button></li>
+            <li><button type="button" className="ios-row ios-action danger-text" onClick={() => { if (confirm('Wecker löschen?')) { remove('alarms', id); void deleteSoundFile(id); void removeNativeClip(id); onClose(); } }}>Wecker löschen</button></li>
           )}
         </ul>
       </>
@@ -535,7 +635,7 @@ function AlarmRow({ alarm, now, onEdit }: { alarm: Alarm; now: Date; onEdit: () 
             {skipping ? 'Nicht auslassen' : 'Auslassen'}
           </button>
         )}
-        <button type="button" className="alarm-act-delete" tabIndex={dx === 0 ? -1 : 0} onClick={() => { remove('alarms', alarm.id); void deleteSoundFile(alarm.id); }}>Löschen</button>
+        <button type="button" className="alarm-act-delete" tabIndex={dx === 0 ? -1 : 0} onClick={() => { remove('alarms', alarm.id); void deleteSoundFile(alarm.id); void removeNativeClip(alarm.id); }}>Löschen</button>
       </div>
       <div className="alarm-slide" style={{ transform: `translateX(${dx}px)`, transition: touch.current?.swiping ? 'none' : undefined }} onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd}>
         <button type="button" className="alarm-row grow" onClick={() => (dx ? setDx(0) : onEdit())}>

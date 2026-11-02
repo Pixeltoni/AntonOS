@@ -147,9 +147,11 @@ function alarmSound(a: Alarm): string {
 /** Die nächsten Weckzeiten aller Wecker, jede mit Titel, Wiederholung und Ton ihres Weckers */
 export function widgetAlarm(alarms: Alarm[], now: Date): WidgetAlarm | null {
   const rings = alarms
-    .flatMap((alarm) => nextRings(alarm, now, 4).map((d) => ({ at: d.getTime(), title: alarmTitle(alarm), repeat: repeatLabel(alarm), sound: alarmSound(alarm) })))
+    .flatMap((alarm) => nextRings(alarm, now, 8).map((d) => ({ at: d.getTime(), title: alarmTitle(alarm), repeat: repeatLabel(alarm), sound: alarmSound(alarm) })))
     .sort((a, b) => a.at - b.at)
-    .slice(0, 8);
+    // Gleiche Uhrzeit bei mehreren Weckern nur einmal – sonst reichen die Plätze nicht weit
+    .filter((r, i, all) => i === 0 || all[i - 1].at !== r.at)
+    .slice(0, 10);
   return rings.length > 0 ? { rings } : null;
 }
 

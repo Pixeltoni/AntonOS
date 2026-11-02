@@ -25,6 +25,13 @@ describe('widgetAlarm', () => {
     expect(w.rings.map((r) => r.at)).toEqual(w.rings.map((r) => r.at).sort((x, y) => x - y));
   });
 
+  it('gleiche Weckzeiten mehrerer Wecker zählen nur einmal', () => {
+    const same = (id: string): Alarm => ({ ...defaultAlarm(), id, time: '07:00', days: [1, 2, 3, 4, 5, 6, 7], enabled: true, armedAt: 0 });
+    const w = widgetAlarm([same('a'), same('b'), same('c')], now)!;
+    expect(new Set(w.rings.map((r) => r.at)).size).toBe(w.rings.length);
+    expect(w.rings.length).toBe(8);
+  });
+
   it('ohne eingeschaltete Wecker: null', () => {
     expect(widgetAlarm([{ ...defaultAlarm(), id: 'x', enabled: false, armedAt: 0 }], now)).toBeNull();
   });

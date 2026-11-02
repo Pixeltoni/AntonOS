@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NATIVE_TONE_SECONDS, TONES, toneFile, toneLoop, toneOf, toneWav } from './tones';
+import { alarmSoundFile, NATIVE_TONE_SECONDS, TONES, toneFile, toneLoop, toneOf, toneWav } from './tones';
 
 describe('Wecktöne', () => {
   it('jeder Ton ist hörbar und nicht übersteuert', () => {
@@ -19,5 +19,10 @@ describe('Wecktöne', () => {
     expect(toneOf(undefined)).toBe('aufgang');
     expect(toneOf('gibtsnicht')).toBe('aufgang');
     expect(toneFile('puls')).toBe('antonos-puls.wav');
+  });
+  it('eigenes Lied: zuerst der Ausschnitt, sonst der Weckton', () => {
+    expect(alarmSoundFile({ id: 'x1', sound: 'datei', tone: 'glocke' })).toBe('antonos-eigen-x1.wav|antonos-glocke.wav');
+    expect(alarmSoundFile({ id: 'x1', sound: 'spotify', tone: 'glocke' })).toBe('antonos-glocke.wav');
+    expect(alarmSoundFile({ id: 'x1', sound: 'ton', tone: undefined })).toBe('antonos-aufgang.wav');
   });
 });

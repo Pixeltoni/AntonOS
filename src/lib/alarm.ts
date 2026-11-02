@@ -1,6 +1,6 @@
 import type { Alarm, AlarmChallenge, SleepSettings, WakeLog } from '../types';
 import { toDateStr } from './dates';
-import { DEFAULT_TONE, toneFile } from './tones';
+import { alarmSoundFile, DEFAULT_TONE } from './tones';
 
 /** So lange nach der Weckzeit klingelt der Wecker noch, z. B. wenn das Handy kurz gesperrt war (ms) */
 export const RING_GRACE = 10 * 60_000;
@@ -457,7 +457,7 @@ export interface NativeAlarm {
   /** Schlummern: Dauer in Sekunden und höchste Anzahl */
   snooze?: number;
   snoozeMax?: number;
-  /** Weckton-Datei im App-Paket */
+  /** Weckton-Datei(en), mit „|“ getrennt: die erste vorhandene klingelt */
   sound?: string;
 }
 
@@ -477,7 +477,7 @@ export function nativeAlarms(alarms: Alarm[], now = new Date()): NativeAlarm[] {
     if (!a.enabled || !/^\d\d:\d\d$/.test(a.time)) continue;
     const [hour, minute] = a.time.split(':').map(Number);
     const s = snoozeOf(a);
-    const base: NativeAlarm = { id: a.id, title: alarmTitle(a), hour, minute, days: [...new Set(a.days)].filter((d) => d >= 1 && d <= 7).sort(), task: hasTask(a), sound: toneFile(a.tone) };
+    const base: NativeAlarm = { id: a.id, title: alarmTitle(a), hour, minute, days: [...new Set(a.days)].filter((d) => d >= 1 && d <= 7).sort(), task: hasTask(a), sound: alarmSoundFile(a) };
     if (s.on) Object.assign(base, { snooze: s.minutes * 60, snoozeMax: s.max });
     const special = (a.days.length === 0 && !!a.date) || isSkipping(a, now) || isPaused(a, now);
     if (!special) {

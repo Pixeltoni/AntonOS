@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { Alarm } from '../types';
-import { previousRing, alarmTitle, bedtimeNotices, canSnooze, defaultAlarm, defaultSleep, dueAlarms, expiredOneShots, fadeVolume, hasTask, hhmm, memoryLength, memorySequence, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, ShakeCounter, shakeTarget, silence, snoozeOf, solveSeconds, spotifyUri } from '../lib/alarm';
-import { toneFile, toneOf, toneWav } from '../lib/tones';
+import { previousRing, alarmTitle, bedtimeNotices, canSnooze, defaultAlarm, defaultSleep, dueAlarms, expiredOneShots, fadeVolume, hasTask, hhmm, memoryLength, memorySequence, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, ShakeCounter, shakeTarget, silence, snoozeOf, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
+import { alarmSoundFile, toneOf, toneWav } from '../lib/tones';
+import { clampClipStart, CLIP_SECONDS, clipFile, clipWav } from '../lib/clip';
 import { today } from '../lib/dates';
 import { MorningBrief } from './morning';
 import { api, pickDevice, type Device } from '../lib/spotify';
@@ -84,10 +85,105 @@ export function previewTone(id: string) {
   previewTimer = window.setTimeout(stopLocal, 3500);
 }
 
-/* ---------- Spotify: Musik nach dem Wecken ---------- */
+/* ---------- Eigenes Lied: Ausschnitt als Weckton fürs iPhone ---------- */
+
+async function decodeAudio(blob: Blob): Promise<AudioBuffer> {
+  const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const ctx = new Ctx();
+  try {
+    return await ctx.decodeAudioData(await blob.arrayBuffer());
+  } finally {
+    void ctx.close().catch(() => undefined);
+  }
+}
+
+/** Länge eines Lieds in Sekunden (0, wenn es sich nicht lesen lässt) */
+export function audioDuration(blob: Blob): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const el = new Audio();
+    const done = (d: number) => {
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(d) ? d : 0);
+    };
+    el.preload = 'metadata';
+    el.onloadedmetadata = () => done(el.duration);
+    el.onerror = () => done(0);
+    el.src = url;
+  });
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+/** iOS-App: Ausschnitt ab `start` als Weckton speichern, damit er am gesperrten iPhone klingelt */
+export async function saveNativeClip(alarmId: string, blob: Blob, start: number): Promise<void> {
+  const buffer = await decodeAudio(blob);
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
+  const bytes = clipWav(channels, buffer.sampleRate, clampClipStart(start, buffer.duration));
+  await AntonAlarm.saveSound({ name: clipFile(alarmId), data: toBase64(bytes) });
+  window.dispatchEvent(new Event(SOUND_EVENT));
+}
+
+export const removeNativeClip = (alarmId: string) => (isNativeApp() ? AntonAlarm.removeSound({ name: clipFile(alarmId) }).catch(() => undefined) : Promise.resolve());
+
+let previewUrl = '';
+/** Ausschnitt eines Lieds kurz vorhören (aus einem Tippen heraus aufrufen) */
+export function previewClip(blob: Blob, start: number) {
+  clearTimeout(previewTimer);
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(blob);
+  const el = audio();
+  el.src = previewUrl;
+  el.loop = false;
+  el.volume = 1;
+  el.currentTime = start;
+  el.play().catch(() => undefined);
+  previewTimer = window.setTimeout(stopLocal, 8000);
+}
+
+/* ---------- YouTube (IFrame-API) ---------- */
+
+interface YTPlayer {
+  playVideo(): void;
+  pauseVideo(): void;
+  seekTo(s: number): void;
+  getPlayerState(): number;
+  setVolume(v: number): void;
+  destroy(): void;
+}
+interface YTNamespace {
+  Player: new (el: HTMLElement, opts: { videoId: string; width: number; height: number; playerVars: Record<string, number | string>; events: Record<string, (e: { target: YTPlayer; data: number }) => void> }) => YTPlayer;
+}
+declare global {
+  interface Window {
+    YT?: YTNamespace;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+let ytApi: Promise<YTNamespace> | null = null;
+function loadYouTube(): Promise<YTNamespace> {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  return (ytApi ??= new Promise((resolve, reject) => {
+    window.onYouTubeIframeAPIReady = () => resolve(window.YT!);
+    const s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => {
+      ytApi = null;
+      reject(new Error('YouTube nicht erreichbar'));
+    };
+    document.head.appendChild(s);
+  }));
+}
+
+/* ---------- Spotify ---------- */
 
 /** Spielt Song oder Playlist auf dem aktiven Spotify-Gerät, sonst bevorzugt auf einem Handy */
-export async function startSpotify(clientId: string, link: string) {
+async function startSpotify(clientId: string, link: string) {
   const target = spotifyUri(link);
   if (!target) throw new Error('Ungültiger Spotify-Link');
   const res = await api<{ devices: Device[] }>(clientId, '/me/player/devices');
@@ -95,25 +191,186 @@ export async function startSpotify(clientId: string, link: string) {
   if (!device) throw new Error('Kein Spotify-Gerät gefunden');
   const body = target.kind === 'track' ? { uris: [target.uri] } : { context_uri: target.uri };
   await api(clientId, `/me/player/play?device_id=${device.id}`, { method: 'PUT', body: JSON.stringify(body) });
+  return { id: device.id!, volume: device.volume_percent ?? null };
 }
+
+/** Spotify-Lautstärke setzen – manche Geräte (z. B. das iPhone) erlauben das nicht, dann passiert nichts */
+const spotifyVolume = (clientId: string, device: string, percent: number) =>
+  api(clientId, `/me/player/volume?volume_percent=${Math.round(Math.min(100, Math.max(0, percent)))}&device_id=${device}`, { method: 'PUT' }).catch(() => undefined);
 
 /* ---------- Klang eines klingelnden Weckers ---------- */
 
-/** Spielt den gewählten Weckton, solange `playing` gilt – auf Wunsch sanft lauter. */
-function AlarmSound({ alarm, playing }: { alarm: Alarm; playing: boolean }) {
+/**
+ * Spielt den gewählten Klang, solange `playing` gilt. Klappt YouTube, Spotify oder das
+ * eigene Lied nicht, kommt der Weckton – ein Wecker darf nie stumm bleiben.
+ * `keepMusic`: Spotify läuft nach dem Ausschalten weiter.
+ */
+function AlarmSound({ alarm, playing, keepMusic, onFallback }: { alarm: Alarm; playing: boolean; keepMusic: boolean; onFallback: (why: string) => void }) {
+  const { clientId, connected } = useSpotify();
+  const [fallback, setFallback] = useState<string | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const yt = useRef<YTPlayer | null>(null);
+  const playingRef = useLatest(playing);
+  const keepRef = useLatest(keepMusic);
+  const mode = fallback ? 'ton' : alarm.sound;
   const fade = !!alarm.fadeIn;
+  const start = alarm.clipStart ?? 0;
+
+  const fail = useCallback((why: string) => setFallback((f) => f ?? why), []);
   useEffect(() => {
-    if (!playing) return stopLocal();
+    if (fallback) onFallback(`${fallback} Stattdessen klingelt der Weckton.`);
+  }, [fallback, onFallback]);
+
+  // Eigenes Lied vom Gerät laden
+  useEffect(() => {
+    if (alarm.sound !== 'datei') return;
+    let url = '';
+    loadSoundFile(alarm.id)
+      .then((blob) => (blob ? setFileUrl((url = URL.createObjectURL(blob))) : fail('Das Lied liegt nicht auf diesem Gerät.')))
+      .catch(() => fail('Das Lied ließ sich nicht laden.'));
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [alarm.id, alarm.sound, fail]);
+
+  // Weckton und eigenes Lied
+  useEffect(() => {
+    if (mode !== 'ton' && mode !== 'datei') return;
+    const src = mode === 'datei' ? fileUrl : tone(alarm.tone);
+    if (!playing || !src) return stopLocal();
     clearTimeout(previewTimer);
     const t0 = Date.now();
-    playLocal(tone(alarm.tone), fade ? fadeVolume(0) : 1).catch(() => undefined);
+    playLocal(src, fade ? fadeVolume(0) : 1)
+      .then(() => {
+        if (mode === 'datei' && element) element.currentTime = start;
+      })
+      .catch(() => {
+        if (mode === 'datei') fail('Das Lied ließ sich nicht abspielen.');
+      });
+    // Eigenes Lied: nur den gewählten Ausschnitt wiederholen
+    const el = audio();
+    const clip = () => {
+      if (mode === 'datei' && (el.currentTime >= start + CLIP_SECONDS || el.currentTime < start - 1)) el.currentTime = start;
+    };
+    el.addEventListener('timeupdate', clip);
     // Sanft lauter (das iPhone lässt die Lautstärke im Browser nicht ändern – dort bleibt es laut)
     const ramp = fade ? setInterval(() => element && (element.volume = fadeVolume(Date.now() - t0)), 500) : 0;
     return () => {
+      el.removeEventListener('timeupdate', clip);
       clearInterval(ramp);
       stopLocal();
     };
-  }, [playing, fade, alarm.tone]);
+  }, [mode, playing, fileUrl, fail, fade, alarm.tone, start]);
+
+  // YouTube: Player anlegen; spielt er nach ein paar Sekunden nicht, kommt der Weckton
+  useEffect(() => {
+    if (mode !== 'youtube') return;
+    const id = youtubeId(alarm.soundUrl);
+    if (!id) return fail('Der YouTube-Link ist ungültig.');
+    let cancelled = false;
+    loadYouTube()
+      .then((YT) => {
+        if (cancelled || !box.current) return;
+        const host = document.createElement('div');
+        box.current.replaceChildren(host);
+        yt.current = new YT.Player(host, {
+          videoId: id,
+          width: 320,
+          height: 180,
+          playerVars: { autoplay: 1, playsinline: 1, controls: 0, rel: 0 },
+          events: {
+            onReady: (e) => {
+              if (fade) e.target.setVolume(10);
+              if (playingRef.current) e.target.playVideo();
+            },
+            onStateChange: (e) => e.data === 0 && (e.target.seekTo(0), e.target.playVideo()),
+            onError: () => fail('Das YouTube-Video lässt sich nicht einbetten.'),
+          },
+        });
+      })
+      .catch(() => fail('YouTube ist nicht erreichbar.'));
+    const check = setTimeout(() => {
+      if (playingRef.current && yt.current?.getPlayerState?.() !== 1) fail('YouTube durfte nicht automatisch abspielen.');
+    }, 7000);
+    return () => {
+      cancelled = true;
+      clearTimeout(check);
+      yt.current?.destroy();
+      yt.current = null;
+    };
+  }, [mode, alarm.soundUrl, fail, fade, playingRef]);
+
+  useEffect(() => {
+    if (mode !== 'youtube' || !yt.current?.playVideo) return;
+    if (playing) yt.current.playVideo();
+    else yt.current.pauseVideo();
+  }, [mode, playing]);
+
+  useEffect(() => {
+    if (mode !== 'youtube' || !playing || !fade) return;
+    const t0 = Date.now();
+    const id = setInterval(() => yt.current?.setVolume?.(Math.round(fadeVolume(Date.now() - t0) * 100)), 1000);
+    return () => clearInterval(id);
+  }, [mode, playing, fade]);
+
+  // Spotify: auf einem verbundenen Gerät abspielen (Premium nötig)
+  const spotifyDevice = useRef<string | null>(null);
+  const spotifyTarget = useRef(80);
+  const gone = useRef(false);
+  useEffect(() => {
+    if (mode !== 'spotify') return;
+    if (!connected || !clientId) return fail('Spotify ist nicht verbunden.');
+    let ramp = 0;
+    let stopped = false;
+    const fadeUp = (device: string) => {
+      if (!fade || stopped) return;
+      const t0 = Date.now();
+      void spotifyVolume(clientId, device, spotifyTarget.current * fadeVolume(0));
+      ramp = window.setInterval(() => {
+        const v = fadeVolume(Date.now() - t0);
+        void spotifyVolume(clientId, device, spotifyTarget.current * v);
+        if (v >= 1) clearInterval(ramp);
+      }, 5000);
+    };
+    if (playing) {
+      const resume = spotifyDevice.current
+        ? api(clientId, `/me/player/play?device_id=${spotifyDevice.current}`, { method: 'PUT' }).then(() => spotifyDevice.current!)
+        : startSpotify(clientId, alarm.soundUrl).then(({ id, volume }) => {
+            spotifyDevice.current = id;
+            // Bis zur bisherigen Lautstärke hochregeln, mindestens aber gut hörbar
+            spotifyTarget.current = Math.max(60, volume ?? 80);
+            return id;
+          });
+      resume
+        .then((device) => {
+          // Start kam erst nach dem Stopp an: anhalten, wenn das Lied nicht mehr laufen soll
+          if (stopped && !playingRef.current && !(gone.current && keepRef.current)) {
+            void api(clientId, `/me/player/pause?device_id=${device}`, { method: 'PUT' }).catch(() => undefined);
+            return;
+          }
+          fadeUp(device);
+        })
+        .catch((e: Error) => fail(`Spotify: ${e.message}.`));
+    } else if (spotifyDevice.current) {
+      api(clientId, '/me/player/pause', { method: 'PUT' }).catch(() => undefined);
+    }
+    return () => {
+      stopped = true;
+      clearInterval(ramp);
+    };
+  }, [mode, playing, connected, clientId, alarm.soundUrl, fail, fade, playingRef, keepRef]);
+  useEffect(
+    () => () => {
+      gone.current = true;
+      const device = spotifyDevice.current;
+      if (!device || !clientId) return;
+      // Nach dem Ausschalten auf Wunsch weiterspielen
+      if (keepRef.current) void spotifyVolume(clientId, device, spotifyTarget.current);
+      else api(clientId, '/me/player/pause', { method: 'PUT' }).catch(() => undefined);
+    },
+    [clientId, keepRef],
+  );
 
   // Vibrieren (nur Android)
   useEffect(() => {
@@ -127,7 +384,7 @@ function AlarmSound({ alarm, playing }: { alarm: Alarm; playing: boolean }) {
     };
   }, [playing]);
 
-  return null;
+  return mode === 'youtube' ? <div ref={box} className="alarm-video" /> : null;
 }
 
 /* ---------- QR-Code-Scanner ---------- */
@@ -466,7 +723,7 @@ const NATIVE_TEST_WINDOW = 15 * 60_000;
 export async function testNativeAlarm(alarm: Alarm): Promise<number> {
   nativeTest = { alarm, at: Date.now() };
   const s = snoozeOf(alarm);
-  await AntonAlarm.ringIn({ seconds: NATIVE_TEST_SECONDS, id: alarm.id, title: `${alarmTitle(alarm)} · Test`, task: hasTask(alarm), snooze: s.on ? s.minutes * 60 : 0, snoozeMax: s.max, sound: toneFile(alarm.tone) });
+  await AntonAlarm.ringIn({ seconds: NATIVE_TEST_SECONDS, id: alarm.id, title: `${alarmTitle(alarm)} · Test`, task: hasTask(alarm), snooze: s.on ? s.minutes * 60 : 0, snoozeMax: s.max, sound: alarmSoundFile(alarm) });
   return NATIVE_TEST_SECONDS;
 }
 
@@ -477,6 +734,8 @@ export async function testNativeAlarm(alarm: Alarm): Promise<number> {
 let syncedList = '';
 /** Meldet nach jedem Stellen am iPhone, wie viele Wecker sich nicht stellen ließen */
 export const SYNC_EVENT = 'antonos:wecker-ios-gestellt';
+/** Ein eigener Ton liegt neu in der App – die Wecker müssen ihn neu einplanen */
+const SOUND_EVENT = 'antonos:wecker-ton-gespeichert';
 
 /**
  * iOS-App: stellt alle eingeschalteten Wecker als echte iPhone-Wecker (AlarmKit).
@@ -484,6 +743,16 @@ export const SYNC_EVENT = 'antonos:wecker-ios-gestellt';
  */
 export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
   const [state, setState] = useState<AlarmPermission | null>(() => (isNativeApp() ? null : 'unavailable'));
+  // Neu gespeicherter eigener Ton: Wecker erneut stellen, auch wenn die Liste gleich bleibt
+  const [soundRev, setSoundRev] = useState(0);
+  useEffect(() => {
+    const onSound = () => {
+      syncedList = '';
+      setSoundRev((n) => n + 1);
+    };
+    window.addEventListener(SOUND_EVENT, onSound);
+    return () => window.removeEventListener(SOUND_EVENT, onSound);
+  }, []);
   // Alle 5 Minuten neu berechnen: Einzeltermine (Überspringen, Pause) rücken weiter
   const [tick, setTick] = useState(() => Math.floor(Date.now() / 300_000));
   useEffect(() => {
@@ -510,7 +779,7 @@ export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
     return () => {
       cancelled = true;
     };
-  }, [list]);
+  }, [list, soundRev]);
   return state;
 }
 
@@ -677,7 +946,7 @@ export function AlarmRinger() {
       const opts = snoozing
         ? { task: hasTask(r.alarm), snooze: canSnooze(r.alarm, r.snoozes) ? s.minutes * 60 : 0, snoozeMax: s.max }
         : {};
-      void AntonAlarm.ringIn({ seconds, id: r.alarm.id, title: alarmTitle(r.alarm), sound: toneFile(r.alarm.tone), ...opts }).catch(() => (planned = 0));
+      void AntonAlarm.ringIn({ seconds, id: r.alarm.id, title: alarmTitle(r.alarm), sound: alarmSoundFile(r.alarm), ...opts }).catch(() => (planned = 0));
     };
     beat();
     const id = setInterval(beat, 10_000);
@@ -700,25 +969,6 @@ export function AlarmRinger() {
     }, 250);
     return () => clearInterval(id);
   }, [ringing?.phase]);
-
-  // Spotify: Musik nach dem Wecken – startet, sobald der Wecker gestoppt ist (bei offener App klappt das zuverlässig)
-  const { clientId, connected } = useSpotify();
-  const musicFor = useRef('');
-  const startMusic = useCallback(
-    (r: Ringing) => {
-      const a = r.alarm;
-      if (a.sound !== 'spotify' || !spotifyUri(a.soundUrl)) return;
-      const key = `${a.id}@${r.ringAt}`;
-      if (musicFor.current === key) return;
-      musicFor.current = key;
-      if (!connected || !clientId) return setFallbackNote('Spotify ist nicht verbunden – verbinde es unter Musik.');
-      startSpotify(clientId, a.soundUrl).catch((e: Error) => setFallbackNote(`Spotify: ${e.message}`));
-    },
-    [clientId, connected],
-  );
-  useEffect(() => {
-    if (ringing?.phase === 'aufgabe') startMusic(ringing);
-  }, [ringing, startMusic]);
 
   // Wach-Check: zur geplanten Zeit fragen, ohne Antwort klingelt der Wecker erneut
   const wakeAt = wake?.at;
@@ -823,7 +1073,6 @@ export function AlarmRinger() {
   const activity = () => setRinging((r) => (r && r.phase === 'aufgabe' ? { ...r, deadline: Date.now() + window_ * 1000 } : r));
   const solved = () => {
     const offAt = Date.now();
-    startMusic(ringing);
     writeJson(ACTIVE_KEY, null);
     setRinging(null);
     if (!ringing.test) add('wakeLogs', { date: today(), alarmId: alarm.id, ringAt: ringing.ringAt, offAt, snoozes: ringing.snoozes });
@@ -849,25 +1098,27 @@ export function AlarmRinger() {
   };
   const left = Math.max(0, Math.ceil((ringing.deadline - now) / 1000));
   const clock = new Date(now);
-  const showSong = alarm.sound === 'spotify' && !!alarm.soundName;
+  const showSong = alarm.sound !== 'ton' && !!(alarm.soundName || alarm.soundUrl);
+  // Lied läuft beim Klingeln – und nach dem Stopp weiter, außer es ist abgeschaltet (am iPhone kommt es erst hier)
+  const songOn = phase === 'klingelt' || (phase === 'aufgabe' && alarm.sound !== 'ton' && alarm.keepMusic !== false);
 
   return (
     <>
       {overlays}
       {createPortal(
         <div className={`alarm-ring ${phase}`} role="alertdialog" aria-modal="true" aria-label={`Wecker ${alarm.time}`}>
-          <AlarmSound key={alarm.id + String(ringing.test)} alarm={alarm} playing={phase === 'klingelt'} />
+          <AlarmSound key={alarm.id + String(ringing.test)} alarm={alarm} playing={songOn} keepMusic={alarm.keepMusic !== false} onFallback={setFallbackNote} />
           <div className="alarm-head">
             <span className="alarm-date">{clock.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
             <span className="alarm-big">{phase === 'klingelt' ? hhmm(clock) : alarm.time}</span>
             <span className="alarm-label">{alarm.label || 'Wecker'}{ringing.test ? ' · Test' : ''}</span>
           </div>
-          {showSong && phase === 'klingelt' && (
+          {showSong && songOn && (
             <div className="alarm-song">
               <span className="alarm-song-cover" aria-hidden>♫</span>
               <span className="grow">
-                <strong>{alarm.soundName}</strong>
-                <span>Spielt nach dem Stopp auf Spotify</span>
+                <strong>{alarm.soundName || (alarm.sound === 'youtube' ? 'YouTube-Video' : 'Eigenes Lied')}</strong>
+                <span>{alarm.sound === 'spotify' ? 'Spotify' : alarm.sound === 'youtube' ? 'YouTube' : 'Eigenes Lied'}</span>
               </span>
             </div>
           )}

@@ -1,4 +1,6 @@
+import type { Alarm } from '../types';
 import { wav } from './alarm';
+import { clipFile } from './clip';
 
 /** Eigene Wecktöne – im Browser erzeugt, für die iOS-App als WAV-Dateien mitgeliefert (scripts/tones.ts) */
 export type ToneId = 'klassisch' | 'puls' | 'glocke' | 'marimba' | 'aufgang' | 'digital';
@@ -18,6 +20,12 @@ export const toneOf = (id: string | undefined): ToneId => (TONES.some((t) => t.i
 
 /** Dateiname in der iOS-App (liegt im App-Paket) */
 export const toneFile = (id: string | undefined) => `antonos-${toneOf(id)}.wav`;
+
+/**
+ * Ton fürs iPhone: beim eigenen Lied zuerst der Ausschnitt, sonst der Weckton.
+ * Mehrere Namen mit „|“ – die App nimmt den ersten, den es auf dem Gerät gibt.
+ */
+export const alarmSoundFile = (a: Pick<Alarm, 'id' | 'sound' | 'tone'>) => (a.sound === 'datei' ? `${clipFile(a.id)}|${toneFile(a.tone)}` : toneFile(a.tone));
 
 /** Länge der Datei für das iPhone – AlarmKit spielt höchstens 30 Sekunden */
 export const NATIVE_TONE_SECONDS = 29;

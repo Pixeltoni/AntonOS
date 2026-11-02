@@ -605,7 +605,7 @@ export interface FocusSession {
 
 /** keine = einfach ausschalten */
 export type AlarmChallenge = 'rechnen' | 'text' | 'qr' | 'schuetteln' | 'memory' | 'keine';
-/** ton = nur Weckton; spotify = Weckton und danach Musik. datei/youtube: ältere Wecker, klingeln mit dem Weckton */
+/** ton = Weckton; datei = eigenes Lied (Ausschnitt als echter Weckton); spotify/youtube = Lied, am gesperrten iPhone erst der Weckton */
 export type AlarmSound = 'ton' | 'datei' | 'youtube' | 'spotify';
 
 export interface Alarm {
@@ -652,8 +652,10 @@ export interface Alarm {
   wakeCheckMinutes?: number;
   /** Nach dem Ausschalten den Guten-Morgen-Bildschirm zeigen (Standard: an) */
   morning?: boolean;
-  /** Spotify nach dem Ausschalten leise weiterlaufen lassen (ältere Version) */
+  /** Lied läuft nach dem Stopp weiter: während der Aufgabe, Spotify auch danach */
   keepMusic?: boolean;
+  /** Eigenes Lied: Start des Weckton-Ausschnitts in Sekunden */
+  clipStart?: number;
   /** Weckton (siehe lib/tones.ts) */
   tone?: string;
 }

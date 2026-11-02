@@ -83,6 +83,9 @@ interface AntonAlarmPlugin {
   ringIn(opts: { seconds: number; id: string; title: string; task?: boolean; snooze?: number; snoozeMax?: number; sound?: string }): Promise<void>;
   solved(): Promise<void>;
   takeStopped(): Promise<{ id?: string; at?: number; snoozes?: number }>;
+  /** Eigenes Lied als Weckton (WAV als Base64) in der App speichern bzw. löschen */
+  saveSound(opts: { name: string; data: string }): Promise<void>;
+  removeSound(opts: { name: string }): Promise<void>;
   addListener(event: 'stopped', fn: () => void): Promise<PluginListenerHandle>;
 }
 

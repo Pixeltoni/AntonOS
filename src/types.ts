@@ -605,7 +605,7 @@ export interface FocusSession {
 
 /** keine = einfach ausschalten */
 export type AlarmChallenge = 'rechnen' | 'text' | 'qr' | 'schuetteln' | 'memory' | 'keine';
-/** Standard-Ton, eigene Audiodatei (nur auf diesem Gerät), YouTube oder Spotify */
+/** ton = nur Weckton; spotify = Weckton und danach Musik. datei/youtube: ältere Wecker, klingeln mit dem Weckton */
 export type AlarmSound = 'ton' | 'datei' | 'youtube' | 'spotify';
 
 export interface Alarm {
@@ -652,8 +652,10 @@ export interface Alarm {
   wakeCheckMinutes?: number;
   /** Nach dem Ausschalten den Guten-Morgen-Bildschirm zeigen (Standard: an) */
   morning?: boolean;
-  /** Spotify nach dem Ausschalten leise weiterlaufen lassen */
+  /** Spotify nach dem Ausschalten leise weiterlaufen lassen (ältere Version) */
   keepMusic?: boolean;
+  /** Weckton (siehe lib/tones.ts) */
+  tone?: string;
 }
 
 /** Ein Aufstehen: wann der Wecker klingelte, wann er aus war, wie oft geschlummert */

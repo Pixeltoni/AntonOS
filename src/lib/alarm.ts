@@ -1,5 +1,6 @@
 import type { Alarm, AlarmChallenge, SleepSettings, WakeLog } from '../types';
 import { toDateStr } from './dates';
+import { DEFAULT_TONE, toneFile } from './tones';
 
 /** So lange nach der Weckzeit klingelt der Wecker noch, z. B. wenn das Handy kurz gesperrt war (ms) */
 export const RING_GRACE = 10 * 60_000;
@@ -45,6 +46,7 @@ export const defaultAlarm = (): Omit<Alarm, 'id'> => ({
   wakeCheck: false,
   wakeCheckMinutes: 5,
   morning: true,
+  tone: DEFAULT_TONE,
 });
 
 export const SNOOZE_MINUTES = [5, 9, 10, 15];
@@ -455,6 +457,8 @@ export interface NativeAlarm {
   /** Schlummern: Dauer in Sekunden und höchste Anzahl */
   snooze?: number;
   snoozeMax?: number;
+  /** Weckton-Datei im App-Paket */
+  sound?: string;
 }
 
 /** So viele einzelne Termine werden vorab gestellt, wenn sich der Wecker nicht als Wochenplan stellen lässt */
@@ -473,7 +477,7 @@ export function nativeAlarms(alarms: Alarm[], now = new Date()): NativeAlarm[] {
     if (!a.enabled || !/^\d\d:\d\d$/.test(a.time)) continue;
     const [hour, minute] = a.time.split(':').map(Number);
     const s = snoozeOf(a);
-    const base: NativeAlarm = { id: a.id, title: alarmTitle(a), hour, minute, days: [...new Set(a.days)].filter((d) => d >= 1 && d <= 7).sort(), task: hasTask(a) };
+    const base: NativeAlarm = { id: a.id, title: alarmTitle(a), hour, minute, days: [...new Set(a.days)].filter((d) => d >= 1 && d <= 7).sort(), task: hasTask(a), sound: toneFile(a.tone) };
     if (s.on) Object.assign(base, { snooze: s.minutes * 60, snoozeMax: s.max });
     const special = (a.days.length === 0 && !!a.date) || isSkipping(a, now) || isPaused(a, now);
     if (!special) {

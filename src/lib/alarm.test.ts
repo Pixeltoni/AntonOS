@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Alarm } from '../types';
-import { alarmTone, daysLabel, defaultAlarm, nativeAlarms, nativeRingAgainSeconds, dueAlarms, isCorrectNumber, isCorrectPhrase, mathProblem, nextRing, RING_GRACE, silence, spotifyUri, untilLabel, youtubeId } from './alarm';
+import { alarmTone, daysLabel, defaultAlarm, expiredOneShots, hasTask, nativeAlarms, nativeRingAgainSeconds, dueAlarms, isCorrectNumber, isCorrectPhrase, mathProblem, nextRing, RING_GRACE, silence, spotifyUri, untilLabel, youtubeId } from './alarm';
 
 const alarm = (patch: Partial<Alarm> = {}): Alarm => ({
   id: 'w', time: '07:00', label: '', days: [1, 2, 3, 4, 5], enabled: true, armedAt: 0, sound: 'ton', soundUrl: '',
@@ -108,7 +108,7 @@ describe('nativeAlarms', () => {
       { ...base, id: 'b', time: '06:45', label: ' Uni ', days: [3, 1, 1] },
       { ...base, id: 'c', enabled: false },
     ]);
-    expect(list).toEqual([{ id: 'b', title: 'Uni', hour: 6, minute: 45, days: [1, 3] }]);
+    expect(list).toEqual([{ id: 'b', title: 'Uni', hour: 6, minute: 45, days: [1, 3], task: true }]);
   });
   it('einmalige Wecker haben keine Tage und heißen „Wecker“', () => {
     expect(nativeAlarms([{ ...base, label: '', days: [] }])[0]).toMatchObject({ title: 'Wecker', days: [] });
@@ -116,5 +116,25 @@ describe('nativeAlarms', () => {
   it('klingelt während der Aufgabe erst nach der Restzeit wieder', () => {
     expect(nativeRingAgainSeconds('aufgabe', 12)).toBe(27);
     expect(nativeRingAgainSeconds('klingelt', 12)).toBe(30);
+  });
+});
+
+describe('Wecker ohne Aufgabe', () => {
+  it('meldet dem iPhone, dass Stopp reicht', () => {
+    const a = { ...defaultAlarm(), id: 'k', challenge: 'keine' as const };
+    expect(hasTask(a)).toBe(false);
+    expect(nativeAlarms([a])[0].task).toBe(false);
+  });
+});
+
+describe('expiredOneShots', () => {
+  const armed = new Date(2026, 10, 2, 22, 0).getTime();
+  const once = { ...defaultAlarm(), id: 'o', time: '07:00', days: [], armedAt: armed };
+  it('einmaliger Wecker ist nach seiner Weckzeit abgelaufen', () => {
+    expect(expiredOneShots([once], new Date(2026, 10, 3, 6, 59))).toEqual([]);
+    expect(expiredOneShots([once], new Date(2026, 10, 3, 7, 1)).map((a) => a.id)).toEqual(['o']);
+  });
+  it('wiederholende Wecker laufen nie ab', () => {
+    expect(expiredOneShots([{ ...once, days: [1, 2, 3, 4, 5, 6, 7] }], new Date(2026, 10, 9))).toEqual([]);
   });
 });

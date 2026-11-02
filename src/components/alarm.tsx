@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { Alarm } from '../types';
-import { alarmTitle, alarmTone, defaultAlarm, dueAlarms, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, silence, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
+import { alarmTitle, alarmTone, defaultAlarm, dueAlarms, expiredOneShots, hasTask, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, silence, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
 import { api } from '../lib/spotify';
 import { isMobile, notify } from '../lib/notify';
 import { useSpotify } from './spotify';
@@ -524,6 +524,15 @@ export function AlarmRinger() {
   ringingRef.current = ringing;
   const nativeState = useNativeAlarmSync(data.alarms);
 
+  // iOS-App: Einmalige Wecker, die das iPhone schon geklingelt hat, ausschalten
+  useEffect(() => {
+    if (nativeState !== 'granted') return;
+    const sweep = () => expiredOneShots(alarmsRef.current, new Date()).forEach((a) => update('alarms', a.id, { enabled: false }));
+    sweep();
+    const onResume = NativeApp.addListener('appStateChange', ({ isActive }) => isActive && sweep());
+    return () => void onResume.then((h) => h.remove());
+  }, [nativeState, update]);
+
   const start = useCallback((alarm: Alarm, test: boolean) => {
     setFallbackNote('');
     setRinging({ alarm, phase: 'klingelt', deadline: 0, test, round: 0 });
@@ -563,6 +572,7 @@ export function AlarmRinger() {
       const test = !saved && nativeTest?.id === stopped.id;
       const alarm = saved ?? (test ? nativeTest! : { ...defaultAlarm(), id: stopped.id || 'wecker' });
       if (saved && saved.days.length === 0 && saved.enabled) update('alarms', saved.id, { enabled: false });
+      if (!hasTask(alarm)) return void AntonAlarm.solved().catch(() => undefined);
       const seconds = solveSeconds(alarm.challenge === 'qr' && !alarm.qr ? 'rechnen' : alarm.challenge);
       const deadline = Date.now() + seconds * 1000;
       setNow(Date.now());
@@ -623,6 +633,7 @@ export function AlarmRinger() {
   const { alarm, phase } = ringing;
   const window_ = solveSeconds(alarm.challenge === 'qr' && !alarm.qr ? 'rechnen' : alarm.challenge);
   const silenceNow = () => {
+    if (!hasTask(alarm)) return solved();
     unlockAlarmAudio();
     setNow(Date.now());
     setRinging({ ...ringing, phase: 'aufgabe', deadline: Date.now() + window_ * 1000 });

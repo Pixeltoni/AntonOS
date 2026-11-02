@@ -79,7 +79,8 @@ interface AntonAlarmPlugin {
   status(): Promise<{ state: AlarmPermission }>;
   requestPermission(): Promise<{ state: AlarmPermission }>;
   sync(opts: { alarms: NativeAlarm[] }): Promise<{ state: AlarmPermission; failed: number }>;
-  ringIn(opts: { seconds: number; id: string; title: string }): Promise<void>;
+  /** `task: false` – Wecker ohne Aufgabe, „Stopp“ schaltet ihn ganz aus */
+  ringIn(opts: { seconds: number; id: string; title: string; task?: boolean }): Promise<void>;
   solved(): Promise<void>;
   takeStopped(): Promise<{ id?: string; at?: number }>;
   addListener(event: 'stopped', fn: () => void): Promise<PluginListenerHandle>;

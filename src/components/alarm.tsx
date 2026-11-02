@@ -446,6 +446,8 @@ export async function testNativeAlarm(alarm: Alarm): Promise<number> {
 }
 
 const SYNC_KEY = 'antonos:wecker-ios';
+/** Meldet nach jedem Stellen am iPhone, wie viele Wecker sich nicht stellen ließen */
+export const SYNC_EVENT = 'antonos:wecker-ios-gestellt';
 
 /**
  * iOS-App: stellt alle eingeschalteten Wecker als echte iPhone-Wecker (AlarmKit).
@@ -464,7 +466,10 @@ export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
       setState(permission);
       if (permission !== 'granted' || readJson<string>(SYNC_KEY, '') === list) return;
       const res = await AntonAlarm.sync({ alarms: JSON.parse(list) }).catch(() => null);
-      if (res && res.failed === 0) writeJson(SYNC_KEY, list);
+      const failed = res ? res.failed : JSON.parse(list).length;
+      // Bei Fehlern nicht merken – beim nächsten Start oder der nächsten Änderung wird es erneut versucht
+      if (failed === 0) writeJson(SYNC_KEY, list);
+      window.dispatchEvent(new CustomEvent<number>(SYNC_EVENT, { detail: failed }));
     })();
     return () => {
       cancelled = true;

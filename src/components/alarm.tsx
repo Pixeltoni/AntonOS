@@ -435,17 +435,23 @@ export function testAlarm(alarm: Alarm) {
 }
 
 /** Gerade getesteter Wecker in der iOS-App (ist evtl. noch nicht gespeichert) */
-let nativeTest: Alarm | null = null;
+let nativeTest: { alarm: Alarm; at: number } | null = null;
 const NATIVE_TEST_SECONDS = 10;
+/** So lange nach dem Start gilt ein am iPhone gestoppter Wecker mit gleicher ID noch als Test */
+const NATIVE_TEST_WINDOW = 15 * 60_000;
 
 /** iOS-App: echten Wecker in wenigen Sekunden klingeln lassen. Gibt die Wartezeit zurück. */
 export async function testNativeAlarm(alarm: Alarm): Promise<number> {
-  nativeTest = alarm;
-  await AntonAlarm.ringIn({ seconds: NATIVE_TEST_SECONDS, id: alarm.id, title: `${alarmTitle(alarm)} · Test` });
+  nativeTest = { alarm, at: Date.now() };
+  await AntonAlarm.ringIn({ seconds: NATIVE_TEST_SECONDS, id: alarm.id, title: `${alarmTitle(alarm)} · Test`, task: hasTask(alarm) });
   return NATIVE_TEST_SECONDS;
 }
 
-const SYNC_KEY = 'antonos:wecker-ios';
+/**
+ * Zuletzt ans iPhone übergebene Wecker – nur im Speicher, damit nach jedem App-Start einmal
+ * abgeglichen wird (iOS kann die Wecker verlieren, z. B. wenn die Erlaubnis entzogen wurde).
+ */
+let syncedList = '';
 /** Meldet nach jedem Stellen am iPhone, wie viele Wecker sich nicht stellen ließen */
 export const SYNC_EVENT = 'antonos:wecker-ios-gestellt';
 
@@ -464,11 +470,11 @@ export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
       const permission = await nativeAlarmPermission(wanted);
       if (cancelled) return;
       setState(permission);
-      if (permission !== 'granted' || readJson<string>(SYNC_KEY, '') === list) return;
+      if (permission !== 'granted' || syncedList === list) return;
       const res = await AntonAlarm.sync({ alarms: JSON.parse(list) }).catch(() => null);
       const failed = res ? res.failed : JSON.parse(list).length;
-      // Bei Fehlern nicht merken – beim nächsten Start oder der nächsten Änderung wird es erneut versucht
-      if (failed === 0) writeJson(SYNC_KEY, list);
+      // Bei Fehlern nicht merken – bei der nächsten Änderung wird es erneut versucht
+      if (failed === 0) syncedList = list;
       window.dispatchEvent(new CustomEvent<number>(SYNC_EVENT, { detail: failed }));
     })();
     return () => {
@@ -574,9 +580,12 @@ export function AlarmRinger() {
       const stopped = await AntonAlarm.takeStopped().catch(() => ({}) as { id?: string });
       if (stopped.id === undefined) return;
       const saved = alarmsRef.current.find((a) => a.id === stopped.id);
-      const test = !saved && nativeTest?.id === stopped.id;
-      const alarm = saved ?? (test ? nativeTest! : { ...defaultAlarm(), id: stopped.id || 'wecker' });
-      if (saved && saved.days.length === 0 && saved.enabled) update('alarms', saved.id, { enabled: false });
+      // Test geht vor: auch ein gespeicherter Wecker wird beim Testen nicht ausgeschaltet, und es gilt der Entwurf
+      const probe = nativeTest && nativeTest.alarm.id === stopped.id && (stopped.at ?? Date.now()) - nativeTest.at < NATIVE_TEST_WINDOW ? nativeTest.alarm : null;
+      if (probe) nativeTest = null;
+      const test = !!probe;
+      const alarm = probe ?? saved ?? { ...defaultAlarm(), id: stopped.id || 'wecker' };
+      if (!test && saved && saved.days.length === 0 && saved.enabled) update('alarms', saved.id, { enabled: false });
       if (!hasTask(alarm)) return void AntonAlarm.solved().catch(() => undefined);
       const seconds = solveSeconds(alarm.challenge === 'qr' && !alarm.qr ? 'rechnen' : alarm.challenge);
       const deadline = Date.now() + seconds * 1000;

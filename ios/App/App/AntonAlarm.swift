@@ -71,14 +71,14 @@ enum AlarmScheduler {
     }
 
     /// Klingelt in `seconds` Sekunden erneut (ersetzt ein früheres Nachklingeln).
-    static func ringAgain(in seconds: TimeInterval, jsId: String, title: String) async throws {
+    static func ringAgain(in seconds: TimeInterval, jsId: String, title: String, withTask: Bool = true) async throws {
         cancelFallback()
         let id = UUID()
         var map = AlarmStore.map
         map[id.uuidString] = jsId
         AlarmStore.map = map
         AlarmStore.defaults.set(id.uuidString, forKey: AlarmStore.fallbackKey)
-        try await schedule(id: id, title: title, schedule: .fixed(Date().addingTimeInterval(max(5, seconds))))
+        try await schedule(id: id, title: title, schedule: .fixed(Date().addingTimeInterval(max(5, seconds))), withTask: withTask)
     }
 
     static func cancelFallback() {
@@ -223,11 +223,17 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
             let list = call.getArray("alarms", JSObject.self) ?? []
             Task {
                 let fallback = AlarmStore.defaults.string(forKey: AlarmStore.fallbackKey)
+                let oldMap = AlarmStore.map
+                var map: [String: String] = [:]
+                if let fallback, let jsId = oldMap[fallback] { map[fallback] = jsId }
                 for alarm in (try? AlarmManager.shared.alarms) ?? [] where alarm.id.uuidString != fallback {
+                    // Ein gerade klingelnder Wecker bleibt – sonst verstummt er ohne Aufgabe
+                    if alarm.state == .alerting {
+                        if let jsId = oldMap[alarm.id.uuidString] { map[alarm.id.uuidString] = jsId }
+                        continue
+                    }
                     try? AlarmManager.shared.cancel(id: alarm.id)
                 }
-                var map: [String: String] = [:]
-                if let fallback, let jsId = AlarmStore.map[fallback] { map[fallback] = jsId }
                 var failed = 0
                 for item in list {
                     guard let jsId = item["id"] as? String, let hour = (item["hour"] as? NSNumber)?.intValue, let minute = (item["minute"] as? NSNumber)?.intValue else { continue }
@@ -260,9 +266,10 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
             let seconds = call.getDouble("seconds") ?? 60
             let jsId = call.getString("id") ?? ""
             let title = call.getString("title") ?? "Wecker"
+            let withTask = call.getBool("task") ?? true
             Task {
                 do {
-                    try await AlarmScheduler.ringAgain(in: seconds, jsId: jsId, title: title)
+                    try await AlarmScheduler.ringAgain(in: seconds, jsId: jsId, title: title, withTask: withTask)
                     call.resolve()
                 } catch {
                     call.reject("Wecker ließ sich nicht planen")

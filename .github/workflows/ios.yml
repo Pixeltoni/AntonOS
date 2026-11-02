@@ -1,6 +1,8 @@
 name: iOS-App zu TestFlight hochladen
 
 # Baut AntonOS als iOS-App auf einem Mac von GitHub und lädt sie zu TestFlight hoch.
+# Enthält die Widget-Erweiterung (ios/App/AntonOSWidgets, Bundle-ID io.github.pixeltoni.antonos.widgets)
+# mit der App Group group.io.github.pixeltoni.antonos – beides legt die automatische Signierung an.
 # Start von Hand: GitHub → Actions → „iOS-App zu TestFlight hochladen“ → Run workflow.
 # Nötige Secrets (Settings → Secrets and variables → Actions):
 #   APPLE_TEAM_ID       – Team-ID aus developer.apple.com → Membership
@@ -92,6 +94,22 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM" CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             archive
+
+      # Ohne Signatur fehlen im Archiv die Berechtigungen (App Group für die Widgets).
+      # Vorläufig ohne Zertifikat signieren, damit der Export sie übernimmt und richtig signiert.
+      - name: Berechtigungen eintragen
+        run: |
+          app="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          if [ -d "$app/Frameworks" ]; then
+            find "$app/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) -exec codesign --force --sign - --timestamp=none {} \;
+          fi
+          for ext in "$app"/PlugIns/*.appex; do
+            [ -d "$ext" ] || continue
+            codesign --force --sign - --timestamp=none --entitlements ios/App/AntonOSWidgets/AntonOSWidgets.entitlements "$ext"
+            codesign -d --entitlements - "$ext"
+          done
+          codesign --force --sign - --timestamp=none --entitlements ios/App/App/App.entitlements "$app"
+          codesign -d --entitlements - "$app"
 
       - name: Zu TestFlight hochladen
         env:

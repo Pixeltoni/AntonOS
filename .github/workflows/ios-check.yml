@@ -1,0 +1,50 @@
+name: iOS-Build prüfen
+
+# Baut die iOS-App samt Widgets ohne Signatur – zeigt Fehler in Swift-Dateien und im Xcode-Projekt,
+# bevor ein Pull Request gemergt wird. Lädt nichts hoch und braucht keine Secrets.
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - '.github/workflows/ios-check.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Neuestes Xcode wählen
+        run: |
+          xcode=$(ls -d /Applications/Xcode_2[6-9]*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$xcode" ]; then echo "::error::Kein Xcode 26 auf dem Runner gefunden"; ls /Applications; exit 1; fi
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # Eigene Lieder gibt es hier nicht (Secret) – Platzhalter, damit das Projekt vollständig ist
+      - name: Platzhalter für eigene Lieder
+        run: |
+          tones=ios/App/App/Tones
+          for f in $(grep -o 'path = Tones/antonos-lied-[^;]*' ios/App/App.xcodeproj/project.pbxproj | sed 's|path = Tones/||' | sort -u); do
+            [ -f "$tones/$f" ] || cp "$tones/antonos-aufgang.wav" "$tones/$f"
+          done
+
+      - run: npm run build
+      - run: npx cap sync ios
+
+      - name: App und Widgets bauen
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+          ls "$RUNNER_TEMP/dd/Build/Products/Release-iphoneos/App.app/PlugIns"

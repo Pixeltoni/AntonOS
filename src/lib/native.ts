@@ -102,3 +102,14 @@ export async function nativeAlarmPermission(ask: boolean): Promise<AlarmPermissi
     return 'unavailable';
   }
 }
+
+/* ---------- iOS-Widgets – Plugin in ios/App/App/AntonWidgets.swift, Widgets in ios/App/AntonOSWidgets ---------- */
+
+interface AntonWidgetsPlugin {
+  /** Legt den Stand für die Widgets ab (JSON), streicht übernommene Aktionen (bis `applied`, ms) und lässt die Widgets neu zeichnen */
+  update(opts: { snapshot: string; applied: number }): Promise<void>;
+  /** Die im Widget abgehakten Einträge (JSON-Liste) */
+  takeActions(): Promise<{ actions: string }>;
+}
+
+export const AntonWidgets = registerPlugin<AntonWidgetsPlugin>('AntonWidgets');

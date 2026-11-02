@@ -601,6 +601,36 @@ export interface FocusSession {
   taskId?: ID | null;
 }
 
+export type AlarmChallenge = 'rechnen' | 'text' | 'qr';
+/** Standard-Ton, eigene Audiodatei (nur auf diesem Gerät), YouTube oder Spotify */
+export type AlarmSound = 'ton' | 'datei' | 'youtube' | 'spotify';
+
+export interface Alarm {
+  id: ID;
+  /** Weckzeit HH:MM */
+  time: string;
+  label: string;
+  /** Wochentage 1 = Montag … 7 = Sonntag; leer = einmalig */
+  days: number[];
+  enabled: boolean;
+  /** Zeitpunkt des Einschaltens (ms) – frühere Weckzeiten klingeln nicht nach */
+  armedAt: number;
+  sound: AlarmSound;
+  /** YouTube- bzw. Spotify-Link */
+  soundUrl: string;
+  /** Name der eigenen Audiodatei (die Datei selbst liegt nur auf dem Gerät) */
+  soundName?: string;
+  challenge: AlarmChallenge;
+  /** Rechnen: 1 leicht, 2 mittel, 3 schwer */
+  level: 1 | 2 | 3;
+  /** Rechnen: Anzahl der Aufgaben */
+  rounds: number;
+  /** Text: eigener Satz (leer = zufälliger) */
+  phrase: string;
+  /** QR: Inhalt des hinterlegten Codes */
+  qr: string;
+}
+
 export interface Data {
   courses: Course[];
   tasks: Task[];
@@ -631,6 +661,7 @@ export interface Data {
   schemaVersion?: number;
   albums: Album[];
   tools: Tool[];
+  alarms: Alarm[];
   settings: Settings;
 }
 

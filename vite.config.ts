@@ -107,6 +107,8 @@ export default defineConfig({
         // Update meist nur der App-Code neu geladen werden statt des ganzen Pakets.
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
+          // QR-Erkennung nur bei Bedarf laden (Wecker auf dem iPhone)
+          if (id.includes('/jsqr/')) return 'jsqr';
           if (id.includes('@supabase') || id.includes('iceberg-js') || id.includes('tslib')) return 'supabase';
           if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
           return 'vendor';

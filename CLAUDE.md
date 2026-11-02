@@ -31,7 +31,7 @@ Funktionsübersicht für Nutzer steht in `README.md` (nur bei Bedarf lesen).
 - Neues Dashboard-Widget: `WidgetId` (`types.ts`), `DEFAULT_DASHBOARD`/`WIDGET_LABELS` (`lib/layout.ts`), Darstellung in `pages/Dashboard.tsx`.
 - Supabase-Adresse und Publishable Key in `src/lib/cloud.ts` sind absichtlich öffentlich (RLS).
 - Deploy: Push auf Branch `Main` → GitHub Pages (`.github/workflows/deploy.yml`).
-- iOS-App: Capacitor (`capacitor.config.ts`, Projekt in `ios/`, Swift Package Manager). Anton hat keinen Mac – gebaut und zu TestFlight hochgeladen wird über `.github/workflows/ios.yml` (manuell starten, Secrets siehe Datei). Native Brücke in `src/lib/native.ts` (`isNativeApp()`), Erinnerungen werden im Voraus beim System angemeldet (`src/lib/schedule.ts`, `components/native.tsx`). Neue Erinnerungsarten dort mit gleichem `tag` wie im Web ergänzen, sonst kommen sie doppelt.
+- iOS-App: Capacitor (`capacitor.config.ts`, Projekt in `ios/`, Swift Package Manager). Anton hat keinen Mac – gebaut und zu TestFlight hochgeladen wird über `.github/workflows/ios.yml` (manuell starten, Secrets siehe Datei). Native Brücke in `src/lib/native.ts` (`isNativeApp()`), Erinnerungen werden im Voraus beim System angemeldet (`src/lib/schedule.ts`, `components/native.tsx`). Neue Erinnerungsarten dort mit gleichem `tag` wie im Web ergänzen, sonst kommen sie doppelt. Eigenes Plugin `AntonAlarm` (echter Wecker über AlarmKit, iOS 26) in `ios/App/App/AntonAlarm.swift`, angemeldet über `AntonBridgeViewController` (Main.storyboard); neue Swift-Dateien von Hand in `project.pbxproj` eintragen.
 
 ## Commits
 Kurze deutsche Überschrift, die beschreibt, was sich für Nutzer ändert (z. B. „Wochenrückblick und Stimmung“), darunter Stichpunkte.

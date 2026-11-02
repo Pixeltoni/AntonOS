@@ -1,7 +1,8 @@
 /** Brücke zur iOS-App (Capacitor): System-Mitteilungen, die auch bei geschlossener App kommen. */
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { alreadyDelivered, noticeId, type PlannedNotice } from './schedule';
+import type { NativeAlarm } from './alarm';
 
 /** Läuft AntonOS gerade als echte App aus dem App Store bzw. TestFlight? */
 export const isNativeApp = (): boolean => Capacitor.isNativePlatform();
@@ -68,4 +69,32 @@ export function onNoticeTap(open: (href: string) => void): () => void {
     if (href && href.startsWith('#')) open(href);
   });
   return () => void handle.then((h) => h.remove());
+}
+
+/* ---------- Echter Wecker (AlarmKit, ab iOS 26) – Plugin in ios/App/App/AntonAlarm.swift ---------- */
+
+export type AlarmPermission = 'granted' | 'denied' | 'prompt' | 'unavailable';
+
+interface AntonAlarmPlugin {
+  status(): Promise<{ state: AlarmPermission }>;
+  requestPermission(): Promise<{ state: AlarmPermission }>;
+  sync(opts: { alarms: NativeAlarm[] }): Promise<{ state: AlarmPermission; failed: number }>;
+  ringIn(opts: { seconds: number; id: string; title: string }): Promise<void>;
+  solved(): Promise<void>;
+  takeStopped(): Promise<{ id?: string; at?: number }>;
+  addListener(event: 'stopped', fn: () => void): Promise<PluginListenerHandle>;
+}
+
+export const AntonAlarm = registerPlugin<AntonAlarmPlugin>('AntonAlarm');
+
+/** Kann diese App echte iPhone-Wecker stellen? (Web und ältere App-Versionen: 'unavailable') */
+export async function nativeAlarmPermission(ask: boolean): Promise<AlarmPermission> {
+  if (!isNativeApp()) return 'unavailable';
+  try {
+    const { state } = await AntonAlarm.status();
+    if (ask && state === 'prompt') return (await AntonAlarm.requestPermission()).state;
+    return state;
+  } catch {
+    return 'unavailable';
+  }
 }

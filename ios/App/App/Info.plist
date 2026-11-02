@@ -55,6 +55,8 @@
 	<string>AntonOS nutzt das Mikrofon für die Spracheingabe der Assistentin.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>AntonOS wandelt deine Sprache in Text um, damit die Assistentin dich versteht.</string>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>AntonOS stellt deine Wecker als echte iPhone-Wecker, damit sie auch im Lautlos-Modus und bei „Nicht stören“ laut klingeln.</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>

@@ -19,12 +19,17 @@ import { toneLabel } from './tones';
 /** Erhöhen, wenn sich das Format so ändert, dass alte Widgets es nicht mehr lesen können */
 export const WIDGET_SNAPSHOT_VERSION = 1;
 
-export interface WidgetAlarm {
+export interface WidgetAlarmRing {
+  /** Zeitpunkt (ms) */
+  at: number;
   title: string;
-  /** Nächste Weckzeiten (ms), damit das Widget ohne App weiterzählen kann */
-  rings: number[];
   repeat: string;
   sound: string;
+}
+
+export interface WidgetAlarm {
+  /** Nächste Weckzeiten aller Wecker samt Angaben, damit das Widget ohne App weiterzählen kann */
+  rings: WidgetAlarmRing[];
 }
 
 export interface WidgetRing {
@@ -139,17 +144,13 @@ function alarmSound(a: Alarm): string {
   return toneLabel(a.tone);
 }
 
-/** Der Wecker, der als nächstes klingelt, samt der folgenden Weckzeiten aller Wecker */
+/** Die nächsten Weckzeiten aller Wecker, jede mit Titel, Wiederholung und Ton ihres Weckers */
 export function widgetAlarm(alarms: Alarm[], now: Date): WidgetAlarm | null {
-  const next = alarms
-    .map((alarm) => ({ alarm, rings: nextRings(alarm, now, 4) }))
-    .filter((x) => x.rings.length > 0)
-    .sort((a, b) => a.rings[0].getTime() - b.rings[0].getTime());
-  if (next.length === 0) return null;
-  const { alarm } = next[0];
-  // Alle kommenden Weckzeiten (auch anderer Wecker): klingelt der erste, rückt das Widget weiter
-  const rings = [...new Set(next.flatMap((x) => x.rings.map((d) => d.getTime())))].sort((a, b) => a - b).slice(0, 8);
-  return { title: alarmTitle(alarm), rings, repeat: repeatLabel(alarm), sound: alarmSound(alarm) };
+  const rings = alarms
+    .flatMap((alarm) => nextRings(alarm, now, 4).map((d) => ({ at: d.getTime(), title: alarmTitle(alarm), repeat: repeatLabel(alarm), sound: alarmSound(alarm) })))
+    .sort((a, b) => a.at - b.at)
+    .slice(0, 8);
+  return rings.length > 0 ? { rings } : null;
 }
 
 /** Termine von heute und morgen (ohne Aufgaben – die haben ihre eigene Liste) */
@@ -217,7 +218,9 @@ export function widgetSnapshot(data: Data, entries: CalendarEntry[], now: Date):
   const ring = ringDay(data, data.settings.rings ?? defaultRingGoals(), day);
   const { tasks, open } = widgetTasks(data.tasks, day);
 
-  const exam = [...data.exams].filter((e) => e.date >= day).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  // Heute schon vorbei? Dann zählt die nächste
+  const exam = [...data.exams].filter((e) => e.date > day || (e.date === day && (!e.time || e.time >= hhmm))).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
   const trip = [...(data.trips ?? [])].filter((t) => t.start >= day).sort((a, b) => a.start.localeCompare(b.start))[0];
 
   const month = monthKey(day);

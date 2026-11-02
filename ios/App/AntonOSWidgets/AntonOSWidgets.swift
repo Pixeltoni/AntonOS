@@ -183,8 +183,8 @@ struct AlarmView: View {
     let entry: SnapshotEntry
 
     var body: some View {
-        let alarm = entry.snapshot.alarm
-        let next = alarm?.next(after: entry.date)
+        let ring = entry.snapshot.alarm?.next(after: entry.date)
+        let next = ring?.date
         switch family {
         case .accessoryInline:
             if let next {
@@ -208,7 +208,7 @@ struct AlarmView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Label("Wecker", systemImage: "alarm.fill").font(.caption.weight(.semibold)).widgetAccentable()
                 Text(next.map { Fmt.time($0) } ?? "Aus").font(.system(size: 26, weight: .semibold, design: .rounded))
-                if let next, let alarm {
+                if let next, let alarm = ring {
                     Text("\(Fmt.dayLabel(next, now: entry.date)) · \(alarm.title)").font(.caption).lineLimit(1)
                 }
             }
@@ -219,7 +219,7 @@ struct AlarmView: View {
                 Spacer(minLength: 0)
                 if entry.empty {
                     EmptyHint()
-                } else if let next, let alarm {
+                } else if let next, let alarm = ring {
                     Text(Fmt.time(next))
                         .font(.system(size: 42, weight: .semibold, design: .rounded))
                         .minimumScaleFactor(0.6)

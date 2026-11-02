@@ -14,9 +14,34 @@ export const TONES: { id: ToneId; label: string; hint: string }[] = [
   { id: 'klassisch', label: 'Klassisch', hint: 'Lauter Piepton' },
 ];
 
+/**
+ * Antons eigene Lieder als feste Wecktöne (je 29 Sekunden, im App-Paket). Sie liegen verschlüsselt
+ * in ios/eigene-toene.tar.gz.enc – nicht öffentlich – und kommen nur beim iOS-Build in die App.
+ * Im Browser klingelt stattdessen der Standardton.
+ */
+export type SongId = 'lied-whatoncewas';
+export const SONGS: { id: SongId; label: string; hint: string }[] = [
+  { id: 'lied-whatoncewas', label: 'What Once Was', hint: 'Her’s' },
+];
+
 export const DEFAULT_TONE: ToneId = 'aufgang';
 
-export const toneOf = (id: string | undefined): ToneId => (TONES.some((t) => t.id === id) ? (id as ToneId) : DEFAULT_TONE);
+export const isSong = (id: string | undefined): id is SongId => SONGS.some((s) => s.id === id);
+
+/** Gültiger Ton (Weckton oder Lied), sonst der Standard */
+export const toneOf = (id: string | undefined): ToneId | SongId => (TONES.some((t) => t.id === id) || isSong(id) ? (id as ToneId | SongId) : DEFAULT_TONE);
+
+/** Name in der Liste */
+export const toneLabel = (id: string | undefined) => {
+  const t = toneOf(id);
+  return [...TONES, ...SONGS].find((x) => x.id === t)?.label ?? 'Weckton';
+};
+
+/** Im Browser erzeugbarer Ton: Lieder spielen dort den Standardton */
+export const synthTone = (id: string | undefined): ToneId => {
+  const t = toneOf(id);
+  return isSong(t) ? DEFAULT_TONE : t;
+};
 
 /** Dateiname in der iOS-App (liegt im App-Paket) */
 export const toneFile = (id: string | undefined) => `antonos-${toneOf(id)}.wav`;

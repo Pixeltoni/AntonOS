@@ -7,6 +7,7 @@ name: iOS-App zu TestFlight hochladen
 #   ASC_KEY_ID          – Schlüssel-ID des App-Store-Connect-API-Schlüssels
 #   ASC_ISSUER_ID       – Issuer-ID von derselben Seite
 #   ASC_KEY_P8          – kompletter Inhalt der heruntergeladenen .p8-Datei
+#   TOENE_SCHLUESSEL    – Passwort für ios/eigene-toene.tar.gz.enc (eigene Lieder als Wecktöne; ohne: Standardton)
 on:
   workflow_dispatch:
 
@@ -46,6 +47,29 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+      # Eigene Lieder sind urheberrechtlich geschützt und liegen daher nur verschlüsselt im öffentlichen Repo.
+      # Sie kommen ins App-Paket (Weckton am gesperrten iPhone) und nach public/tones (Vorhören in der App).
+      - name: Eigene Lieder entpacken
+        env:
+          TOENE_SCHLUESSEL: ${{ secrets.TOENE_SCHLUESSEL }}
+        run: |
+          tones=ios/App/App/Tones
+          mkdir -p public/tones
+          ssl="$(brew --prefix openssl@3 2>/dev/null)/bin/openssl"
+          [ -x "$ssl" ] || ssl=openssl
+          if [ -n "$TOENE_SCHLUESSEL" ]; then
+            "$ssl" enc -d -aes-256-cbc -pbkdf2 -pass env:TOENE_SCHLUESSEL -in ios/eigene-toene.tar.gz.enc | tar -xzf - -C "$tones"
+          else
+            echo "::warning::Secret TOENE_SCHLUESSEL fehlt – eigene Lieder klingen wie der Standardton."
+          fi
+          # Jedes im Xcode-Projekt eingetragene Lied muss existieren, sonst schlägt der Build fehl
+          for f in $(grep -o 'path = Tones/antonos-lied-[^;]*' ios/App/App.xcodeproj/project.pbxproj | sed 's|path = Tones/||' | sort -u); do
+            [ -f "$tones/$f" ] || { echo "::warning::$f fehlt – nehme den Standardton"; cp "$tones/antonos-aufgang.wav" "$tones/$f"; }
+            cp "$tones/$f" public/tones/
+          done
+          ls -la "$tones" public/tones
+
       - run: npm run build
       - run: npx cap sync ios
 

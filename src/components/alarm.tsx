@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { Alarm } from '../types';
 import { previousRing, alarmTitle, bedtimeNotices, canSnooze, defaultAlarm, defaultSleep, dueAlarms, expiredOneShots, fadeVolume, hasTask, hhmm, memoryLength, memorySequence, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, ShakeCounter, shakeTarget, silence, snoozeOf, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
-import { alarmSoundFile, toneOf, toneWav } from '../lib/tones';
+import { alarmSoundFile, isSong, synthTone, toneFile, toneOf, toneWav } from '../lib/tones';
 import { clampClipStart, CLIP_SECONDS, clipFile, clipWav } from '../lib/clip';
 import { today } from '../lib/dates';
 import { MorningBrief } from './morning';
@@ -49,11 +49,16 @@ const audio = () => (element ??= Object.assign(new Audio(), { preload: 'auto' })
 
 /** Abspielbare Adresse je Weckton (eine Schleife, wird wiederholt) */
 const toneSrcs = new Map<string, string>();
-const tone = (id: string | undefined) => {
-  const t = toneOf(id);
+const synth = (id: string | undefined) => {
+  const t = synthTone(id);
   let src = toneSrcs.get(t);
   if (!src) toneSrcs.set(t, (src = URL.createObjectURL(new Blob([toneWav(t)], { type: 'audio/wav' }))));
   return src;
+};
+/** Lieder liegen nur in der iOS-App (beim Build eingefügt), sonst der erzeugte Ton */
+const tone = (id: string | undefined) => {
+  const t = toneOf(id);
+  return isSong(t) && isNativeApp() ? `tones/${toneFile(t)}` : synth(t);
 };
 let silentSrc: string | null = null;
 
@@ -82,7 +87,7 @@ let previewTimer = 0;
 export function previewTone(id: string) {
   clearTimeout(previewTimer);
   playLocal(tone(id)).catch(() => undefined);
-  previewTimer = window.setTimeout(stopLocal, 3500);
+  previewTimer = window.setTimeout(stopLocal, isSong(id) ? 8000 : 3500);
 }
 
 /* ---------- Eigenes Lied: Ausschnitt als Weckton fürs iPhone ---------- */
@@ -247,6 +252,8 @@ function AlarmSound({ alarm, playing, keepMusic, onFallback }: { alarm: Alarm; p
       })
       .catch(() => {
         if (mode === 'datei') fail('Das Lied ließ sich nicht abspielen.');
+        // Lied fehlt in der App: erzeugter Ton, damit es nie still bleibt
+        else if (playingRef.current && src !== synth(alarm.tone)) playLocal(synth(alarm.tone), 1).catch(() => undefined);
       });
     // Eigenes Lied: nur den gewählten Ausschnitt wiederholen
     const el = audio();

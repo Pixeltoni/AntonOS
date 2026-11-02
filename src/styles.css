@@ -2086,3 +2086,5 @@ input.switch:checked::after { transform: translateX(20px); }
 .sheet-body label.ios-row, .modal label.ios-row, .panel label.ios-row { flex-direction: row; align-items: center; gap: 0.6rem; font-size: 1rem; color: var(--text); }
 .sheet-body .ios-sub label { font-size: 0.85rem; }
 .ios-row input[type=date] { max-width: 48%; flex: none; }
+.ios-caption { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 -0.5rem 0.9rem; }
+.tone-play { width: 28px; height: 28px; flex: none !important; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, #FF9500 16%, transparent); color: #FF9500; font-size: 0.7rem; }

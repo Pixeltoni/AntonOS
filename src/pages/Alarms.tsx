@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react';
 import { useStore } from '../store';
-import type { Alarm, AlarmChallenge, AlarmSound, ID } from '../types';
+import type { Alarm, AlarmChallenge, ID } from '../types';
 import {
   bedtimeFor, CHALLENGES, cycleTimes, defaultAlarm, defaultSleep, durationLabel, hhmm, isPaused, isPunctual, isSkipping, memoryLength, nextAlarm, nextRing,
-  quickAlarm, repeatLabel, shakeTarget, skipNext, SLEEP_GOALS, SNOOZE_MINUTES, snoozeOf, spotifyUri, untilLabel, WAKE_CHECK_MINUTES, wakeStats, youtubeId,
+  quickAlarm, repeatLabel, shakeTarget, skipNext, SLEEP_GOALS, SNOOZE_MINUTES, snoozeOf, spotifyUri, untilLabel, WAKE_CHECK_MINUTES, wakeStats,
 } from '../lib/alarm';
 import { addDays, parseDate, today } from '../lib/dates';
+import { TONES, toneOf } from '../lib/tones';
 import { isMobile } from '../lib/notify';
-import { deleteSoundFile, QrScanner, saveSoundFile, SYNC_EVENT, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
+import { deleteSoundFile, previewTone, QrScanner, SYNC_EVENT, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
 import { isNativeApp, nativeAlarmPermission, type AlarmPermission } from '../lib/native';
 import { useSpotify } from '../components/spotify';
 import { api } from '../lib/spotify';
@@ -15,15 +16,10 @@ import { safeImageSrc } from '../lib/life';
 import { Empty, PageHeader, Panel } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
 
-const SOUNDS: { id: AlarmSound; label: string }[] = [
-  { id: 'ton', label: 'Standard' },
-  { id: 'datei', label: 'Datei' },
-  { id: 'youtube', label: 'YouTube' },
-  { id: 'spotify', label: 'Spotify' },
-];
-
-const soundLabel = (a: Alarm) =>
-  a.sound === 'datei' ? a.soundName || 'Eigene Datei' : a.sound === 'spotify' && a.soundName ? `Spotify: ${a.soundName}` : SOUNDS.find((s) => s.id === a.sound)?.label ?? 'Standard';
+const soundLabel = (a: Pick<Alarm, 'tone' | 'sound' | 'soundName'>) => {
+  const t = TONES.find((x) => x.id === toneOf(a.tone))?.label ?? 'Weckton';
+  return a.sound === 'spotify' ? `${t} + Spotify` : t;
+};
 
 interface SpotifyItem { uri: string; name: string; detail: string; image: string | null }
 interface Img { url: string }
@@ -221,7 +217,6 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
   const { add, update, remove } = useStore();
   const [a, setA] = useState<Draft>(initial);
   const [page, setPage] = useState<SubPage | null>(null);
-  const [file, setFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [hint, setHint] = useState('');
@@ -232,8 +227,6 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
 
   const problem = (): string => {
     if (!/^\d\d:\d\d$/.test(a.time)) return 'Bitte eine Uhrzeit wählen.';
-    if (a.sound === 'datei' && !file && !a.soundName) return 'Bitte eine Audiodatei auswählen.';
-    if (a.sound === 'youtube' && !youtubeId(a.soundUrl)) return 'Bitte einen gültigen YouTube-Link einfügen.';
     if (a.sound === 'spotify' && !spotifyUri(a.soundUrl)) return 'Bitte einen Song, ein Album oder eine Playlist aus Spotify wählen.';
     if (a.challenge === 'qr' && !a.qr) return 'Bitte zuerst einen QR-Code scannen.';
     if (a.days.length === 0 && a.date && parseDate(a.date).getTime() + (Number(a.time.slice(0, 2)) * 60 + Number(a.time.slice(3))) * 60_000 <= Date.now()) {
@@ -256,14 +249,17 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
       phrase: a.phrase.trim(),
       enabled: true,
       armedAt: Date.now(),
-      soundName: file?.name ?? a.soundName,
+      // Ältere Wecker mit Datei oder YouTube klingeln jetzt mit dem Weckton
+      sound: a.sound === 'spotify' ? 'spotify' : 'ton',
+      tone: toneOf(a.tone),
       date: a.days.length === 0 ? a.date || undefined : undefined,
       // Neue Uhrzeit oder Tage: „Nur den nächsten auslassen“ gilt nicht mehr
       skip: changed ? undefined : a.skip,
     };
-    const alarmId = id ?? add('alarms', final);
-    if (id) update('alarms', id, final);
-    if (file) await saveSoundFile(alarmId, file).catch(() => setError('Die Datei ließ sich nicht speichern.'));
+    if (id) {
+      update('alarms', id, final);
+      if (initial.sound === 'datei') void deleteSoundFile(id);
+    } else add('alarms', final);
     onClose();
   };
 
@@ -302,43 +298,41 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
       </>
     );
   } else if (page === 'ton') {
+    const music = a.sound === 'spotify';
     body = (
       <>
         {back('Ton')}
+        <span className="ios-caption">Weckton</span>
         <ul className="ios-group">
-          {SOUNDS.map((s) => (
-            <CheckRow
-              key={s.id}
-              label={s.label}
-              hint={{ ton: 'Lauter Piepton, am zuverlässigsten', datei: 'Eigene Audiodatei von diesem Gerät', youtube: 'Video im Wecker-Fenster', spotify: 'Song oder Playlist aus deinem Konto' }[s.id]}
-              on={a.sound === s.id}
-              onClick={() => s.id !== a.sound && set(s.id === initial.sound ? { sound: s.id, soundUrl: initial.soundUrl, soundName: initial.soundName } : { sound: s.id, soundUrl: '', soundName: undefined })}
-            />
+          {TONES.map((t) => (
+            <li key={t.id}>
+              <button type="button" className="ios-row" aria-pressed={toneOf(a.tone) === t.id} onClick={() => { set({ tone: t.id }); previewTone(t.id); }}>
+                <span className="tone-play" aria-hidden>▶</span>
+                <span className="grow">
+                  {t.label}
+                  <span className="ios-row-hint">{t.hint}</span>
+                </span>
+                <span className="ios-check" aria-hidden>{toneOf(a.tone) === t.id ? '✓' : ''}</span>
+              </button>
+            </li>
           ))}
         </ul>
-        {a.sound === 'datei' && (
-          <div className="stack-tight">
-            <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label="Audiodatei" />
-            <span className="muted small">{file?.name ?? a.soundName ?? 'Noch keine Datei.'} Die Datei bleibt nur auf diesem Gerät gespeichert.</span>
-          </div>
-        )}
-        {a.sound === 'youtube' && (
-          <div className="stack-tight">
-            <input value={a.soundUrl} placeholder="https://youtu.be/…" inputMode="url" onChange={(e) => set({ soundUrl: e.target.value })} aria-label="YouTube-Link" />
-            <span className="muted small">Blockiert das Handy den Ton, klingelt stattdessen der Standard-Ton.</span>
-          </div>
-        )}
-        {a.sound === 'spotify' && (
+        <span className="muted small">Tippen spielt den Ton kurz vor. Er klingelt auch am gesperrten iPhone, im Lautlos-Modus und bei „Nicht stören“.</span>
+        <ul className="ios-group">
+          <SwitchRow label="Sanft lauter werden" hint="Bei offener App: beginnt leise, nach 45 Sekunden voll laut" checked={!!a.fadeIn} onChange={(v) => set({ fadeIn: v })} />
+          <SwitchRow
+            label="Danach Musik von Spotify"
+            hint="Startet, sobald du den Wecker stoppst – läuft während der Aufgabe und danach weiter"
+            checked={music}
+            onChange={(v) => set(v ? { sound: 'spotify', soundUrl: initial.sound === 'spotify' ? initial.soundUrl : '', soundName: initial.sound === 'spotify' ? initial.soundName : undefined } : { sound: 'ton', soundUrl: '', soundName: undefined })}
+          />
+        </ul>
+        {music && (
           <div className="stack-tight">
             <SpotifyPicker value={spotifyUri(a.soundUrl) ? a.soundUrl : ''} name={a.soundName} onPick={(uri, name) => set({ soundUrl: uri, soundName: name })} />
-            <span className="muted small">Spielt über die Spotify-App (Premium nötig). Findet Spotify kein Gerät, klingelt der Standard-Ton.</span>
+            <span className="muted small">Spielt über die Spotify-App (Premium nötig). Ist Spotify vorher zu, öffne es einmal kurz, damit das iPhone als Gerät auftaucht.</span>
           </div>
         )}
-        <ul className="ios-group">
-          <SwitchRow label="Sanft lauter werden" hint="Beginnt leise, nach 45 Sekunden voll laut" checked={!!a.fadeIn} onChange={(v) => set({ fadeIn: v })} />
-          {a.sound === 'spotify' && <SwitchRow label="Musik danach weiterlaufen lassen" hint="Nach dem Ausschalten leiser weiter" checked={!!a.keepMusic} onChange={(v) => set({ keepMusic: v })} />}
-        </ul>
-        <span className="muted small">Am gesperrten iPhone klingelt immer der laute iPhone-Weckton. Dein Klang und das sanfte Lauterwerden gelten, solange AntonOS offen ist. Im Browser am iPhone lässt sich die Lautstärke nicht regeln, Spotify klappt je nach Gerät.</span>
       </>
     );
   } else if (page === 'aufgabe') {

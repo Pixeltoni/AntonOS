@@ -108,7 +108,7 @@ describe('nativeAlarms', () => {
       { ...base, id: 'b', time: '06:45', label: ' Uni ', days: [3, 1, 1] },
       { ...base, id: 'c', enabled: false },
     ]);
-    expect(list).toEqual([{ id: 'b', title: 'Uni', hour: 6, minute: 45, days: [1, 3], task: true, snooze: 540, snoozeMax: 3 }]);
+    expect(list).toEqual([{ id: 'b', title: 'Uni', hour: 6, minute: 45, days: [1, 3], task: true, sound: 'antonos-aufgang.wav', snooze: 540, snoozeMax: 3 }]);
   });
   it('einmalige Wecker haben keine Tage und heißen „Wecker“', () => {
     expect(nativeAlarms([{ ...base, label: '', days: [] }])[0]).toMatchObject({ title: 'Wecker', days: [] });

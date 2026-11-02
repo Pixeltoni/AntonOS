@@ -18,6 +18,8 @@
 		A1A1A1A12F00000200000009 /* antonos-digital.wav in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000200000010 /* antonos-digital.wav */; };
 		A1A1A1A12F00000200000011 /* antonos-klassisch.wav in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000200000012 /* antonos-klassisch.wav */; };
 		A1A1A1A12F00000200000013 /* antonos-lied-whatoncewas.wav in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000200000014 /* antonos-lied-whatoncewas.wav */; };
+		A1A1A1A12F00000200000015 /* antonos-lied-outthefire.wav in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000200000016 /* antonos-lied-outthefire.wav */; };
+		A1A1A1A12F00000200000017 /* antonos-lied-livewell.wav in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000200000018 /* antonos-lied-livewell.wav */; };
 		A1A1A1A12F00000100000001 /* AntonAlarm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000100000002 /* AntonAlarm.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -36,6 +38,8 @@
 		A1A1A1A12F00000200000010 /* antonos-digital.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = antonos-digital.wav; path = Tones/antonos-digital.wav; sourceTree = "<group>"; };
 		A1A1A1A12F00000200000012 /* antonos-klassisch.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = antonos-klassisch.wav; path = Tones/antonos-klassisch.wav; sourceTree = "<group>"; };
 		A1A1A1A12F00000200000014 /* antonos-lied-whatoncewas.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = antonos-lied-whatoncewas.wav; path = Tones/antonos-lied-whatoncewas.wav; sourceTree = "<group>"; };
+		A1A1A1A12F00000200000016 /* antonos-lied-outthefire.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = antonos-lied-outthefire.wav; path = Tones/antonos-lied-outthefire.wav; sourceTree = "<group>"; };
+		A1A1A1A12F00000200000018 /* antonos-lied-livewell.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = antonos-lied-livewell.wav; path = Tones/antonos-lied-livewell.wav; sourceTree = "<group>"; };
 		A1A1A1A12F00000100000002 /* AntonAlarm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntonAlarm.swift; sourceTree = "<group>"; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -88,6 +92,8 @@
 				A1A1A1A12F00000200000010 /* antonos-digital.wav */,
 				A1A1A1A12F00000200000012 /* antonos-klassisch.wav */,
 				A1A1A1A12F00000200000014 /* antonos-lied-whatoncewas.wav */,
+				A1A1A1A12F00000200000016 /* antonos-lied-outthefire.wav */,
+				A1A1A1A12F00000200000018 /* antonos-lied-livewell.wav */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -176,6 +182,8 @@
 				A1A1A1A12F00000200000009 /* antonos-digital.wav in Resources */,
 				A1A1A1A12F00000200000011 /* antonos-klassisch.wav in Resources */,
 				A1A1A1A12F00000200000013 /* antonos-lied-whatoncewas.wav in Resources */,
+				A1A1A1A12F00000200000015 /* antonos-lied-outthefire.wav in Resources */,
+				A1A1A1A12F00000200000017 /* antonos-lied-livewell.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

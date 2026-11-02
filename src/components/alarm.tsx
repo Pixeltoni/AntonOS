@@ -125,6 +125,7 @@ export async function saveNativeClip(alarmId: string, blob: Blob, start: number)
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
   const bytes = clipWav(channels, buffer.sampleRate, clampClipStart(start, buffer.duration));
   await AntonAlarm.saveSound({ name: clipFile(alarmId), data: toBase64(bytes) });
+  window.dispatchEvent(new Event(SOUND_EVENT));
 }
 
 export const removeNativeClip = (alarmId: string) => (isNativeApp() ? AntonAlarm.removeSound({ name: clipFile(alarmId) }).catch(() => undefined) : Promise.resolve());
@@ -316,6 +317,7 @@ function AlarmSound({ alarm, playing, keepMusic, onFallback }: { alarm: Alarm; p
   // Spotify: auf einem verbundenen Gerät abspielen (Premium nötig)
   const spotifyDevice = useRef<string | null>(null);
   const spotifyTarget = useRef(80);
+  const gone = useRef(false);
   useEffect(() => {
     if (mode !== 'spotify') return;
     if (!connected || !clientId) return fail('Spotify ist nicht verbunden.');
@@ -340,7 +342,16 @@ function AlarmSound({ alarm, playing, keepMusic, onFallback }: { alarm: Alarm; p
             spotifyTarget.current = Math.max(60, volume ?? 80);
             return id;
           });
-      resume.then(fadeUp).catch((e: Error) => fail(`Spotify: ${e.message}.`));
+      resume
+        .then((device) => {
+          // Start kam erst nach dem Stopp an: anhalten, wenn das Lied nicht mehr laufen soll
+          if (stopped && !playingRef.current && !(gone.current && keepRef.current)) {
+            void api(clientId, `/me/player/pause?device_id=${device}`, { method: 'PUT' }).catch(() => undefined);
+            return;
+          }
+          fadeUp(device);
+        })
+        .catch((e: Error) => fail(`Spotify: ${e.message}.`));
     } else if (spotifyDevice.current) {
       api(clientId, '/me/player/pause', { method: 'PUT' }).catch(() => undefined);
     }
@@ -348,9 +359,10 @@ function AlarmSound({ alarm, playing, keepMusic, onFallback }: { alarm: Alarm; p
       stopped = true;
       clearInterval(ramp);
     };
-  }, [mode, playing, connected, clientId, alarm.soundUrl, fail, fade]);
+  }, [mode, playing, connected, clientId, alarm.soundUrl, fail, fade, playingRef, keepRef]);
   useEffect(
     () => () => {
+      gone.current = true;
       const device = spotifyDevice.current;
       if (!device || !clientId) return;
       // Nach dem Ausschalten auf Wunsch weiterspielen
@@ -722,6 +734,8 @@ export async function testNativeAlarm(alarm: Alarm): Promise<number> {
 let syncedList = '';
 /** Meldet nach jedem Stellen am iPhone, wie viele Wecker sich nicht stellen ließen */
 export const SYNC_EVENT = 'antonos:wecker-ios-gestellt';
+/** Ein eigener Ton liegt neu in der App – die Wecker müssen ihn neu einplanen */
+const SOUND_EVENT = 'antonos:wecker-ton-gespeichert';
 
 /**
  * iOS-App: stellt alle eingeschalteten Wecker als echte iPhone-Wecker (AlarmKit).
@@ -729,6 +743,16 @@ export const SYNC_EVENT = 'antonos:wecker-ios-gestellt';
  */
 export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
   const [state, setState] = useState<AlarmPermission | null>(() => (isNativeApp() ? null : 'unavailable'));
+  // Neu gespeicherter eigener Ton: Wecker erneut stellen, auch wenn die Liste gleich bleibt
+  const [soundRev, setSoundRev] = useState(0);
+  useEffect(() => {
+    const onSound = () => {
+      syncedList = '';
+      setSoundRev((n) => n + 1);
+    };
+    window.addEventListener(SOUND_EVENT, onSound);
+    return () => window.removeEventListener(SOUND_EVENT, onSound);
+  }, []);
   // Alle 5 Minuten neu berechnen: Einzeltermine (Überspringen, Pause) rücken weiter
   const [tick, setTick] = useState(() => Math.floor(Date.now() / 300_000));
   useEffect(() => {
@@ -755,7 +779,7 @@ export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
     return () => {
       cancelled = true;
     };
-  }, [list]);
+  }, [list, soundRev]);
   return state;
 }
 

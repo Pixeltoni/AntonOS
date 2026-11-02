@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import type { Alarm } from '../types';
 import { previousRing, alarmTitle, bedtimeNotices, canSnooze, defaultAlarm, defaultSleep, dueAlarms, expiredOneShots, fadeVolume, hasTask, hhmm, memoryLength, memorySequence, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, ShakeCounter, shakeTarget, silence, snoozeOf, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
 import { alarmSoundFile, toneOf, toneWav } from '../lib/tones';
-import { clampClipStart, clipFile, clipWav } from '../lib/clip';
+import { clampClipStart, CLIP_SECONDS, clipFile, clipWav } from '../lib/clip';
 import { today } from '../lib/dates';
 import { MorningBrief } from './morning';
 import { api, pickDevice, type Device } from '../lib/spotify';
@@ -247,9 +247,16 @@ function AlarmSound({ alarm, playing, keepMusic, onFallback }: { alarm: Alarm; p
       .catch(() => {
         if (mode === 'datei') fail('Das Lied ließ sich nicht abspielen.');
       });
+    // Eigenes Lied: nur den gewählten Ausschnitt wiederholen
+    const el = audio();
+    const clip = () => {
+      if (mode === 'datei' && (el.currentTime >= start + CLIP_SECONDS || el.currentTime < start - 1)) el.currentTime = start;
+    };
+    el.addEventListener('timeupdate', clip);
     // Sanft lauter (das iPhone lässt die Lautstärke im Browser nicht ändern – dort bleibt es laut)
     const ramp = fade ? setInterval(() => element && (element.volume = fadeVolume(Date.now() - t0)), 500) : 0;
     return () => {
+      el.removeEventListener('timeupdate', clip);
       clearInterval(ramp);
       stopLocal();
     };
@@ -1068,15 +1075,15 @@ export function AlarmRinger() {
   const left = Math.max(0, Math.ceil((ringing.deadline - now) / 1000));
   const clock = new Date(now);
   const showSong = alarm.sound !== 'ton' && !!(alarm.soundName || alarm.soundUrl);
-  // Lied läuft beim Klingeln – und auf Wunsch nach dem Stopp weiter (am iPhone kommt es erst hier)
-  const songOn = phase === 'klingelt' || (phase === 'aufgabe' && alarm.sound !== 'ton' && !!alarm.keepMusic);
+  // Lied läuft beim Klingeln – und nach dem Stopp weiter, außer es ist abgeschaltet (am iPhone kommt es erst hier)
+  const songOn = phase === 'klingelt' || (phase === 'aufgabe' && alarm.sound !== 'ton' && alarm.keepMusic !== false);
 
   return (
     <>
       {overlays}
       {createPortal(
         <div className={`alarm-ring ${phase}`} role="alertdialog" aria-modal="true" aria-label={`Wecker ${alarm.time}`}>
-          <AlarmSound key={alarm.id + String(ringing.test)} alarm={alarm} playing={songOn} keepMusic={!!alarm.keepMusic} onFallback={setFallbackNote} />
+          <AlarmSound key={alarm.id + String(ringing.test)} alarm={alarm} playing={songOn} keepMusic={alarm.keepMusic !== false} onFallback={setFallbackNote} />
           <div className="alarm-head">
             <span className="alarm-date">{clock.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
             <span className="alarm-big">{phase === 'klingelt' ? hhmm(clock) : alarm.time}</span>

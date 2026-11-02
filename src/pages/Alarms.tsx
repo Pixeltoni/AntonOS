@@ -316,7 +316,7 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
       soundUrl: same ? initial.soundUrl : '',
       soundName: same ? initial.soundName : sound === 'datei' && file ? file.name.replace(/\.[^.]+$/, '') : undefined,
       // Lieder laufen nach dem Stopp standardmäßig weiter – am iPhone kommen Spotify und YouTube erst dann
-      keepMusic: sound === 'ton' ? a.keepMusic : (a.keepMusic ?? true),
+      keepMusic: a.keepMusic,
     });
   };
 
@@ -422,7 +422,7 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
         {!song && <span className="muted small">Tippen spielt den Ton kurz vor. Er klingelt auch am gesperrten iPhone, im Lautlos-Modus und bei „Nicht stören“.</span>}
         <ul className="ios-group">
           <SwitchRow label="Sanft lauter werden" hint="Bei offener App: beginnt leise, nach 45 Sekunden voll laut" checked={!!a.fadeIn} onChange={(v) => set({ fadeIn: v })} />
-          {song && <SwitchRow label="Lied nach dem Stopp weiterspielen" hint="Läuft während der Aufgabe – Spotify auch danach" checked={!!a.keepMusic} onChange={(v) => set({ keepMusic: v })} />}
+          {song && <SwitchRow label="Lied nach dem Stopp weiterspielen" hint="Läuft während der Aufgabe – Spotify auch danach" checked={a.keepMusic !== false} onChange={(v) => set({ keepMusic: v })} />}
         </ul>
       </>
     );

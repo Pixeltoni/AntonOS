@@ -107,19 +107,26 @@ struct Snapshot: Codable {
     var shoppingOpen: Int
 }
 
-struct WAlarm: Codable {
+struct WAlarmRing: Codable {
+    var at: Double
     var title: String
-    var rings: [Double]
     var repeatText: String
     var sound: String
 
+    var date: Date { Date(timeIntervalSince1970: at / 1000) }
+
     enum CodingKeys: String, CodingKey {
-        case title, rings, sound
+        case at, title, sound
         case repeatText = "repeat"
     }
+}
 
-    func next(after now: Date) -> Date? {
-        rings.map { Date(timeIntervalSince1970: $0 / 1000) }.first { $0 > now }
+struct WAlarm: Codable {
+    var rings: [WAlarmRing]
+
+    /// Nächste Weckzeit nach `now` – mit Titel, Wiederholung und Ton ihres Weckers
+    func next(after now: Date) -> WAlarmRing? {
+        rings.first { $0.date > now }
     }
 }
 
@@ -205,7 +212,7 @@ extension Snapshot {
 
     /// Zeitpunkte, an denen sich die Anzeige ohne die App ändert (Wecker klingelt, Termin endet)
     func changes(after now: Date) -> [Date] {
-        var dates = agenda.map(\.end) + (alarm?.rings.map { Date(timeIntervalSince1970: $0 / 1000) } ?? [])
+        var dates = agenda.map(\.end) + (alarm?.rings.map(\.date) ?? [])
         if let midnight = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now)) { dates.append(midnight) }
         let limit = now.addingTimeInterval(36 * 3600)
         return Array(Set(dates.filter { $0 > now && $0 < limit })).sorted().prefix(30).map { $0 }
@@ -218,7 +225,7 @@ extension Snapshot {
         let alarmAt = tomorrow.addingTimeInterval(6 * 3600 + 45 * 60)
         return Snapshot(
             version: 1, at: now.timeIntervalSince1970 * 1000, day: WidgetStore.dayString(now),
-            alarm: WAlarm(title: "Wecker", rings: [alarmAt.timeIntervalSince1970 * 1000], repeatText: "Werktags", sound: "Sonnenaufgang"),
+            alarm: WAlarm(rings: [WAlarmRing(at: alarmAt.timeIntervalSince1970 * 1000, title: "Wecker", repeatText: "Werktags", sound: "Sonnenaufgang")]),
             rings: [
                 WRing(label: "Lernen", share: 0.75, text: "90/120 Min.", color: "#FA114F", track: "#3A0B12"),
                 WRing(label: "Bewegung", share: 1, text: "30/30 Min.", color: "#A6FF00", track: "#163A05"),

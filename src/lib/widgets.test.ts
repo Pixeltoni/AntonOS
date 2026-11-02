@@ -17,10 +17,19 @@ describe('widgetAlarm', () => {
     const a: Alarm = { ...defaultAlarm(), id: 'a', time: '06:45', days: [1, 2, 3, 4, 5], enabled: true, armedAt: 0, label: '' };
     const b: Alarm = { ...defaultAlarm(), id: 'b', time: '10:00', days: [], date: DAY, enabled: true, armedAt: 0, label: 'Vorlesung' };
     const w = widgetAlarm([a, b], now)!;
-    expect(w.title).toBe('Vorlesung');
-    expect(new Date(w.rings[0]).getHours()).toBe(10);
-    expect(new Date(w.rings[1]).getDate()).toBe(3);
-    expect(w.rings).toEqual([...w.rings].sort((x, y) => x - y));
+    expect(w.rings[0].title).toBe('Vorlesung');
+    expect(new Date(w.rings[0].at).getHours()).toBe(10);
+    // Danach der andere Wecker – mit seinen eigenen Angaben
+    expect(w.rings[1]).toMatchObject({ title: 'Wecker', repeat: 'Werktags' });
+    expect(new Date(w.rings[1].at).getDate()).toBe(3);
+    expect(w.rings.map((r) => r.at)).toEqual(w.rings.map((r) => r.at).sort((x, y) => x - y));
+  });
+
+  it('gleiche Weckzeiten mehrerer Wecker zählen nur einmal', () => {
+    const same = (id: string): Alarm => ({ ...defaultAlarm(), id, time: '07:00', days: [1, 2, 3, 4, 5, 6, 7], enabled: true, armedAt: 0 });
+    const w = widgetAlarm([same('a'), same('b'), same('c')], now)!;
+    expect(new Set(w.rings.map((r) => r.at)).size).toBe(w.rings.length);
+    expect(w.rings.length).toBe(8);
   });
 
   it('ohne eingeschaltete Wecker: null', () => {
@@ -102,6 +111,9 @@ describe('widgetSnapshot', () => {
     expect(s.shopping.map((x) => x.id)).toEqual(['s2', 's1']);
     expect(s.shoppingOpen).toBe(1);
     expect(s.exam).toMatchObject({ title: 'Lineare Algebra', date: '2026-11-14' });
+    // Heutige Prüfung, deren Uhrzeit vorbei ist, zählt nicht mehr
+    data.exams.push({ id: 'f', title: 'Vorbei', courseId: null, date: DAY, time: '08:00', location: '' }, { id: 'g', title: 'Gleich', courseId: null, date: DAY, time: '11:00', location: '' });
+    expect(widgetSnapshot(data, [], now).exam?.title).toBe('Gleich');
   });
 });
 

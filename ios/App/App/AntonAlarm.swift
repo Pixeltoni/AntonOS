@@ -25,6 +25,20 @@ enum AlarmStore {
     /// Gestoppter Wecker, dessen Aufgabe noch offen ist: { id, at }
     static let pendingKey = "antonAlarm.pending"
     static let stoppedNotification = Notification.Name("antonAlarmStopped")
+    /// Wie oft geschlummert wurde: { jsId: [Anzahl, Zeitpunkt] }
+    static let snoozeKey = "antonAlarm.snoozes"
+
+    /// Schlummer-Zähler eines Weckers (verfällt nach zwei Stunden)
+    static func snoozes(_ jsId: String) -> Int {
+        guard let entry = (defaults.dictionary(forKey: snoozeKey) ?? [:])[jsId] as? [Double], entry.count == 2 else { return 0 }
+        return Date().timeIntervalSince1970 - entry[1] < 2 * 3600 ? Int(entry[0]) : 0
+    }
+
+    static func setSnoozes(_ jsId: String, _ count: Int) {
+        var all = defaults.dictionary(forKey: snoozeKey) ?? [:]
+        all[jsId] = [Double(count), Date().timeIntervalSince1970]
+        defaults.set(all, forKey: snoozeKey)
+    }
 
     static var map: [String: String] {
         get { defaults.dictionary(forKey: mapKey) as? [String: String] ?? [:] }
@@ -33,7 +47,7 @@ enum AlarmStore {
 
     static func markStopped(alarmID: String) {
         let jsId = map[alarmID] ?? ""
-        defaults.set(["id": jsId, "at": Date().timeIntervalSince1970 * 1000], forKey: pendingKey)
+        defaults.set(["id": jsId, "at": Date().timeIntervalSince1970 * 1000, "snoozes": snoozes(jsId)], forKey: pendingKey)
     }
 }
 
@@ -46,39 +60,67 @@ enum AlarmScheduler {
     /// So lange nach „Stopp“ bleibt es still – danach klingelt der Wecker wieder, wenn die Aufgabe nicht gelöst ist.
     static let afterStopSeconds: TimeInterval = 60
 
-    static func attributes(title: String, withTask: Bool) -> AlarmAttributes<AntonAlarmMetadata> {
+    /// Zweiter Knopf: „Schlummern“, wenn erlaubt – sonst „Aufgabe lösen“ (bei Weckern mit Aufgabe)
+    static func attributes(title: String, withTask: Bool, snooze: Bool) -> AlarmAttributes<AntonAlarmMetadata> {
         let stop = AlarmButton(text: "Stopp", textColor: .white, systemImageName: "stop.fill")
         let task = AlarmButton(text: "Aufgabe lösen", textColor: .white, systemImageName: "brain.head.profile")
+        let nap = AlarmButton(text: "Schlummern", textColor: .white, systemImageName: "zzz")
+        let second: AlarmButton? = snooze ? nap : (withTask ? task : nil)
         let alert = AlarmPresentation.Alert(
             title: LocalizedStringResource(stringLiteral: title),
             stopButton: stop,
-            secondaryButton: withTask ? task : nil,
-            secondaryButtonBehavior: withTask ? .custom : nil
+            secondaryButton: second,
+            secondaryButtonBehavior: second == nil ? nil : .custom
         )
-        return AlarmAttributes(presentation: AlarmPresentation(alert: alert), metadata: AntonAlarmMetadata(), tintColor: .blue)
+        return AlarmAttributes(presentation: AlarmPresentation(alert: alert), metadata: AntonAlarmMetadata(), tintColor: .orange)
     }
 
-    static func schedule(id: UUID, title: String, schedule: Alarm.Schedule, withTask: Bool = true) async throws {
+    /// `snooze`: Schlummer-Dauer in Sekunden (0 = kein Schlummern), `snoozeMax`: höchste Anzahl
+    static func schedule(id: UUID, title: String, schedule: Alarm.Schedule, withTask: Bool = true, snooze: Int = 0, snoozeMax: Int = 3) async throws {
+        let secondary: (any LiveActivityIntent)?
+        if snooze > 0 {
+            secondary = AntonAlarmSnoozeIntent(alarmID: id.uuidString, title: title, withTask: withTask, seconds: snooze, maxCount: snoozeMax)
+        } else if withTask {
+            secondary = AntonAlarmOpenIntent(alarmID: id.uuidString)
+        } else {
+            secondary = nil
+        }
         let config = AlarmManager.AlarmConfiguration<AntonAlarmMetadata>(
             countdownDuration: nil,
             schedule: schedule,
-            attributes: attributes(title: title, withTask: withTask),
+            attributes: attributes(title: title, withTask: withTask, snooze: snooze > 0),
             stopIntent: withTask ? AntonAlarmStopIntent(alarmID: id.uuidString) : nil,
-            secondaryIntent: withTask ? AntonAlarmOpenIntent(alarmID: id.uuidString) : nil,
+            secondaryIntent: secondary,
             sound: .default
         )
         _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
     }
 
     /// Klingelt in `seconds` Sekunden erneut (ersetzt ein früheres Nachklingeln).
-    static func ringAgain(in seconds: TimeInterval, jsId: String, title: String, withTask: Bool = true) async throws {
+    static func ringAgain(in seconds: TimeInterval, jsId: String, title: String, withTask: Bool = true, snooze: Int = 0, snoozeMax: Int = 3) async throws {
         cancelFallback()
         let id = UUID()
         var map = AlarmStore.map
         map[id.uuidString] = jsId
         AlarmStore.map = map
         AlarmStore.defaults.set(id.uuidString, forKey: AlarmStore.fallbackKey)
-        try await schedule(id: id, title: title, schedule: .fixed(Date().addingTimeInterval(max(5, seconds))), withTask: withTask)
+        try await schedule(id: id, title: title, schedule: .fixed(Date().addingTimeInterval(max(5, seconds))), withTask: withTask, snooze: snooze, snoozeMax: snoozeMax)
+    }
+
+    /// „Schlummern“ am Sperrbildschirm: still und nach `seconds` wieder klingeln – höchstens `maxCount`-mal
+    static func handleSnooze(alarmID: String, title: String, withTask: Bool, seconds: Int, maxCount: Int) async {
+        let jsId = AlarmStore.map[alarmID] ?? ""
+        let count = AlarmStore.snoozes(jsId)
+        if count >= maxCount {
+            // Genug geschlummert: mit Aufgabe wie „Stopp“, sonst gleich wieder klingeln – ohne Schlummern
+            if withTask { return await handleStop(alarmID: alarmID, notify: true) }
+            try? AlarmManager.shared.stop(id: UUID(uuidString: alarmID) ?? UUID())
+            try? await ringAgain(in: 5, jsId: jsId, title: title, withTask: false)
+            return
+        }
+        try? AlarmManager.shared.stop(id: UUID(uuidString: alarmID) ?? UUID())
+        AlarmStore.setSnoozes(jsId, count + 1)
+        try? await ringAgain(in: TimeInterval(seconds), jsId: jsId, title: title, withTask: withTask, snooze: seconds, snoozeMax: maxCount)
     }
 
     static func cancelFallback() {
@@ -136,6 +178,45 @@ struct AntonAlarmStopIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         await AlarmScheduler.handleStop(alarmID: alarmID, notify: true)
+        return .result()
+    }
+}
+
+/// „Schlummern“ am Sperrbildschirm: läuft im Hintergrund.
+@available(iOS 26.0, *)
+struct AntonAlarmSnoozeIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Schlummern"
+    static var isDiscoverable: Bool = false
+
+    @Parameter(title: "Wecker")
+    var alarmID: String
+    @Parameter(title: "Titel")
+    var alarmTitle: String
+    @Parameter(title: "Mit Aufgabe")
+    var withTask: Bool
+    @Parameter(title: "Sekunden")
+    var seconds: Int
+    @Parameter(title: "Höchstens")
+    var maxCount: Int
+
+    init() {
+        alarmID = ""
+        alarmTitle = "Wecker"
+        withTask = true
+        seconds = 540
+        maxCount = 3
+    }
+
+    init(alarmID: String, title: String, withTask: Bool, seconds: Int, maxCount: Int) {
+        self.alarmID = alarmID
+        self.alarmTitle = title
+        self.withTask = withTask
+        self.seconds = seconds
+        self.maxCount = maxCount
+    }
+
+    func perform() async throws -> some IntentResult {
+        await AlarmScheduler.handleSnooze(alarmID: alarmID, title: alarmTitle, withTask: withTask, seconds: seconds, maxCount: maxCount)
         return .result()
     }
 }
@@ -216,7 +297,7 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(["state": "unavailable"])
     }
 
-    /// Ersetzt alle Weckzeiten: `alarms: [{ id, title, hour, minute, days: [1…7] }]` (leere Tage = einmalig)
+    /// Ersetzt alle Weckzeiten: `alarms: [{ id, title, hour, minute, days: [1…7], task, at?, snooze?, snoozeMax? }]` (leere Tage = einmalig, `at` = fester Zeitpunkt in ms)
     @objc func sync(_ call: CAPPluginCall) {
         #if canImport(AlarmKit)
         if #available(iOS 26.0, *) {
@@ -239,12 +320,22 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
                     guard let jsId = item["id"] as? String, let hour = (item["hour"] as? NSNumber)?.intValue, let minute = (item["minute"] as? NSNumber)?.intValue else { continue }
                     let title = item["title"] as? String ?? "Wecker"
                     let withTask = item["task"] as? Bool ?? true
+                    let snooze = (item["snooze"] as? NSNumber)?.intValue ?? 0
+                    let snoozeMax = (item["snoozeMax"] as? NSNumber)?.intValue ?? 3
                     let days = (item["days"] as? JSArray ?? []).compactMap { ($0 as? NSNumber)?.intValue }.compactMap(AlarmScheduler.weekday)
-                    let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
-                    let schedule = Alarm.Schedule.relative(.init(time: time, repeats: days.isEmpty ? .never : .weekly(days)))
+                    let schedule: Alarm.Schedule
+                    if let at = (item["at"] as? NSNumber)?.doubleValue {
+                        // Fester Termin (bestimmtes Datum, Überspringen oder Pause)
+                        let date = Date(timeIntervalSince1970: at / 1000)
+                        if date <= Date() { continue }
+                        schedule = .fixed(date)
+                    } else {
+                        let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
+                        schedule = .relative(.init(time: time, repeats: days.isEmpty ? .never : .weekly(days)))
+                    }
                     let id = UUID()
                     do {
-                        try await AlarmScheduler.schedule(id: id, title: title, schedule: schedule, withTask: withTask)
+                        try await AlarmScheduler.schedule(id: id, title: title, schedule: schedule, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax)
                         map[id.uuidString] = jsId
                     } catch {
                         failed += 1
@@ -267,9 +358,11 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
             let jsId = call.getString("id") ?? ""
             let title = call.getString("title") ?? "Wecker"
             let withTask = call.getBool("task") ?? true
+            let snooze = call.getInt("snooze") ?? 0
+            let snoozeMax = call.getInt("snoozeMax") ?? 3
             Task {
                 do {
-                    try await AlarmScheduler.ringAgain(in: seconds, jsId: jsId, title: title, withTask: withTask)
+                    try await AlarmScheduler.ringAgain(in: seconds, jsId: jsId, title: title, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax)
                     call.resolve()
                 } catch {
                     call.reject("Wecker ließ sich nicht planen")
@@ -289,6 +382,7 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         #endif
         AlarmStore.defaults.removeObject(forKey: AlarmStore.pendingKey)
+        AlarmStore.defaults.removeObject(forKey: AlarmStore.snoozeKey)
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["antonos-wecker-aufgabe"])
         call.resolve()
     }
@@ -297,6 +391,6 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func takeStopped(_ call: CAPPluginCall) {
         guard let pending = AlarmStore.defaults.dictionary(forKey: AlarmStore.pendingKey) else { return call.resolve([:]) }
         AlarmStore.defaults.removeObject(forKey: AlarmStore.pendingKey)
-        call.resolve(["id": pending["id"] as? String ?? "", "at": pending["at"] as? Double ?? 0])
+        call.resolve(["id": pending["id"] as? String ?? "", "at": pending["at"] as? Double ?? 0, "snoozes": pending["snoozes"] as? Int ?? 0])
     }
 }

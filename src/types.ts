@@ -553,6 +553,8 @@ export interface Settings {
   semester: SemesterSettings;
   /** Eigene Packlisten-Vorlagen */
   packTemplates?: PackTemplate[];
+  /** Schlafziel und Erinnerung zur Schlafenszeit (Wecker) */
+  sleep?: SleepSettings;
 }
 
 export interface SemesterSettings {
@@ -602,7 +604,7 @@ export interface FocusSession {
 }
 
 /** keine = einfach ausschalten */
-export type AlarmChallenge = 'rechnen' | 'text' | 'qr' | 'keine';
+export type AlarmChallenge = 'rechnen' | 'text' | 'qr' | 'schuetteln' | 'memory' | 'keine';
 /** Standard-Ton, eigene Audiodatei (nur auf diesem Gerät), YouTube oder Spotify */
 export type AlarmSound = 'ton' | 'datei' | 'youtube' | 'spotify';
 
@@ -630,6 +632,47 @@ export interface Alarm {
   phrase: string;
   /** QR: Inhalt des hinterlegten Codes */
   qr: string;
+  /** Einmaliger Wecker an diesem Tag (nur ohne Wochentage) */
+  date?: DateStr;
+  /** Dieser eine Tag wird übersprungen („Nur den nächsten auslassen“) */
+  skip?: DateStr;
+  /** Bis einschließlich zu diesem Tag pausiert (z. B. Urlaub) */
+  pausedUntil?: DateStr;
+  /** Schlummern erlaubt */
+  snooze?: boolean;
+  /** Schlummer-Dauer in Minuten */
+  snoozeMinutes?: number;
+  /** Höchstens so oft schlummern */
+  snoozeMax?: number;
+  /** Klang beginnt leise und wird lauter */
+  fadeIn?: boolean;
+  /** Ein paar Minuten nach dem Ausschalten fragen, ob man wach ist */
+  wakeCheck?: boolean;
+  /** Minuten bis zum Wach-Check */
+  wakeCheckMinutes?: number;
+  /** Nach dem Ausschalten den Guten-Morgen-Bildschirm zeigen (Standard: an) */
+  morning?: boolean;
+  /** Spotify nach dem Ausschalten leise weiterlaufen lassen */
+  keepMusic?: boolean;
+}
+
+/** Ein Aufstehen: wann der Wecker klingelte, wann er aus war, wie oft geschlummert */
+export interface WakeLog {
+  id: ID;
+  date: DateStr;
+  alarmId: ID;
+  /** Geplante Weckzeit (ms) */
+  ringAt: number;
+  /** Aufgabe gelöst bzw. ausgeschaltet (ms) */
+  offAt: number;
+  snoozes: number;
+}
+
+export interface SleepSettings {
+  /** Schlafziel in Minuten */
+  goal: number;
+  /** Zur Schlafenszeit erinnern */
+  remind: boolean;
 }
 
 export interface Data {
@@ -663,6 +706,7 @@ export interface Data {
   albums: Album[];
   tools: Tool[];
   alarms: Alarm[];
+  wakeLogs: WakeLog[];
   settings: Settings;
 }
 

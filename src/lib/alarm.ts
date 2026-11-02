@@ -1,4 +1,4 @@
-import type { Alarm, AlarmChallenge } from '../types';
+import type { Alarm, AlarmChallenge, SleepSettings, WakeLog } from '../types';
 import { toDateStr } from './dates';
 
 /** So lange nach der Weckzeit klingelt der Wecker noch, z. B. wenn das Handy kurz gesperrt war (ms) */
@@ -8,12 +8,15 @@ export const SOLVE_SECONDS = 15;
 /** Beim QR-Code mehr Zeit – man muss erst zum Code laufen */
 export const QR_SOLVE_SECONDS = 60;
 
-export const solveSeconds = (challenge: AlarmChallenge) => (challenge === 'qr' ? QR_SOLVE_SECONDS : SOLVE_SECONDS);
+/** Schütteln und Memory brauchen etwas länger (Folge ansehen, Handy greifen) */
+export const solveSeconds = (challenge: AlarmChallenge) => (challenge === 'qr' ? QR_SOLVE_SECONDS : challenge === 'schuetteln' || challenge === 'memory' ? 30 : SOLVE_SECONDS);
 
 export const CHALLENGES: { id: AlarmChallenge; label: string; hint: string }[] = [
   { id: 'rechnen', label: 'Rechnen', hint: 'Matheaufgaben lösen' },
   { id: 'text', label: 'Text', hint: 'Einen Satz fehlerfrei eingeben' },
   { id: 'qr', label: 'QR-Code', hint: 'Einen hinterlegten Code scannen, z. B. im Bad' },
+  { id: 'schuetteln', label: 'Schütteln', hint: 'Das Handy kräftig schütteln' },
+  { id: 'memory', label: 'Memory', hint: 'Eine Farbfolge merken und nachtippen' },
   { id: 'keine', label: 'Keine', hint: 'Einfach ausschalten' },
 ];
 
@@ -35,7 +38,27 @@ export const defaultAlarm = (): Omit<Alarm, 'id'> => ({
   rounds: 3,
   phrase: '',
   qr: '',
+  snooze: true,
+  snoozeMinutes: 9,
+  snoozeMax: 3,
+  fadeIn: true,
+  wakeCheck: false,
+  wakeCheckMinutes: 5,
+  morning: true,
 });
+
+export const SNOOZE_MINUTES = [5, 9, 10, 15];
+export const WAKE_CHECK_MINUTES = [3, 5, 10];
+
+/** Schlummer-Einstellungen mit Standardwerten (ältere Wecker: aus) */
+export const snoozeOf = (a: Pick<Alarm, 'snooze' | 'snoozeMinutes' | 'snoozeMax'>) => ({
+  on: !!a.snooze,
+  minutes: Math.min(30, Math.max(1, a.snoozeMinutes ?? 9)),
+  max: Math.min(10, Math.max(1, a.snoozeMax ?? 3)),
+});
+
+/** Darf nach `count`-mal Schlummern noch einmal geschlummert werden? */
+export const canSnooze = (a: Pick<Alarm, 'snooze' | 'snoozeMinutes' | 'snoozeMax'>, count: number) => snoozeOf(a).on && count < snoozeOf(a).max;
 
 /** 1 = Montag … 7 = Sonntag */
 export const weekday = (d: Date) => ((d.getDay() + 6) % 7) + 1;
@@ -48,18 +71,72 @@ function at(day: Date, time: string): Date {
   return d;
 }
 
-const ringsOn = (alarm: Alarm, d: Date) => alarm.days.length === 0 || alarm.days.includes(weekday(d));
+/** Klingelt der Wecker an diesem Tag? Wochentage, festes Datum, Überspringen und Pause */
+export function ringsOn(alarm: Pick<Alarm, 'days' | 'date' | 'skip' | 'pausedUntil'>, d: Date): boolean {
+  const day = toDateStr(d);
+  if (alarm.skip === day) return false;
+  if (alarm.pausedUntil && day <= alarm.pausedUntil) return false;
+  if (alarm.days.length > 0) return alarm.days.includes(weekday(d));
+  return !alarm.date || alarm.date === day;
+}
 
-/** Nächster Zeitpunkt, an dem der Wecker klingelt (nach `now`), oder null, wenn er aus ist. */
-export function nextRing(alarm: Alarm, now: Date): Date | null {
-  if (!alarm.enabled) return null;
-  for (let i = 0; i <= 7; i++) {
+/** Die nächsten `count` Klingelzeitpunkte nach `now` (höchstens gut ein Jahr voraus) */
+export function nextRings(alarm: Alarm, now: Date, count: number): Date[] {
+  const out: Date[] = [];
+  if (!alarm.enabled) return out;
+  const once = alarm.days.length === 0;
+  for (let i = 0; i <= 400 && out.length < count; i++) {
     const day = new Date(now);
     day.setDate(now.getDate() + i);
     const ring = at(day, alarm.time);
-    if (ring > now && ringsOn(alarm, ring)) return ring;
+    if (ring > now && ringsOn(alarm, ring)) {
+      out.push(ring);
+      if (once) break;
+    }
   }
-  return null;
+  return out;
+}
+
+/** Nächster Zeitpunkt, an dem der Wecker klingelt (nach `now`), oder null, wenn er aus ist. */
+export const nextRing = (alarm: Alarm, now: Date): Date | null => nextRings(alarm, now, 1)[0] ?? null;
+
+/** Der nächste klingelnde Wecker */
+export function nextAlarm(alarms: Alarm[], now: Date): { alarm: Alarm; at: Date } | null {
+  let best: { alarm: Alarm; at: Date } | null = null;
+  for (const alarm of alarms) {
+    const ring = nextRing(alarm, now);
+    if (ring && (!best || ring < best.at)) best = { alarm, at: ring };
+  }
+  return best;
+}
+
+/** Letzte Weckzeit (laut Uhrzeit) bis `atMs` – z. B. wann ein am iPhone gestoppter Wecker geklingelt hat (ms) */
+export function previousRing(alarm: Pick<Alarm, 'time'>, atMs: number): number {
+  const ref = new Date(atMs);
+  for (const back of [0, 1]) {
+    const day = new Date(ref);
+    day.setDate(ref.getDate() - back);
+    const ring = at(day, alarm.time).getTime();
+    if (ring <= atMs) return ring;
+  }
+  return atMs;
+}
+
+/** „Nur den nächsten auslassen“: der Tag des nächsten Klingelns */
+export function skipNext(alarm: Alarm, now: Date): Pick<Alarm, 'skip'> {
+  const ring = nextRing({ ...alarm, skip: undefined }, now);
+  return { skip: ring ? toDateStr(ring) : undefined };
+}
+
+/** Ist das Überspringen bzw. die Pause noch aktiv? */
+export const isSkipping = (a: Alarm, now: Date) => !!a.skip && a.skip >= toDateStr(now);
+export const isPaused = (a: Alarm, now: Date) => !!a.pausedUntil && a.pausedUntil >= toDateStr(now);
+
+/** Schnellwecker in `minutes` Minuten, z. B. für einen Power-Nap */
+export function quickAlarm(minutes: number, now: Date): Omit<Alarm, 'id'> {
+  const ring = new Date(now.getTime() + minutes * 60_000);
+  const hhmm = `${String(ring.getHours()).padStart(2, '0')}:${String(ring.getMinutes()).padStart(2, '0')}`;
+  return { ...defaultAlarm(), time: hhmm, date: toDateStr(ring), days: [], label: `Power-Nap ${minutes} Min.`, challenge: 'keine', snooze: false, fadeIn: true, morning: false, armedAt: now.getTime() - 60_000 };
 }
 
 /** Eindeutige Kennung eines Klingelns – damit jeder Termin nur einmal klingelt */
@@ -97,6 +174,13 @@ export function daysLabel(days: number[]): string {
   return set.map((d) => WEEKDAYS[d - 1]).join(', ');
 }
 
+/** „Einmalig“ bzw. „Einmalig · Fr., 6. Nov.“ */
+export function repeatLabel(a: Pick<Alarm, 'days' | 'date'>): string {
+  if (a.days.length > 0 || !a.date) return daysLabel(a.days);
+  const [y, m, d] = a.date.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 /** „in 7 Std. 5 Min.“ */
 export function untilLabel(ring: Date, now: Date): string {
   const min = Math.max(1, Math.ceil((ring.getTime() - now.getTime()) / 60_000));
@@ -105,6 +189,100 @@ export function untilLabel(ring: Date, now: Date): string {
   if (h === 0) return `in ${m} Min.`;
   if (h >= 24) return `in ${Math.floor(h / 24)} T. ${h % 24} Std.`;
   return `in ${h} Std.${m ? ` ${m} Min.` : ''}`;
+}
+
+/* ---------- Schlaf ---------- */
+
+export const defaultSleep = (): SleepSettings => ({ goal: 8 * 60, remind: false });
+export const SLEEP_GOALS = [6 * 60, 6.5 * 60, 7 * 60, 7.5 * 60, 8 * 60, 8.5 * 60, 9 * 60];
+/** So lange braucht man im Schnitt zum Einschlafen (Minuten) */
+export const FALL_ASLEEP = 15;
+/** Ein Schlafzyklus dauert etwa 90 Minuten */
+export const CYCLE = 90;
+
+/** „7 Std. 30 Min.“ */
+export function durationLabel(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes));
+  const h = Math.floor(m / 60);
+  return `${h} Std.${m % 60 ? ` ${m % 60} Min.` : ''}`;
+}
+
+export const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+/** Wann man ins Bett muss, um vor dem Wecker `goal` Minuten zu schlafen */
+export const bedtimeFor = (ring: Date, goal: number) => new Date(ring.getTime() - (goal + FALL_ASLEEP) * 60_000);
+
+/** Weckzeiten am Ende eines Schlafzyklus, wenn man jetzt ins Bett geht (4½ bis 9 Std. Schlaf), auf 5 Min. gerundet */
+export function cycleTimes(now: Date): { at: Date; cycles: number }[] {
+  return [3, 4, 5, 6].map((cycles) => {
+    const t = now.getTime() + (FALL_ASLEEP + cycles * CYCLE) * 60_000;
+    return { at: new Date(Math.round(t / 300_000) * 300_000), cycles };
+  });
+}
+
+/** Erinnerungen zur Schlafenszeit für die nächsten Tage (je Weckmorgen der früheste Wecker) */
+export function bedtimeNotices(alarms: Alarm[], sleep: SleepSettings, now: Date, days = 7): { tag: string; at: number; title: string; body: string; href: string }[] {
+  if (!sleep.remind) return [];
+  const firstPerDay = new Map<string, Date>();
+  for (const a of alarms) {
+    for (const ring of nextRings(a, now, days + 1)) {
+      const key = toDateStr(ring);
+      const known = firstPerDay.get(key);
+      if (!known || ring < known) firstPerDay.set(key, ring);
+    }
+  }
+  const limit = now.getTime() + (days + 1) * 86_400_000;
+  return [...firstPerDay.entries()]
+    .map(([day, ring]) => ({ day, ring, bed: bedtimeFor(ring, sleep.goal) }))
+    .filter((x) => x.bed.getTime() > now.getTime() && x.ring.getTime() <= limit)
+    .sort((a, b) => a.bed.getTime() - b.bed.getTime())
+    .map(({ day, ring, bed }) => ({
+      tag: `schlafenszeit-${day}`,
+      at: bed.getTime(),
+      title: '🌙 Schlafenszeit',
+      body: `Für ${durationLabel(sleep.goal)} Schlaf bis zum Wecker um ${hhmm(ring)}.`,
+      href: '#/wecker',
+    }));
+}
+
+/* ---------- Aufsteh-Statistik ---------- */
+
+/** Pünktlich = nicht geschlummert und spätestens 10 Minuten nach dem Klingeln aus */
+export const isPunctual = (l: Pick<WakeLog, 'snoozes' | 'ringAt' | 'offAt'>) => l.snoozes === 0 && l.offAt - l.ringAt <= 10 * 60_000;
+
+export interface WakeStats {
+  /** Durchschnittliche Aufstehzeit „HH:MM“ (letzte 14 Tage) */
+  avgWake: string | null;
+  /** Durchschnittlich geschlummert */
+  avgSnoozes: number;
+  /** Pünktliche Morgen in Folge (bis zum letzten) */
+  streak: number;
+  /** Letzte Tage (je Tag das erste Aufstehen), neueste zuerst */
+  recent: WakeLog[];
+}
+
+export function wakeStats(logs: WakeLog[], now: Date): WakeStats {
+  const byDay = new Map<string, WakeLog>();
+  for (const l of [...logs].sort((a, b) => a.offAt - b.offAt)) if (!byDay.has(l.date)) byDay.set(l.date, l);
+  const days = [...byDay.values()].sort((a, b) => b.date.localeCompare(a.date));
+  const from = toDateStr(new Date(now.getTime() - 13 * 86_400_000));
+  const recent = days.filter((l) => l.date >= from);
+  let streak = 0;
+  for (const l of days) {
+    if (!isPunctual(l)) break;
+    streak++;
+  }
+  const mins = recent.map((l) => {
+    const d = new Date(l.offAt);
+    return d.getHours() * 60 + d.getMinutes();
+  });
+  const avg = mins.length ? Math.round(mins.reduce((a, b) => a + b, 0) / mins.length) : null;
+  return {
+    avgWake: avg === null ? null : `${String(Math.floor(avg / 60)).padStart(2, '0')}:${String(avg % 60).padStart(2, '0')}`,
+    avgSnoozes: recent.length ? Math.round((recent.reduce((a, l) => a + l.snoozes, 0) / recent.length) * 10) / 10 : 0,
+    streak,
+    recent,
+  };
 }
 
 /* ---------- Aufgaben ---------- */
@@ -146,6 +324,38 @@ export const PHRASES = [
 ];
 
 export const randomPhrase = (rnd: () => number = Math.random) => PHRASES[Math.floor(rnd() * PHRASES.length)];
+
+/** Memory: Länge der Farbfolge je Schwierigkeit */
+export const memoryLength = (level: 1 | 2 | 3) => (level === 1 ? 4 : level === 2 ? 6 : 8);
+
+/** Zufällige Folge aus 4 Feldern, nie zweimal dasselbe direkt hintereinander */
+export function memorySequence(length: number, rnd: () => number = Math.random): number[] {
+  const out: number[] = [];
+  while (out.length < length) {
+    const n = Math.floor(rnd() * 4);
+    if (n !== out.at(-1)) out.push(n);
+  }
+  return out;
+}
+
+/** Schütteln: Anzahl je Schwierigkeit */
+export const shakeTarget = (level: 1 | 2 | 3) => (level === 1 ? 15 : level === 2 ? 30 : 50);
+
+/** Zählt kräftige Bewegungen aus Beschleunigungswerten (m/s², mit Schwerkraft) */
+export class ShakeCounter {
+  count = 0;
+  private last = -Infinity;
+  /** Ab dieser Stärke zählt eine Bewegung (gut 2 g) */
+  constructor(private threshold = 22, private gap = 250) {}
+  feed(x: number, y: number, z: number, t: number): number {
+    const force = Math.sqrt(x * x + y * y + z * z);
+    if (force >= this.threshold && t - this.last >= this.gap) {
+      this.count++;
+      this.last = t;
+    }
+    return this.count;
+  }
+}
 
 /** Leerzeichen und Groß-/Kleinschreibung egal (Autokorrektur am Handy), sonst muss alles stimmen. */
 const squash = (s: string) => s.trim().replace(/\s+/g, ' ').toLocaleLowerCase('de');
@@ -223,6 +433,9 @@ export function alarmTone(rate = 16000): Uint8Array {
   return wav(samples, rate);
 }
 
+/** Sanft lauter: Lautstärke (0…1) nach `elapsed` ms – von 10 % auf 100 % in `duration` ms */
+export const fadeVolume = (elapsed: number, duration = 45_000, start = 0.1) => Math.min(1, start + (1 - start) * Math.max(0, elapsed) / duration);
+
 /** Eine stille Viertelsekunde – zum Freischalten der Wiedergabe auf dem iPhone */
 export const silence = (rate = 8000) => wav(new Float32Array(rate / 4), rate);
 
@@ -237,26 +450,47 @@ export interface NativeAlarm {
   days: number[];
   /** false = „Stopp“ schaltet ihn einfach aus */
   task: boolean;
+  /** Fester Zeitpunkt (ms) statt Uhrzeit – bei festem Datum, Überspringen oder Pause */
+  at?: number;
+  /** Schlummern: Dauer in Sekunden und höchste Anzahl */
+  snooze?: number;
+  snoozeMax?: number;
 }
+
+/** So viele einzelne Termine werden vorab gestellt, wenn sich der Wecker nicht als Wochenplan stellen lässt */
+export const NATIVE_FIXED = 14;
 
 export const alarmTitle = (alarm: Pick<Alarm, 'label'>) => alarm.label.trim() || 'Wecker';
 
-/** Eingeschaltete Wecker im Format für das iPhone */
-export function nativeAlarms(alarms: Alarm[]): NativeAlarm[] {
-  return alarms
-    .filter((a) => a.enabled && /^\d\d:\d\d$/.test(a.time))
-    .map((a) => {
-      const [hour, minute] = a.time.split(':').map(Number);
-      return { id: a.id, title: alarmTitle(a), hour, minute, days: [...new Set(a.days)].filter((d) => d >= 1 && d <= 7).sort(), task: hasTask(a) };
-    })
-    .sort((x, y) => x.id.localeCompare(y.id));
+/**
+ * Eingeschaltete Wecker im Format für das iPhone. Wecker mit festem Datum, Überspringen
+ * oder Pause gehen als einzelne Termine (die nächsten `NATIVE_FIXED`) – AlarmKit kennt
+ * keine Ausnahmen im Wochenplan.
+ */
+export function nativeAlarms(alarms: Alarm[], now = new Date()): NativeAlarm[] {
+  const out: NativeAlarm[] = [];
+  for (const a of alarms) {
+    if (!a.enabled || !/^\d\d:\d\d$/.test(a.time)) continue;
+    const [hour, minute] = a.time.split(':').map(Number);
+    const s = snoozeOf(a);
+    const base: NativeAlarm = { id: a.id, title: alarmTitle(a), hour, minute, days: [...new Set(a.days)].filter((d) => d >= 1 && d <= 7).sort(), task: hasTask(a) };
+    if (s.on) Object.assign(base, { snooze: s.minutes * 60, snoozeMax: s.max });
+    const special = (a.days.length === 0 && !!a.date) || isSkipping(a, now) || isPaused(a, now);
+    if (!special) {
+      out.push(base);
+      continue;
+    }
+    for (const ring of nextRings(a, now, a.days.length === 0 ? 1 : NATIVE_FIXED)) out.push({ ...base, days: [], at: ring.getTime() });
+  }
+  return out.sort((x, y) => x.id.localeCompare(y.id) || (x.at ?? 0) - (y.at ?? 0));
 }
 
 /**
  * Wie lange das iPhone nach „Stopp“ still bleibt, bevor es wieder klingelt.
  * Während der Aufgabe: Restzeit plus Puffer, damit das offene AntonOS zuerst klingelt.
  */
-export const nativeRingAgainSeconds = (phase: 'klingelt' | 'aufgabe', secondsLeft: number) => (phase === 'aufgabe' ? Math.max(0, secondsLeft) + 15 : 30);
+export const nativeRingAgainSeconds = (phase: 'klingelt' | 'aufgabe' | 'schlummert', secondsLeft: number) =>
+  phase === 'aufgabe' ? Math.max(0, secondsLeft) + 15 : phase === 'schlummert' ? Math.max(5, secondsLeft) : 30;
 
 /**
  * Einmalige Wecker, deren Weckzeit seit dem Einschalten schon vorbei ist – das iPhone hat sie

@@ -40,6 +40,7 @@ export const emptyData = (): Data => ({
   albums: [],
   tools: [],
   alarms: [],
+  wakeLogs: [],
   settings: defaultSettings(),
   schemaVersion: SCHEMA_VERSION,
 });

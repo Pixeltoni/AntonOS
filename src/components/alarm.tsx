@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { Alarm } from '../types';
-import { alarmTitle, alarmTone, defaultAlarm, dueAlarms, expiredOneShots, hasTask, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, silence, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
+import { previousRing, alarmTitle, alarmTone, bedtimeNotices, canSnooze, defaultAlarm, defaultSleep, dueAlarms, expiredOneShots, fadeVolume, hasTask, hhmm, memoryLength, memorySequence, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, ShakeCounter, shakeTarget, silence, snoozeOf, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
+import { today } from '../lib/dates';
+import { MorningBrief } from './morning';
 import { api, pickDevice, type Device } from '../lib/spotify';
 import { isMobile, notify } from '../lib/notify';
 import { useSpotify } from './spotify';
@@ -56,14 +58,17 @@ export function unlockAlarmAudio() {
   el.play().then(() => el.pause()).catch(() => undefined);
 }
 
-function playLocal(src: string) {
+function playLocal(src: string, volume = 1) {
   const el = audio();
   if (el.src !== src) el.src = src;
   el.loop = true;
   el.currentTime = 0;
-  el.volume = 1;
+  el.volume = volume;
   return el.play();
 }
+
+/** Spotify nach dem Ausschalten weiterlaufen lassen (einmalig, wird beim Beenden gesetzt) */
+let keepMusicOnce = false;
 
 const stopLocal = () => element?.pause();
 
@@ -74,6 +79,7 @@ interface YTPlayer {
   pauseVideo(): void;
   seekTo(s: number): void;
   getPlayerState(): number;
+  setVolume(v: number): void;
   destroy(): void;
 }
 interface YTNamespace {
@@ -112,8 +118,12 @@ async function startSpotify(clientId: string, link: string) {
   if (!device) throw new Error('Kein Spotify-Gerät gefunden');
   const body = target.kind === 'track' ? { uris: [target.uri] } : { context_uri: target.uri };
   await api(clientId, `/me/player/play?device_id=${device.id}`, { method: 'PUT', body: JSON.stringify(body) });
-  return device.id!;
+  return { id: device.id!, volume: device.volume_percent ?? null };
 }
+
+/** Spotify-Lautstärke setzen – manche Geräte (z. B. das iPhone) erlauben das nicht, dann passiert nichts */
+const spotifyVolume = (clientId: string, device: string, percent: number) =>
+  api(clientId, `/me/player/volume?volume_percent=${Math.round(Math.min(100, Math.max(0, percent)))}&device_id=${device}`, { method: 'PUT' }).catch(() => undefined);
 
 /* ---------- Klang eines klingelnden Weckers ---------- */
 
@@ -121,7 +131,7 @@ async function startSpotify(clientId: string, link: string) {
  * Spielt den gewählten Klang, solange `playing` gilt. Klappt YouTube, Spotify oder die
  * eigene Datei nicht, kommt der Standard-Ton – ein Wecker darf nie stumm bleiben.
  */
-function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boolean; onFallback: (why: string) => void }) {
+function AlarmSound({ alarm, playing, keepMusic = false, onFallback }: { alarm: Alarm; playing: boolean; keepMusic?: boolean; onFallback: (why: string) => void }) {
   const { clientId, connected } = useSpotify();
   const [fallback, setFallback] = useState<string | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -130,6 +140,7 @@ function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boo
   const playingRef = useRef(playing);
   playingRef.current = playing;
   const mode = fallback ? 'ton' : alarm.sound;
+  const fade = !!alarm.fadeIn;
 
   const fail = useCallback((why: string) => setFallback((f) => f ?? why), []);
   useEffect(() => {
@@ -153,11 +164,17 @@ function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boo
     if (mode !== 'ton' && mode !== 'datei') return;
     const src = mode === 'datei' ? fileUrl : tone();
     if (!playing || !src) return stopLocal();
-    playLocal(src).catch(() => {
+    const t0 = Date.now();
+    playLocal(src, fade ? fadeVolume(0) : 1).catch(() => {
       if (mode === 'datei') fail('Die Audiodatei ließ sich nicht abspielen.');
     });
-    return stopLocal;
-  }, [mode, playing, fileUrl, fail]);
+    // Sanft lauter (das iPhone lässt die Lautstärke im Browser nicht ändern – dort bleibt es laut)
+    const ramp = fade ? setInterval(() => element && (element.volume = fadeVolume(Date.now() - t0)), 500) : 0;
+    return () => {
+      clearInterval(ramp);
+      stopLocal();
+    };
+  }, [mode, playing, fileUrl, fail, fade]);
 
   // YouTube: Player anlegen; spielt er nach ein paar Sekunden nicht, Standard-Ton
   useEffect(() => {
@@ -176,7 +193,10 @@ function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boo
           height: 180,
           playerVars: { autoplay: 1, playsinline: 1, controls: 0, rel: 0 },
           events: {
-            onReady: (e) => playingRef.current && e.target.playVideo(),
+            onReady: (e) => {
+              if (fade) e.target.setVolume(10);
+              if (playingRef.current) e.target.playVideo();
+            },
             onStateChange: (e) => e.data === 0 && (e.target.seekTo(0), e.target.playVideo()),
             onError: () => fail('Das YouTube-Video lässt sich nicht einbetten.'),
           },
@@ -192,7 +212,7 @@ function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boo
       yt.current?.destroy();
       yt.current = null;
     };
-  }, [mode, alarm.soundUrl, fail]);
+  }, [mode, alarm.soundUrl, fail, fade]);
 
   useEffect(() => {
     if (mode !== 'youtube' || !yt.current?.playVideo) return;
@@ -200,23 +220,59 @@ function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boo
     else yt.current.pauseVideo();
   }, [mode, playing]);
 
+  useEffect(() => {
+    if (mode !== 'youtube' || !playing || !fade) return;
+    const t0 = Date.now();
+    const id = setInterval(() => yt.current?.setVolume?.(Math.round(fadeVolume(Date.now() - t0) * 100)), 1000);
+    return () => clearInterval(id);
+  }, [mode, playing, fade]);
+
   // Spotify: auf einem verbundenen Gerät abspielen (Premium nötig)
   const spotifyDevice = useRef<string | null>(null);
+  const spotifyTarget = useRef(80);
+  // Mit „Musik weiterlaufen lassen“ spielt Spotify auch während der Aufgabe weiter
+  const spotifyOn = playing || keepMusic;
   useEffect(() => {
     if (mode !== 'spotify') return;
     if (!connected || !clientId) return fail('Spotify ist nicht verbunden.');
-    if (playing) {
+    let ramp = 0;
+    let stopped = false;
+    const fadeUp = (device: string) => {
+      if (!fade || stopped) return;
+      const t0 = Date.now();
+      void spotifyVolume(clientId, device, spotifyTarget.current * fadeVolume(0));
+      ramp = window.setInterval(() => {
+        const v = fadeVolume(Date.now() - t0);
+        void spotifyVolume(clientId, device, spotifyTarget.current * v);
+        if (v >= 1) clearInterval(ramp);
+      }, 5000);
+    };
+    if (spotifyOn) {
       const resume = spotifyDevice.current
-        ? api(clientId, `/me/player/play?device_id=${spotifyDevice.current}`, { method: 'PUT' })
-        : startSpotify(clientId, alarm.soundUrl).then((id) => (spotifyDevice.current = id));
-      resume.catch((e: Error) => fail(`Spotify: ${e.message}`));
+        ? api(clientId, `/me/player/play?device_id=${spotifyDevice.current}`, { method: 'PUT' }).then(() => spotifyDevice.current!)
+        : startSpotify(clientId, alarm.soundUrl).then(({ id, volume }) => {
+            spotifyDevice.current = id;
+            // Bis zur bisherigen Lautstärke hochregeln, mindestens aber gut hörbar
+            spotifyTarget.current = Math.max(60, volume ?? 80);
+            return id;
+          });
+      resume.then(fadeUp).catch((e: Error) => fail(`Spotify: ${e.message}`));
     } else if (spotifyDevice.current) {
       api(clientId, '/me/player/pause', { method: 'PUT' }).catch(() => undefined);
     }
-  }, [mode, playing, connected, clientId, alarm.soundUrl, fail]);
+    return () => {
+      stopped = true;
+      clearInterval(ramp);
+    };
+  }, [mode, spotifyOn, connected, clientId, alarm.soundUrl, fail, fade]);
   useEffect(
     () => () => {
-      if (spotifyDevice.current && clientId) api(clientId, '/me/player/pause', { method: 'PUT' }).catch(() => undefined);
+      const device = spotifyDevice.current;
+      if (!device || !clientId) return;
+      // Nach dem Ausschalten auf Wunsch leise weiterspielen
+      if (keepMusicOnce) void spotifyVolume(clientId, device, Math.round(spotifyTarget.current * 0.5));
+      else api(clientId, '/me/player/pause', { method: 'PUT' }).catch(() => undefined);
+      keepMusicOnce = false;
     },
     [clientId],
   );
@@ -405,6 +461,128 @@ function QrChallenge({ alarm, active, onActivity, onSolved }: ChallengeProps) {
   );
 }
 
+/** Aktuelle Rückruffunktionen für Effekte, ohne sie neu starten zu müssen */
+function useLatest<T>(value: T) {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
+type MotionPermission = { requestPermission?: () => Promise<'granted' | 'denied'> };
+
+function ShakeChallenge(props: ChallengeProps) {
+  const { alarm, active } = props;
+  const target = shakeTarget(alarm.level);
+  const [count, setCount] = useState(0);
+  const [state, setState] = useState<'start' | 'laeuft' | 'geht-nicht'>('start');
+  const counter = useRef(new ShakeCounter());
+  const cb = useLatest(props);
+
+  const begin = async () => {
+    props.onActivity();
+    const DM = (typeof DeviceMotionEvent === 'undefined' ? undefined : DeviceMotionEvent) as unknown as MotionPermission | undefined;
+    if (!DM) return setState('geht-nicht');
+    if (typeof DM.requestPermission === 'function') {
+      const answer = await DM.requestPermission().catch(() => 'denied' as const);
+      if (answer !== 'granted') return setState('geht-nicht');
+    }
+    setState('laeuft');
+  };
+
+  useEffect(() => {
+    if (state !== 'laeuft' || !active) return;
+    let got = false;
+    const onMotion = (e: DeviceMotionEvent) => {
+      const a = e.accelerationIncludingGravity;
+      if (!a || a.x === null) return;
+      got = true;
+      const before = counter.current.count;
+      const n = counter.current.feed(a.x ?? 0, a.y ?? 0, a.z ?? 0, e.timeStamp);
+      if (n === before) return;
+      setCount(n);
+      cb.current.onActivity();
+      if (n >= target) cb.current.onSolved();
+    };
+    window.addEventListener('devicemotion', onMotion);
+    const check = setTimeout(() => !got && setState('geht-nicht'), 3000);
+    return () => {
+      window.removeEventListener('devicemotion', onMotion);
+      clearTimeout(check);
+    };
+  }, [state, active, target, cb]);
+
+  if (state === 'geht-nicht') {
+    return (
+      <>
+        <p className="muted small">Dieses Gerät meldet keine Bewegung – darum heute Rechnen.</p>
+        <MathChallenge {...props} />
+      </>
+    );
+  }
+  const pct = Math.min(1, count / target);
+  return (
+    <div className="alarm-task">
+      <span className="muted small">Schüttle das Handy {target}-mal kräftig.</span>
+      <div className="alarm-shake" style={{ ['--p' as string]: pct }} aria-live="polite">
+        <strong>{Math.min(count, target)}</strong>
+        <span>von {target}</span>
+      </div>
+      {state === 'start' && <button className="primary" type="button" onClick={() => void begin()}>Los geht’s</button>}
+    </div>
+  );
+}
+
+const MEMORY_COLORS = ['#FF3B30', '#34C759', '#007AFF', '#FFCC00'];
+const MEMORY_NAMES = ['Rot', 'Grün', 'Blau', 'Gelb'];
+
+function MemoryChallenge(props: ChallengeProps) {
+  const { alarm, active } = props;
+  const length = memoryLength(alarm.level);
+  const [seq, setSeq] = useState(() => memorySequence(length));
+  const [phase, setPhase] = useState<'zeigen' | 'tippen'>('zeigen');
+  const [pos, setPos] = useState(0);
+  const [lit, setLit] = useState<number | null>(null);
+  const [wrong, setWrong] = useState(false);
+  const cb = useLatest(props);
+
+  useEffect(() => {
+    if (!active || phase !== 'zeigen') return;
+    const step = 750;
+    const timers = seq.flatMap((n, i) => [window.setTimeout(() => setLit(n), 800 + i * step), window.setTimeout(() => setLit(null), 800 + i * step + 480)]);
+    timers.push(window.setTimeout(() => { setPhase('tippen'); cb.current.onActivity(); }, 800 + seq.length * step));
+    return () => timers.forEach(clearTimeout);
+  }, [active, phase, seq, cb]);
+
+  const tap = (n: number) => {
+    if (phase !== 'tippen') return;
+    props.onActivity();
+    setLit(n);
+    setTimeout(() => setLit((x) => (x === n ? null : x)), 180);
+    if (seq[pos] !== n) {
+      setWrong(true);
+      setSeq(memorySequence(length));
+      setPos(0);
+      setPhase('zeigen');
+      return;
+    }
+    setWrong(false);
+    if (pos + 1 >= seq.length) props.onSolved();
+    else setPos(pos + 1);
+  };
+
+  return (
+    <div className="alarm-task">
+      <span className="muted small">{phase === 'zeigen' ? `Merk dir die Folge (${length} Farben) …` : `Jetzt nachtippen: ${pos} von ${length}`}</span>
+      <div className="alarm-memory">
+        {MEMORY_COLORS.map((c, i) => (
+          <button key={c} type="button" className={lit === i ? 'lit' : ''} style={{ ['--c' as string]: c }} disabled={phase !== 'tippen'} onClick={() => tap(i)} aria-label={MEMORY_NAMES[i]} />
+        ))}
+      </div>
+      {wrong && <span className="alarm-wrong">Falsch – neue Folge.</span>}
+    </div>
+  );
+}
+
 interface ChallengeProps {
   alarm: Alarm;
   active: boolean;
@@ -415,6 +593,8 @@ interface ChallengeProps {
 function Challenge(props: ChallengeProps) {
   if (props.alarm.challenge === 'text') return <TextChallenge {...props} />;
   if (props.alarm.challenge === 'qr' && props.alarm.qr) return <QrChallenge {...props} />;
+  if (props.alarm.challenge === 'schuetteln') return <ShakeChallenge {...props} />;
+  if (props.alarm.challenge === 'memory') return <MemoryChallenge {...props} />;
   return <MathChallenge {...props} />;
 }
 
@@ -425,6 +605,12 @@ const FIRED_KEY = 'antonos:wecker-geklingelt';
 /** Klingelnder Wecker – überlebt ein Neuladen, damit man ihn so nicht los wird */
 const ACTIVE_KEY = 'antonos:wecker-aktiv';
 const ACTIVE_MAX = 60 * 60_000;
+/** Geplanter Wach-Check: { alarm, at } */
+const WAKE_KEY = 'antonos:wecker-wach-check';
+/** So lange hat man beim Wach-Check Zeit zu antworten */
+const WAKE_ANSWER = 60_000;
+/** Schon gemeldete Schlafenszeiten */
+const BEDTIME_KEY = 'antonos:schlafenszeit-gemeldet';
 
 /** Wecker probehalber klingeln lassen (aus einem Tippen heraus aufrufen) */
 export function testAlarm(alarm: Alarm) {
@@ -441,7 +627,8 @@ const NATIVE_TEST_WINDOW = 15 * 60_000;
 /** iOS-App: echten Wecker in wenigen Sekunden klingeln lassen. Gibt die Wartezeit zurück. */
 export async function testNativeAlarm(alarm: Alarm): Promise<number> {
   nativeTest = { alarm, at: Date.now() };
-  await AntonAlarm.ringIn({ seconds: NATIVE_TEST_SECONDS, id: alarm.id, title: `${alarmTitle(alarm)} · Test`, task: hasTask(alarm) });
+  const s = snoozeOf(alarm);
+  await AntonAlarm.ringIn({ seconds: NATIVE_TEST_SECONDS, id: alarm.id, title: `${alarmTitle(alarm)} · Test`, task: hasTask(alarm), snooze: s.on ? s.minutes * 60 : 0, snoozeMax: s.max });
   return NATIVE_TEST_SECONDS;
 }
 
@@ -459,7 +646,14 @@ export const SYNC_EVENT = 'antonos:wecker-ios-gestellt';
  */
 export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
   const [state, setState] = useState<AlarmPermission | null>(() => (isNativeApp() ? null : 'unavailable'));
-  const list = JSON.stringify(nativeAlarms(alarms));
+  // Alle 5 Minuten neu berechnen: Einzeltermine (Überspringen, Pause) rücken weiter
+  const [tick, setTick] = useState(() => Math.floor(Date.now() / 300_000));
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const id = setInterval(() => setTick(Math.floor(Date.now() / 300_000)), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const list = JSON.stringify(nativeAlarms(alarms, new Date(tick * 300_000)));
   useEffect(() => {
     if (!isNativeApp()) return;
     let cancelled = false;
@@ -500,14 +694,26 @@ function writeJson(key: string, value: unknown) {
 
 interface Ringing {
   alarm: Alarm;
-  /** klingelt = Ton läuft, aufgabe = still, Zeit läuft */
-  phase: 'klingelt' | 'aufgabe';
+  /** klingelt = Ton läuft, aufgabe = still, Zeit läuft, schlummert = still bis `deadline` */
+  phase: 'klingelt' | 'aufgabe' | 'schlummert';
   deadline: number;
   test: boolean;
   /** Neu zählen bei jedem neuen Klingeln, damit die Aufgabe neu startet */
   round: number;
   /** Kam vom echten iPhone-Wecker: Das iPhone klingelt wieder, falls AntonOS zugeht */
   native?: boolean;
+  /** Wie oft schon geschlummert */
+  snoozes: number;
+  /** Wann der Wecker zuerst klingelte (ms) – für die Statistik */
+  ringAt: number;
+}
+
+interface Saved {
+  alarm: Alarm;
+  since: number;
+  snoozes?: number;
+  ringAt?: number;
+  snoozeUntil?: number;
 }
 
 /**
@@ -515,11 +721,15 @@ interface Ringing {
  * den Wecker über allem an. Testläufe klingeln auf jedem Gerät.
  */
 export function AlarmRinger() {
-  const { data, update } = useStore();
+  const { data, update, add } = useStore();
   const [ringing, setRinging] = useState<Ringing | null>(() => {
-    const saved = readJson<{ alarm: Alarm; since: number } | null>(ACTIVE_KEY, null);
-    return saved && Date.now() - saved.since < ACTIVE_MAX ? { alarm: saved.alarm, phase: 'klingelt', deadline: 0, test: false, round: 0 } : null;
+    const saved = readJson<Saved | null>(ACTIVE_KEY, null);
+    if (!saved || Date.now() - saved.since >= ACTIVE_MAX) return null;
+    const snoozing = !!saved.snoozeUntil && saved.snoozeUntil > Date.now();
+    return { alarm: saved.alarm, phase: snoozing ? 'schlummert' : 'klingelt', deadline: snoozing ? saved.snoozeUntil! : 0, test: false, round: 0, snoozes: saved.snoozes ?? 0, ringAt: saved.ringAt ?? saved.since };
   });
+  const [brief, setBrief] = useState<{ alarm: Alarm; snoozes: number; offAt: number } | null>(null);
+  const [wake, setWake] = useState<{ alarm: Alarm; at: number } | null>(() => readJson<{ alarm: Alarm; at: number } | null>(WAKE_KEY, null));
   const [now, setNow] = useState(() => Date.now());
   const [fallbackNote, setFallbackNote] = useState('');
   const alarmsRef = useRef(data.alarms);
@@ -544,8 +754,9 @@ export function AlarmRinger() {
 
   const start = useCallback((alarm: Alarm, test: boolean) => {
     setFallbackNote('');
-    setRinging({ alarm, phase: 'klingelt', deadline: 0, test, round: 0 });
-    if (!test) writeJson(ACTIVE_KEY, { alarm, since: Date.now() });
+    setBrief(null);
+    setRinging({ alarm, phase: 'klingelt', deadline: 0, test, round: 0, snoozes: 0, ringAt: Date.now() });
+    if (!test) writeJson(ACTIVE_KEY, { alarm, since: Date.now(), ringAt: Date.now() } satisfies Saved);
   }, []);
 
   // Klingeln im Browser – in der iOS-App mit echtem Wecker übernimmt das das iPhone
@@ -575,7 +786,7 @@ export function AlarmRinger() {
   useEffect(() => {
     if (!isNativeApp()) return;
     const take = async () => {
-      const stopped = await AntonAlarm.takeStopped().catch(() => ({}) as { id?: string; at?: number });
+      const stopped = await AntonAlarm.takeStopped().catch(() => ({}) as { id?: string; at?: number; snoozes?: number });
       if (stopped.id === undefined) return;
       const saved = alarmsRef.current.find((a) => a.id === stopped.id);
       // Test geht vor: auch ein gespeicherter Wecker wird beim Testen nicht ausgeschaltet, und es gilt der Entwurf
@@ -589,12 +800,14 @@ export function AlarmRinger() {
       const deadline = Date.now() + seconds * 1000;
       setNow(Date.now());
       setFallbackNote('');
+      const ringAt = previousRing(alarm, stopped.at || Date.now());
+      setBrief(null);
       setRinging((r) =>
         r && r.alarm.id === alarm.id
-          ? { ...r, phase: 'aufgabe', deadline, native: true }
-          : { alarm, phase: 'aufgabe', deadline, test, round: 0, native: true },
+          ? { ...r, phase: 'aufgabe', deadline, native: true, snoozes: Math.max(r.snoozes, stopped.snoozes ?? 0) }
+          : { alarm, phase: 'aufgabe', deadline, test, round: 0, native: true, snoozes: stopped.snoozes ?? 0, ringAt },
       );
-      if (!test) writeJson(ACTIVE_KEY, { alarm, since: Date.now() });
+      if (!test) writeJson(ACTIVE_KEY, { alarm, since: Date.now(), ringAt, snoozes: stopped.snoozes ?? 0 } satisfies Saved);
     };
     void take();
     const onStop = AntonAlarm.addListener('stopped', () => void take());
@@ -620,7 +833,13 @@ export function AlarmRinger() {
       const at = Date.now() + seconds * 1000;
       if (Math.abs(at - planned) < 2000) return;
       planned = at;
-      void AntonAlarm.ringIn({ seconds, id: r.alarm.id, title: alarmTitle(r.alarm) }).catch(() => (planned = 0));
+      // Beim Schlummern klingelt das iPhone wie der Wecker selbst (mit Schlummern, solange erlaubt)
+      const snoozing = r.phase === 'schlummert';
+      const s = snoozeOf(r.alarm);
+      const opts = snoozing
+        ? { task: hasTask(r.alarm), snooze: canSnooze(r.alarm, r.snoozes) ? s.minutes * 60 : 0, snoozeMax: s.max }
+        : {};
+      void AntonAlarm.ringIn({ seconds, id: r.alarm.id, title: alarmTitle(r.alarm), ...opts }).catch(() => (planned = 0));
     };
     beat();
     const id = setInterval(beat, 10_000);
@@ -633,9 +852,9 @@ export function AlarmRinger() {
     return () => window.removeEventListener(RING_EVENT, onTest);
   }, [start]);
 
-  // Countdown, nach Ablauf klingelt er wieder
+  // Countdown (Aufgabe oder Schlummern), nach Ablauf klingelt er wieder
   useEffect(() => {
-    if (ringing?.phase !== 'aufgabe') return;
+    if (ringing?.phase !== 'aufgabe' && ringing?.phase !== 'schlummert') return;
     const id = setInterval(() => {
       const t = Date.now();
       setNow(t);
@@ -646,48 +865,187 @@ export function AlarmRinger() {
 
   const onFallback = useCallback((why: string) => setFallbackNote(`${why} Darum klingelt der Standard-Ton.`), []);
 
-  if (!ringing) return null;
+  // Wach-Check: zur geplanten Zeit fragen, ohne Antwort klingelt der Wecker erneut
+  const wakeAt = wake?.at;
+  useEffect(() => {
+    if (!wakeAt) return;
+    let asked = false;
+    const tickWake = () => {
+      const t = Date.now();
+      setNow(t);
+      const w = readJson<{ alarm: Alarm; at: number } | null>(WAKE_KEY, null);
+      if (!w) return setWake(null);
+      if (t >= w.at && !asked) {
+        asked = true;
+        if (document.visibilityState === 'hidden') void notify('⏰ Bist du wach?', 'Tippe hier – sonst klingelt der Wecker gleich wieder.', 'wecker-wach');
+      }
+      if (t >= w.at + WAKE_ANSWER) {
+        writeJson(WAKE_KEY, null);
+        setWake(null);
+        // In der iOS-App klingelt das iPhone selbst (siehe solved)
+        if (!(isNativeApp() && nativeState === 'granted')) start({ ...w.alarm, wakeCheck: false, morning: false }, false);
+      }
+    };
+    tickWake();
+    const id = setInterval(tickWake, 1000);
+    return () => clearInterval(id);
+  }, [wakeAt, nativeState, start]);
+
+  // Erinnerung zur Schlafenszeit (im Browser; die iOS-App plant sie beim System)
+  const sleep = data.settings.sleep ?? defaultSleep();
+  const sleepRef = useLatest(sleep);
+  useEffect(() => {
+    if (!sleep.remind || nativeState === null || nativeState === 'granted' || isNativeApp()) return;
+    const check = () => {
+      const now = Date.now();
+      const due = bedtimeNotices(alarmsRef.current, sleepRef.current, new Date(now - 5 * 60_000)).filter((n) => n.at <= now);
+      if (due.length === 0) return;
+      const done = readJson<string[]>(BEDTIME_KEY, []);
+      for (const n of due) {
+        if (done.includes(n.tag)) continue;
+        done.push(n.tag);
+        void notify(n.title, n.body, n.tag);
+      }
+      writeJson(BEDTIME_KEY, done.slice(-30));
+    };
+    check();
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [sleep.remind, nativeState, sleepRef]);
+
+  const overlays = (
+    <>
+      {brief && <MorningBrief alarm={brief.alarm} snoozes={brief.snoozes} offAt={brief.offAt} onClose={() => setBrief(null)} />}
+      {wake && now >= wake.at && !ringing && (
+        createPortal(
+          <div className="alarm-ring wach" role="alertdialog" aria-modal="true" aria-label="Wach-Check">
+            <div className="alarm-head">
+              <span className="alarm-date">Wach-Check</span>
+              <span className="alarm-big">Bist du wach?</span>
+            </div>
+            <div className="alarm-countdown" aria-live="polite">
+              Sonst klingelt der Wecker in <strong>{Math.max(0, Math.ceil((wake.at + WAKE_ANSWER - now) / 1000))} s</strong> wieder
+              <span className="alarm-bar"><span style={{ width: `${Math.max(0, (wake.at + WAKE_ANSWER - now) / WAKE_ANSWER) * 100}%` }} /></span>
+            </div>
+            <div className="alarm-buttons">
+              <button
+                type="button"
+                className="alarm-snooze"
+                onClick={() => {
+                  writeJson(WAKE_KEY, null);
+                  setWake(null);
+                  if (isNativeApp()) void AntonAlarm.solved().catch(() => undefined);
+                }}
+              >
+                Ich bin wach
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )
+      )}
+    </>
+  );
+
+  if (!ringing) return overlays;
   const { alarm, phase } = ringing;
   const window_ = solveSeconds(alarm.challenge === 'qr' && !alarm.qr ? 'rechnen' : alarm.challenge);
+  const snoozeAllowed = canSnooze(alarm, ringing.snoozes);
   const silenceNow = () => {
     if (!hasTask(alarm)) return solved();
     unlockAlarmAudio();
     setNow(Date.now());
     setRinging({ ...ringing, phase: 'aufgabe', deadline: Date.now() + window_ * 1000 });
   };
+  const snooze = () => {
+    unlockAlarmAudio();
+    const until = Date.now() + snoozeOf(alarm).minutes * 60_000;
+    setNow(Date.now());
+    const next = { ...ringing, phase: 'schlummert' as const, deadline: until, snoozes: ringing.snoozes + 1 };
+    setRinging(next);
+    if (!ringing.test) writeJson(ACTIVE_KEY, { alarm, since: Date.now(), ringAt: ringing.ringAt, snoozes: next.snoozes, snoozeUntil: until } satisfies Saved);
+  };
   const activity = () => setRinging((r) => (r && r.phase === 'aufgabe' ? { ...r, deadline: Date.now() + window_ * 1000 } : r));
   const solved = () => {
+    const offAt = Date.now();
     writeJson(ACTIVE_KEY, null);
+    keepMusicOnce = !!alarm.keepMusic && alarm.sound === 'spotify';
     setRinging(null);
+    if (!ringing.test) add('wakeLogs', { date: today(), alarmId: alarm.id, ringAt: ringing.ringAt, offAt, snoozes: ringing.snoozes });
+    if (alarm.morning !== false) setBrief({ alarm, snoozes: ringing.snoozes, offAt });
+    const checkWake = !!alarm.wakeCheck && !ringing.test;
+    const wakeMs = (alarm.wakeCheckMinutes ?? 5) * 60_000;
+    if (checkWake) {
+      const w = { alarm, at: offAt + wakeMs };
+      writeJson(WAKE_KEY, w);
+      setWake(w);
+    }
     if (isNativeApp()) {
       // Zweimal, falls gerade noch ein Nachklingeln geplant wurde
       void AntonAlarm.solved().catch(() => undefined);
-      setTimeout(() => void AntonAlarm.solved().catch(() => undefined), 1500);
+      setTimeout(() => {
+        void AntonAlarm.solved()
+          .catch(() => undefined)
+          // Wach-Check: Das iPhone klingelt, falls bis dahin niemand „Ich bin wach“ tippt
+          .then(() => (checkWake && nativeState === 'granted' ? AntonAlarm.ringIn({ seconds: Math.round((offAt + wakeMs + WAKE_ANSWER - Date.now()) / 1000), id: alarm.id, title: 'Bist du wach?', task: false }) : undefined))
+          .catch(() => undefined);
+      }, 1500);
     }
   };
   const left = Math.max(0, Math.ceil((ringing.deadline - now) / 1000));
+  const clock = new Date(now);
+  const showSong = alarm.sound === 'spotify' && !!alarm.soundName;
 
-  return createPortal(
-    <div className={`alarm-ring ${phase}`} role="alertdialog" aria-modal="true" aria-label={`Wecker ${alarm.time}`}>
-      <AlarmSound key={alarm.id + String(ringing.test)} alarm={alarm} playing={phase === 'klingelt'} onFallback={onFallback} />
-      <div className="alarm-head">
-        <span className="alarm-big">{alarm.time}</span>
-        <span>{alarm.label || 'Wecker'}{ringing.test ? ' · Test' : ''}</span>
-      </div>
-      {fallbackNote && <p className="muted small alarm-note">{fallbackNote}</p>}
-      {phase === 'klingelt' ? (
-        <button type="button" className="alarm-off" onClick={silenceNow}>Ausschalten</button>
-      ) : (
-        <div className="alarm-countdown" aria-live="polite">
-          Klingelt wieder in <strong>{left} s</strong>
-          <span className="alarm-bar"><span style={{ width: `${(left / window_) * 100}%` }} /></span>
-        </div>
+  return (
+    <>
+      {overlays}
+      {createPortal(
+        <div className={`alarm-ring ${phase}`} role="alertdialog" aria-modal="true" aria-label={`Wecker ${alarm.time}`}>
+          <AlarmSound key={alarm.id + String(ringing.test)} alarm={alarm} playing={phase === 'klingelt'} keepMusic={!!alarm.keepMusic && phase === 'aufgabe'} onFallback={onFallback} />
+          <div className="alarm-head">
+            <span className="alarm-date">{clock.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+            <span className="alarm-big">{phase === 'klingelt' ? hhmm(clock) : alarm.time}</span>
+            <span className="alarm-label">{alarm.label || 'Wecker'}{ringing.test ? ' · Test' : ''}</span>
+          </div>
+          {showSong && phase === 'klingelt' && (
+            <div className="alarm-song">
+              <span className="alarm-song-cover" aria-hidden>♫</span>
+              <span className="grow">
+                <strong>{alarm.soundName}</strong>
+                <span>Spotify{alarm.fadeIn ? ' · wird lauter' : ''}</span>
+              </span>
+            </div>
+          )}
+          {fallbackNote && <p className="muted small alarm-note">{fallbackNote}</p>}
+          {phase === 'klingelt' ? (
+            <div className="alarm-buttons">
+              {snoozeAllowed && <button type="button" className="alarm-snooze" onClick={snooze}>Schlummern · {snoozeOf(alarm).minutes} Min.</button>}
+              <button type="button" className={snoozeAllowed ? 'alarm-stop' : 'alarm-snooze'} onClick={silenceNow}>{hasTask(alarm) ? 'Stopp und Aufgabe lösen' : 'Stopp'}</button>
+              {snoozeOf(alarm).on && (
+                <span className="alarm-hint">{snoozeAllowed ? `Noch ${snoozeOf(alarm).max - ringing.snoozes}-mal schlummern möglich` : 'Genug geschlummert – jetzt aufstehen'}</span>
+              )}
+            </div>
+          ) : phase === 'schlummert' ? (
+            <div className="alarm-buttons">
+              <div className="alarm-countdown" aria-live="polite">
+                Schlummert – klingelt wieder um <strong>{hhmm(new Date(ringing.deadline))}</strong>
+                <span className="alarm-bar"><span style={{ width: `${(left / (snoozeOf(alarm).minutes * 60)) * 100}%` }} /></span>
+              </div>
+              <button type="button" className="alarm-stop" onClick={silenceNow}>{hasTask(alarm) ? 'Jetzt aufstehen und Aufgabe lösen' : 'Jetzt ausschalten'}</button>
+            </div>
+          ) : (
+            <div className="alarm-countdown" aria-live="polite">
+              Klingelt wieder in <strong>{left} s</strong>
+              <span className="alarm-bar"><span style={{ width: `${(left / window_) * 100}%` }} /></span>
+            </div>
+          )}
+          <div className="alarm-challenge" hidden={phase !== 'aufgabe'}>
+            <Challenge key={ringing.round} alarm={alarm} active={phase === 'aufgabe'} onActivity={activity} onSolved={solved} />
+          </div>
+          {ringing.test && <button type="button" className="alarm-skip" onClick={solved}>Test beenden</button>}
+        </div>,
+        document.body,
       )}
-      <div className="alarm-challenge" hidden={phase === 'klingelt'}>
-        <Challenge key={ringing.round} alarm={alarm} active={phase === 'aufgabe'} onActivity={activity} onSolved={solved} />
-      </div>
-      {ringing.test && <button type="button" className="alarm-skip" onClick={solved}>Test beenden</button>}
-    </div>,
-    document.body,
+    </>
   );
 }

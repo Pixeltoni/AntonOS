@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { Alarm } from '../types';
-import { alarmTitle, alarmTone, bedtimeNotices, canSnooze, defaultAlarm, defaultSleep, dueAlarms, expiredOneShots, fadeVolume, hasTask, hhmm, memoryLength, memorySequence, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, ShakeCounter, shakeTarget, silence, snoozeOf, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
+import { previousRing, alarmTitle, alarmTone, bedtimeNotices, canSnooze, defaultAlarm, defaultSleep, dueAlarms, expiredOneShots, fadeVolume, hasTask, hhmm, memoryLength, memorySequence, nativeAlarms, nativeRingAgainSeconds, isCorrectNumber, isCorrectPhrase, mathProblem, randomPhrase, ShakeCounter, shakeTarget, silence, snoozeOf, solveSeconds, spotifyUri, youtubeId } from '../lib/alarm';
 import { today } from '../lib/dates';
 import { MorningBrief } from './morning';
 import { api, pickDevice, type Device } from '../lib/spotify';
@@ -131,7 +131,7 @@ const spotifyVolume = (clientId: string, device: string, percent: number) =>
  * Spielt den gewählten Klang, solange `playing` gilt. Klappt YouTube, Spotify oder die
  * eigene Datei nicht, kommt der Standard-Ton – ein Wecker darf nie stumm bleiben.
  */
-function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boolean; onFallback: (why: string) => void }) {
+function AlarmSound({ alarm, playing, keepMusic = false, onFallback }: { alarm: Alarm; playing: boolean; keepMusic?: boolean; onFallback: (why: string) => void }) {
   const { clientId, connected } = useSpotify();
   const [fallback, setFallback] = useState<string | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -230,6 +230,8 @@ function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boo
   // Spotify: auf einem verbundenen Gerät abspielen (Premium nötig)
   const spotifyDevice = useRef<string | null>(null);
   const spotifyTarget = useRef(80);
+  // Mit „Musik weiterlaufen lassen“ spielt Spotify auch während der Aufgabe weiter
+  const spotifyOn = playing || keepMusic;
   useEffect(() => {
     if (mode !== 'spotify') return;
     if (!connected || !clientId) return fail('Spotify ist nicht verbunden.');
@@ -245,7 +247,7 @@ function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boo
         if (v >= 1) clearInterval(ramp);
       }, 5000);
     };
-    if (playing) {
+    if (spotifyOn) {
       const resume = spotifyDevice.current
         ? api(clientId, `/me/player/play?device_id=${spotifyDevice.current}`, { method: 'PUT' }).then(() => spotifyDevice.current!)
         : startSpotify(clientId, alarm.soundUrl).then(({ id, volume }) => {
@@ -262,7 +264,7 @@ function AlarmSound({ alarm, playing, onFallback }: { alarm: Alarm; playing: boo
       stopped = true;
       clearInterval(ramp);
     };
-  }, [mode, playing, connected, clientId, alarm.soundUrl, fail, fade]);
+  }, [mode, spotifyOn, connected, clientId, alarm.soundUrl, fail, fade]);
   useEffect(
     () => () => {
       const device = spotifyDevice.current;
@@ -798,7 +800,7 @@ export function AlarmRinger() {
       const deadline = Date.now() + seconds * 1000;
       setNow(Date.now());
       setFallbackNote('');
-      const ringAt = stopped.at || Date.now();
+      const ringAt = previousRing(alarm, stopped.at || Date.now());
       setBrief(null);
       setRinging((r) =>
         r && r.alarm.id === alarm.id
@@ -999,7 +1001,7 @@ export function AlarmRinger() {
       {overlays}
       {createPortal(
         <div className={`alarm-ring ${phase}`} role="alertdialog" aria-modal="true" aria-label={`Wecker ${alarm.time}`}>
-          <AlarmSound key={alarm.id + String(ringing.test)} alarm={alarm} playing={phase === 'klingelt'} onFallback={onFallback} />
+          <AlarmSound key={alarm.id + String(ringing.test)} alarm={alarm} playing={phase === 'klingelt'} keepMusic={!!alarm.keepMusic && phase === 'aufgabe'} onFallback={onFallback} />
           <div className="alarm-head">
             <span className="alarm-date">{clock.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
             <span className="alarm-big">{phase === 'klingelt' ? hhmm(clock) : alarm.time}</span>

@@ -110,6 +110,18 @@ export function nextAlarm(alarms: Alarm[], now: Date): { alarm: Alarm; at: Date 
   return best;
 }
 
+/** Letzte Weckzeit (laut Uhrzeit) bis `atMs` – z. B. wann ein am iPhone gestoppter Wecker geklingelt hat (ms) */
+export function previousRing(alarm: Pick<Alarm, 'time'>, atMs: number): number {
+  const ref = new Date(atMs);
+  for (const back of [0, 1]) {
+    const day = new Date(ref);
+    day.setDate(ref.getDate() - back);
+    const ring = at(day, alarm.time).getTime();
+    if (ring <= atMs) return ring;
+  }
+  return atMs;
+}
+
 /** „Nur den nächsten auslassen“: der Tag des nächsten Klingelns */
 export function skipNext(alarm: Alarm, now: Date): Pick<Alarm, 'skip'> {
   const ring = nextRing({ ...alarm, skip: undefined }, now);

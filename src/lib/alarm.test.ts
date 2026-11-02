@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Alarm } from '../types';
-import { bedtimeFor, bedtimeNotices, canSnooze, cycleTimes, durationLabel, fadeVolume, isPunctual, memorySequence, nextAlarm, nextRings, quickAlarm, repeatLabel, ShakeCounter, skipNext, snoozeOf, wakeStats, alarmTone, daysLabel, defaultAlarm, expiredOneShots, hasTask, nativeAlarms, nativeRingAgainSeconds, dueAlarms, isCorrectNumber, isCorrectPhrase, mathProblem, nextRing, RING_GRACE, silence, spotifyUri, untilLabel, youtubeId } from './alarm';
+import { previousRing, bedtimeFor, bedtimeNotices, canSnooze, cycleTimes, durationLabel, fadeVolume, isPunctual, memorySequence, nextAlarm, nextRings, quickAlarm, repeatLabel, ShakeCounter, skipNext, snoozeOf, wakeStats, alarmTone, daysLabel, defaultAlarm, expiredOneShots, hasTask, nativeAlarms, nativeRingAgainSeconds, dueAlarms, isCorrectNumber, isCorrectPhrase, mathProblem, nextRing, RING_GRACE, silence, spotifyUri, untilLabel, youtubeId } from './alarm';
 
 const alarm = (patch: Partial<Alarm> = {}): Alarm => ({
   id: 'w', time: '07:00', label: '', days: [1, 2, 3, 4, 5], enabled: true, armedAt: 0, sound: 'ton', soundUrl: '',
@@ -235,5 +235,12 @@ describe('Neue Aufgaben', () => {
     expect(fadeVolume(0)).toBeCloseTo(0.1);
     expect(fadeVolume(22_500)).toBeCloseTo(0.55);
     expect(fadeVolume(90_000)).toBe(1);
+  });
+});
+
+describe('previousRing', () => {
+  it('findet die Weckzeit vor dem Stoppen, auch über Mitternacht', () => {
+    expect(previousRing({ time: '07:00' }, at('2026-11-02T07:25:00').getTime())).toBe(at('2026-11-02T07:00:00').getTime());
+    expect(previousRing({ time: '23:50' }, at('2026-11-03T00:10:00').getTime())).toBe(at('2026-11-02T23:50:00').getTime());
   });
 });

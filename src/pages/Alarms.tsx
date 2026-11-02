@@ -236,7 +236,9 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
     if (a.sound === 'youtube' && !youtubeId(a.soundUrl)) return 'Bitte einen gültigen YouTube-Link einfügen.';
     if (a.sound === 'spotify' && !spotifyUri(a.soundUrl)) return 'Bitte einen Song, ein Album oder eine Playlist aus Spotify wählen.';
     if (a.challenge === 'qr' && !a.qr) return 'Bitte zuerst einen QR-Code scannen.';
-    if (a.days.length === 0 && a.date && a.date < today()) return 'Das Datum liegt in der Vergangenheit.';
+    if (a.days.length === 0 && a.date && parseDate(a.date).getTime() + (Number(a.time.slice(0, 2)) * 60 + Number(a.time.slice(3))) * 60_000 <= Date.now()) {
+      return a.date < today() ? 'Das Datum liegt in der Vergangenheit.' : 'Diese Uhrzeit ist heute schon vorbei – wähle eine spätere Zeit oder einen anderen Tag.';
+    }
     return '';
   };
 

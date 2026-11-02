@@ -19,9 +19,11 @@ export const TONES: { id: ToneId; label: string; hint: string }[] = [
  * in ios/eigene-toene.tar.gz.enc – nicht öffentlich – und kommen nur beim iOS-Build in die App.
  * Im Browser klingelt stattdessen der Standardton.
  */
-export type SongId = 'lied-whatoncewas';
+export type SongId = 'lied-whatoncewas' | 'lied-outthefire' | 'lied-livewell';
 export const SONGS: { id: SongId; label: string; hint: string }[] = [
   { id: 'lied-whatoncewas', label: 'What Once Was', hint: 'Her’s' },
+  { id: 'lied-outthefire', label: 'Out The Fire (At The Hotel)', hint: 'Franky Rizardo' },
+  { id: 'lied-livewell', label: 'Live Well', hint: 'Palace' },
 ];
 
 export const DEFAULT_TONE: ToneId = 'aufgang';

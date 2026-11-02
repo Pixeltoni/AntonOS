@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import type { Alarm, AlarmSound, ID } from '../types';
 import { CHALLENGES, daysLabel, defaultAlarm, nextRing, spotifyUri, untilLabel, WEEKDAYS, youtubeId } from '../lib/alarm';
 import { isMobile } from '../lib/notify';
-import { deleteSoundFile, QrScanner, saveSoundFile, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
+import { deleteSoundFile, QrScanner, saveSoundFile, SYNC_EVENT, testAlarm, testNativeAlarm, unlockAlarmAudio } from '../components/alarm';
 import { isNativeApp, nativeAlarmPermission, type AlarmPermission } from '../lib/native';
 import { useSpotify } from '../components/spotify';
 import { Empty, PageHeader, Panel } from '../components/ui';
@@ -206,6 +206,12 @@ export function Alarms() {
     void nativeAlarmPermission(false).then(setReal);
   }, [data.alarms]);
   const native = real === 'granted';
+  const [failed, setFailed] = useState(0);
+  useEffect(() => {
+    const onSync = (e: Event) => setFailed((e as CustomEvent<number>).detail);
+    window.addEventListener(SYNC_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_EVENT, onSync);
+  }, []);
 
   return (
     <>
@@ -243,6 +249,9 @@ export function Alarms() {
       </Panel>
       {isNativeApp() && real !== null && real !== 'unavailable' && (
         <Panel title="Echter iPhone-Wecker">
+          {native && failed > 0 && (
+            <p className="alert">{failed === 1 ? 'Ein Wecker ließ' : `${failed} Wecker ließen`} sich am iPhone nicht stellen und klingeln nicht. Öffne AntonOS später erneut oder schalte den Wecker aus und wieder ein.</p>
+          )}
           {native ? (
             <p className="small">
               Deine Wecker sind als echte iPhone-Wecker gestellt: Sie klingeln laut, auch wenn das Handy gesperrt ist, im Lautlos-Modus und bei „Nicht stören“.

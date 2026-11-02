@@ -529,8 +529,13 @@ export function AlarmRinger() {
     if (nativeState !== 'granted') return;
     const sweep = () => expiredOneShots(alarmsRef.current, new Date()).forEach((a) => update('alarms', a.id, { enabled: false }));
     sweep();
+    // Auch bei offener App: Ein Wecker ohne Aufgabe meldet sein Klingeln nicht an AntonOS
+    const timer = setInterval(sweep, 60_000);
     const onResume = NativeApp.addListener('appStateChange', ({ isActive }) => isActive && sweep());
-    return () => void onResume.then((h) => h.remove());
+    return () => {
+      clearInterval(timer);
+      void onResume.then((h) => h.remove());
+    };
   }, [nativeState, update]);
 
   const start = useCallback((alarm: Alarm, test: boolean) => {

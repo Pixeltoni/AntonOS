@@ -30,6 +30,8 @@
 		<string>AntonTierSchlaf.otf</string>
 		<string>AntonTierEssen.otf</string>
 		<string>AntonTierHunger.otf</string>
+		<string>AntonTierKrank.otf</string>
+		<string>AntonTierTot.otf</string>
 	</array>
 	<key>NSExtension</key>
 	<dict>

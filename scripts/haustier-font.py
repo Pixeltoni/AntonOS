@@ -10,6 +10,8 @@ Knubbel ist ein kleines Tamagotchi: Seine Laune hängt nur daran, wann er gefüt
   AntonTierSchlaf  – liegt und schnarcht, Zs steigen auf, Mond
   AntonTierEssen   – mampft einen Apfel, Herzchen steigen auf (gleich nach dem Füttern)
   AntonTierHunger  – sitzt vor dem leeren Napf und träumt von einem Apfel
+  AntonTierKrank   – liegt mit Fieberthermometer, schwitzt und zittert
+  AntonTierTot     – Geist schwebt über einem Grabstein
 Aufruf: pip install fonttools && python3 scripts/haustier-font.py
 Schreibt ios/App/AntonOSWidgets/AntonTier*.otf
 """
@@ -299,9 +301,70 @@ def hunger(t):
     return out
 
 
+def cross(x, y, r, w):
+    """Pluszeichen als ein Vieleck"""
+    a, b = w / 2, r
+    return [(x - a, y - b), (x + a, y - b), (x + a, y - a), (x + b, y - a), (x + b, y + a), (x + a, y + a),
+            (x + a, y + b), (x - a, y + b), (x - a, y + a), (x - b, y + a), (x - b, y - a), (x - a, y - a)]
+
+
+def krank(t):
+    shiver = 14 if t % 2 else -14
+    x = WIDTH * 0.40 + shiver
+    out = ground() + knubbel(x, sx=1.12, sy=0.8, eyes="sad", mouth="o", feet="lie")
+    cy = GROUND + FOOT * 0.6 + RY * 0.8
+    # Fieberthermometer aus dem Mund
+    mx, my = x + 0, cy - RY * 0.8 * 0.22
+    tip = (mx + 430, my + 170)
+    out.append(ccw(band([(mx + 30, my + 8), tip], 26)))
+    out.append(ccw(circle(tip[0] + 6, tip[1] + 4, 30, 14)))
+    # Schweißtropfen fallen neben dem Kopf
+    for k, side in enumerate((-1, 1)):
+        p = ((t + k * 3) % 6) / 6
+        out.append(ccw(drop(x + side * (RX * 1.12 + 40), cy + RY * 0.5 - p * 180, 20)))
+    # Rotes Kreuz pulsiert
+    r = 95 if t % 2 else 75
+    out.append(ccw(cross(x + RX + 520, 720, r, r * 0.65)))
+    # Frost-Sterne beim Zittern
+    if t % 3 == 0:
+        out += star(x - RX - 160, 620, 36)
+    return out
+
+
+def tot(t):
+    # Grabstein mit Kreuz
+    gx = WIDTH * 0.40
+    stone = [(gx - 170, GROUND), (gx + 170, GROUND)] + arc(gx, GROUND + 330, 170, 170, 0, 180, 16)
+    out = ground() + [ccw(stone)]
+    out.append(cw(cross(gx, GROUND + 300, 110, 46)))
+    # Gras
+    for k in range(-3, 4):
+        bx = gx + k * 70
+        out.append(ccw([(bx - 18, GROUND), (bx + 18, GROUND), (bx + 4, GROUND + 60 + (k % 2) * 25)]))
+    # Geist schwebt auf und ab, schwankt
+    phase = math.sin(2 * math.pi * t / 8)
+    hx = gx + 480 + math.sin(2 * math.pi * t / 20) * 120
+    hy = 520 + phase * 70
+    top = arc(hx, hy, 170, 190, 0, 180, 16)              # rechts über oben nach links
+    hem = [(hx - 170 + 340 * i / 12, hy - 200 + (45 if (i + t) % 2 else 0)) for i in range(13)]
+    out.append(ccw(top + [(hx - 170, hy - 160)] + hem + [(hx + 170, hy - 160)]))
+    for side in (-1, 1):
+        out.append(cw(ellipse(hx + side * 60, hy + 50, 28, 40, 14)))
+    out.append(cw(ellipse(hx, hy - 60, 30, 36, 12)))
+    # Heiligenschein
+    out.append(ccw(ellipse(hx, hy + 260, 130, 34, 24)))
+    out.append(cw(ellipse(hx, hy + 260, 96, 16, 24)))
+    # Sterne
+    for i, (sx_, sy_) in enumerate([(200, 820), (1700, 900), (2050, 640), (1250, 950)]):
+        if (t + i) % 3:
+            out += star(sx_, sy_, 34)
+    return out
+
+
 MOODS = {"AntonTierNormal": normal, "AntonTierFroh": froh, "AntonTierParty": party,
          "AntonTierTraurig": traurig, "AntonTierSchlaf": schlaf,
-         "AntonTierEssen": essen, "AntonTierHunger": hunger}
+         "AntonTierEssen": essen, "AntonTierHunger": hunger,
+         "AntonTierKrank": krank, "AntonTierTot": tot}
 
 if __name__ == "__main__":
     for family, fn in MOODS.items():

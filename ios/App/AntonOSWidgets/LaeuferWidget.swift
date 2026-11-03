@@ -26,24 +26,38 @@ struct LaeuferProvider: TimelineProvider {
     }
 }
 
-struct LaeuferView: View {
-    @Environment(\.widgetFamily) private var family
-    let entry: LaeuferEntry
+/// Zeigt einen ab Mitternacht laufenden Sekunden-Zähler in einer Sekunden-Schrift (60 Bilder, 2,2 : 1)
+struct SekundenBild: View {
+    let font: String
+    let date: Date
+    var color: Color = .primary
+    var label: String
 
     var body: some View {
         GeometryReader { geo in
             // Ein Bild ist 2,2-mal so breit wie hoch
             let size = max(1, min(geo.size.height, geo.size.width / 2.2) * 0.96)
-            Text(Calendar.current.startOfDay(for: entry.date), style: .timer)
-                .font(.custom("AntonLaeufer-Regular", fixedSize: size))
+            Text(Calendar.current.startOfDay(for: date), style: .timer)
+                .font(.custom(font, fixedSize: size))
                 .lineLimit(1)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(family == .accessoryRectangular ? Color.primary : Color.orange)
+                .foregroundStyle(color)
                 .widgetAccentable()
                 .frame(width: geo.size.width, height: geo.size.height)
         }
         .accessibilityElement()
-        .accessibilityLabel("Laufendes Strichmännchen")
+        .accessibilityLabel(label)
+    }
+}
+
+struct LaeuferView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: LaeuferEntry
+
+    var body: some View {
+        SekundenBild(font: "AntonLaeufer-Regular", date: entry.date,
+                     color: family == .accessoryRectangular ? .primary : .orange,
+                     label: "Laufendes Strichmännchen")
     }
 }
 

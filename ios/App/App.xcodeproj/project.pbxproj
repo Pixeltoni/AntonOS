@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1A1A1A12F00000500000011 /* HaustierWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000012 /* HaustierWidget.swift */; };
+		A1A1A1A12F00000500000020 /* AntonTierNormal.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000030 /* AntonTierNormal.otf */; };
+		A1A1A1A12F00000500000021 /* AntonTierFroh.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000031 /* AntonTierFroh.otf */; };
+		A1A1A1A12F00000500000022 /* AntonTierParty.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000032 /* AntonTierParty.otf */; };
+		A1A1A1A12F00000500000023 /* AntonTierTraurig.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000033 /* AntonTierTraurig.otf */; };
+		A1A1A1A12F00000500000024 /* AntonTierSchlaf.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000034 /* AntonTierSchlaf.otf */; };
 		A1A1A1A12F00000500000001 /* LaeuferWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000002 /* LaeuferWidget.swift */; };
 		A1A1A1A12F00000500000003 /* AntonLaeufer.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000004 /* AntonLaeufer.otf */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
@@ -65,6 +71,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1A1A1A12F00000500000012 /* HaustierWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaustierWidget.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000500000030 /* AntonTierNormal.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierNormal.otf; sourceTree = "<group>"; };
+		A1A1A1A12F00000500000031 /* AntonTierFroh.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierFroh.otf; sourceTree = "<group>"; };
+		A1A1A1A12F00000500000032 /* AntonTierParty.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierParty.otf; sourceTree = "<group>"; };
+		A1A1A1A12F00000500000033 /* AntonTierTraurig.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierTraurig.otf; sourceTree = "<group>"; };
+		A1A1A1A12F00000500000034 /* AntonTierSchlaf.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierSchlaf.otf; sourceTree = "<group>"; };
 		A1A1A1A12F00000500000002 /* LaeuferWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaeuferWidget.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000500000004 /* AntonLaeufer.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonLaeufer.otf; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -180,6 +192,12 @@
 				A1A1A1A12F00000400000009 /* FocusLiveActivity.swift */,
 				A1A1A1A12F00000500000002 /* LaeuferWidget.swift */,
 				A1A1A1A12F00000500000004 /* AntonLaeufer.otf */,
+				A1A1A1A12F00000500000012 /* HaustierWidget.swift */,
+				A1A1A1A12F00000500000030 /* AntonTierNormal.otf */,
+				A1A1A1A12F00000500000031 /* AntonTierFroh.otf */,
+				A1A1A1A12F00000500000032 /* AntonTierParty.otf */,
+				A1A1A1A12F00000500000033 /* AntonTierTraurig.otf */,
+				A1A1A1A12F00000500000034 /* AntonTierSchlaf.otf */,
 				A1A1A1A12F00000300000019 /* Info.plist */,
 				A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */,
 			);
@@ -298,6 +316,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1A1A1A12F00000500000003 /* AntonLaeufer.otf in Resources */,
+				A1A1A1A12F00000500000020 /* AntonTierNormal.otf in Resources */,
+				A1A1A1A12F00000500000021 /* AntonTierFroh.otf in Resources */,
+				A1A1A1A12F00000500000022 /* AntonTierParty.otf in Resources */,
+				A1A1A1A12F00000500000023 /* AntonTierTraurig.otf in Resources */,
+				A1A1A1A12F00000500000024 /* AntonTierSchlaf.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -328,6 +351,7 @@
 				A1A1A1A12F00000400000007 /* FocusActivity.swift in Sources */,
 				A1A1A1A12F00000400000008 /* FocusLiveActivity.swift in Sources */,
 				A1A1A1A12F00000500000001 /* LaeuferWidget.swift in Sources */,
+				A1A1A1A12F00000500000011 /* HaustierWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

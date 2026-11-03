@@ -46,6 +46,6 @@ export function feedError(status: number | null, text?: string): string {
   if (status === 404) return 'Den Kalender gibt es unter diesem Link nicht (404).';
   if (status === 401 || status === 403) return 'Kein Zugriff – ist der Link noch gültig?';
   if (status >= 400) return `Der Server antwortet mit Fehler ${status}.`;
-  if (text !== undefined && !text.includes('BEGIN:VCALENDAR')) return 'Unter dem Link liegt kein Kalender (.ics).';
+  if (text !== undefined && !/BEGIN:VCALENDAR/i.test(text)) return 'Unter dem Link liegt kein Kalender (.ics).';
   return '';
 }

@@ -27,6 +27,11 @@ describe('Kalender-Abos', () => {
     expect(second.events.map((e) => e.title)).toEqual(['Zahnarzt', 'Lineare Algebra']);
   });
 
+  it('versteht Komponenten in Kleinbuchstaben', () => {
+    const lower = ics('Analysis').replace('BEGIN:VEVENT', 'BEGIN:vevent').replace('END:VEVENT', 'end:vevent');
+    expect(applyFeed([], { id: 'f', color: 'blau' }, lower, id).count).toBe(1);
+  });
+
   it('lädt nach drei Stunden neu und erklärt Fehler', () => {
     const feed = { id: 'f', name: 'x', url: 'https://x', color: 'blau' as const, lastSync: 1000 };
     expect(feedStale(feed, 1000 + FEED_REFRESH - 1)).toBe(false);

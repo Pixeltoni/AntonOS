@@ -69,6 +69,11 @@ function StudyPlanCard({ exam, blocks, status }: { exam: Exam; blocks: StudyBloc
   const share = status.goal ? Math.min(1, status.done / status.goal) : 0;
   const label = statusLabel(status);
   const startFocus = () => {
+    // Läuft schon ein Timer, bleibt er unverändert – sonst gingen Zeit und Zuordnung verloren
+    if (focus.timer.active) {
+      location.hash = '#/fokus';
+      return;
+    }
     focus.configure({ mode: 'lernen', courseId: exam.courseId });
     focus.start();
     location.hash = '#/fokus';

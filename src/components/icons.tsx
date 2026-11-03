@@ -2,8 +2,7 @@ import {
   MoonStar,
   AlarmClock, BookOpen, Cake, Calendar, CreditCard, Plane, Users, UtensilsCrossed, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
   LayoutGrid, ListChecks, MessageCircleHeart, Music, NotebookPen, Pencil, Receipt, Repeat, Rocket, Search, Settings, ShoppingCart,
-  Plus, Smile, Sparkles, Sun, Target, Timer, Tv, Wallet, WandSparkles, Zap, type LucideIcon,
-} from 'lucide-react';
+  PawPrint, Plus, Smile, Sparkles, Sun, Target, Timer, Tv, Wallet, WandSparkles, Zap, type LucideIcon } from 'lucide-react';
 import type { NavItem, WidgetId } from '../types';
 
 /** Ein Symbol pro Bereich – in Sidebar, Bereichsleiste, Suche und Dashboard gleich */
@@ -28,6 +27,7 @@ export const PAGE_ICONS: Record<string, LucideIcon> = {
   essen: UtensilsCrossed,
   menschen: Users,
   reisen: Plane,
+  knubbel: PawPrint,
   kurse: GraduationCap,
   lernen: Layers,
   pruefungen: ClipboardCheck,

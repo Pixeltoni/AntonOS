@@ -127,7 +127,7 @@ export const DEFAULT_SIDEBAR: NavItem[] = (
     ['finanzen', 'Finanzen', 'Geld'], ['einkauf', 'Einkaufsliste', 'Geld'], ['abos', 'Abos & Verträge', 'Geld'],
     ['kurse', 'Kurse', 'Studium'], ['lernen', 'Lernkarten', 'Studium'], ['pruefungen', 'Prüfungen', 'Studium'], ['noten', 'Noten', 'Studium'],
     ['fokus', 'Fokus', 'Studium'],
-    ['musik', 'Musik', 'Freizeit'], ['schauen', 'Watchlist', 'Freizeit'], ['lesen', 'Leseliste', 'Freizeit'], ['alben', 'Alben', 'Freizeit'], ['reisen', 'Reisen', 'Freizeit'],
+    ['musik', 'Musik', 'Freizeit'], ['schauen', 'Watchlist', 'Freizeit'], ['lesen', 'Leseliste', 'Freizeit'], ['alben', 'Alben', 'Freizeit'], ['reisen', 'Reisen', 'Freizeit'], ['knubbel', 'Knubbel', 'Freizeit'],
     ['tools', 'Tools', ''], ['einstellungen', 'Einstellungen', ''],
   ] as [string, string, string][]
 ).map(([path, label, group]) => ({ path, label, icon: '', group, hidden: false }));

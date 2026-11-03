@@ -1,4 +1,4 @@
-import type { Data, DateStr, FinanceSettings, Recurring, Transaction } from '../types';
+import type { BalanceCorrection, Data, DateStr, FinanceSettings, Recurring, Transaction } from '../types';
 import { monthTotals, shiftMonth } from './life';
 import { parseDate } from './dates';
 
@@ -98,6 +98,47 @@ export function nextBooking(r: Recurring, on: DateStr): DateStr | null {
   return r.endsOn && date > r.endsOn ? null : date;
 }
 
+/** Betrag mit Vorzeichen: Einnahmen positiv, Ausgaben negativ */
+export const signedAmount = (t: Pick<Transaction, 'type' | 'amount'>) => (t.type === 'Einnahme' ? t.amount : -t.amount);
+
+const cents = (v: number) => Math.round(v * 100) / 100;
+
+/** Kontostand nach allen Buchungen und Korrekturen bis einschließlich `until` */
+export function balanceUntil(txs: Transaction[], corrections: BalanceCorrection[], until: DateStr): number {
+  let sum = 0;
+  for (const t of txs) if (t.date <= until) sum += signedAmount(t);
+  for (const c of corrections) if (c.date <= until) sum += c.amount;
+  return cents(sum);
+}
+
+export interface AccountBalance {
+  /** Übertrag aus dem Vormonat (Kontostand am letzten Tag davor) */
+  start: number;
+  /** Kontostand am Monatsende (bzw. jetzt im laufenden Monat) */
+  end: number;
+  /** Summe der Korrekturen in diesem Monat */
+  corrected: number;
+}
+
+/** Kontostand im Monat `key`: Übertrag vom Vormonat + Einnahmen − Ausgaben + Korrekturen */
+export function accountBalance(txs: Transaction[], corrections: BalanceCorrection[], key: string): AccountBalance {
+  const start = balanceUntil(txs, corrections, `${shiftMonth(key, -1)}-31`);
+  const end = balanceUntil(txs, corrections, `${key}-31`);
+  const corrected = cents(corrections.filter((c) => c.date.slice(0, 7) === key).reduce((s, c) => s + c.amount, 0));
+  return { start, end, corrected };
+}
+
+/**
+ * Korrektur, damit der Kontostand im Monat `key` danach `target` beträgt.
+ * Im laufenden Monat mit heutigem Datum, sonst am Monatsletzten. null, wenn nichts zu ändern ist.
+ */
+export function balanceCorrection(txs: Transaction[], corrections: BalanceCorrection[], key: string, target: number, on: DateStr): Omit<BalanceCorrection, 'id'> | null {
+  const delta = cents(target - accountBalance(txs, corrections, key).end);
+  if (delta === 0) return null;
+  const date = key === on.slice(0, 7) ? on : `${key}-${String(daysInMonth(key)).padStart(2, '0')}`;
+  return { date, amount: delta };
+}
+
 export interface BudgetStatus {
   budget: number;
   spent: number;
@@ -106,6 +147,8 @@ export interface BudgetStatus {
   available: number;
   categories: { category: string; spent: number; budget: number; share: number; warn: boolean }[];
   daysLeft: number;
+  /** Kontostand mit Übertrag aus dem Vormonat */
+  balance: AccountBalance;
 }
 
 /** Stand des Monats `key` gegenüber dem Budget. Warnung ab 90 % eines Kategorie-Budgets. */
@@ -127,6 +170,7 @@ export function budgetStatus(txs: Transaction[], settings: FinanceSettings, key:
     available: settings.budget > 0 ? settings.budget - totals.expenses : totals.balance,
     categories,
     daysLeft,
+    balance: accountBalance(txs, settings.balanceCorrections ?? [], key),
   };
 }
 

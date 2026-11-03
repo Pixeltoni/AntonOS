@@ -833,6 +833,12 @@ h3 { font-size: 0.95rem; margin: 0.5rem 0 0; }
 .wallet-value.negative { color: #FF453A; }
 .wallet-bar { display: block; height: 6px; border-radius: 999px; background: rgb(255 255 255 / 0.15); overflow: hidden; margin-top: 0.5rem; }
 .wallet-bar span { display: block; height: 100%; border-radius: 999px; }
+.wallet-balance { font-size: 0.8rem; color: #AEAEB2; margin-top: 0.4rem; font-variant-numeric: tabular-nums; }
+.wallet-balance strong { color: #fff; font-weight: 600; }
+.wallet-edit { align-self: flex-start; margin-top: 0.5rem; position: relative; z-index: 1; background: rgb(255 255 255 / 0.12); color: #fff; border: 0; }
+.wallet-form { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; position: relative; z-index: 1; }
+.wallet-form input { width: 8rem; }
+.wallet-hint { flex-basis: 100%; font-size: 0.75rem; color: #AEAEB2; }
 
 .donut-row { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
 .donut-row > .cat-legend, .donut-row > .empty { flex: 1; min-width: 180px; }

@@ -271,6 +271,15 @@ export interface FinanceSettings {
   budget: number;
   /** Budget pro Kategorie */
   categoryBudgets: { category: string; amount: number }[];
+  /** Korrekturen des Kontostands – zählen weder als Einnahme noch als Ausgabe */
+  balanceCorrections?: BalanceCorrection[];
+}
+
+/** Korrektur des Kontostands: verschiebt den Stand ab `date` um `amount` (kann negativ sein) */
+export interface BalanceCorrection {
+  id: ID;
+  date: DateStr;
+  amount: number;
 }
 
 /** Artikel auf der Einkaufsliste */

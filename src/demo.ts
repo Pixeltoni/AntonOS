@@ -21,7 +21,7 @@ export const defaultSettings = (): Settings => ({
 
 export const defaultSemester = (): SemesterSettings => ({ start: '', end: '', remind: 0 });
 
-export const defaultFinance = (): FinanceSettings => ({ budget: 0, categoryBudgets: [] });
+export const defaultFinance = (): FinanceSettings => ({ budget: 0, categoryBudgets: [], balanceCorrections: [] });
 
 export function defaultAppearance(): Appearance {
   return { theme: 'system' };

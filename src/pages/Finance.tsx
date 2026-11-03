@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
-import type { Recurring, SavingsPot, Transaction, TxType, WidgetVariant } from '../types';
+import type { BalanceCorrection, Recurring, SavingsPot, Transaction, TxType, WidgetVariant } from '../types';
 import { formatDate, relativeLabel, today } from '../lib/dates';
 import { formatMoney, monthKey, monthLabel, shiftMonth } from '../lib/life';
-import { applyRecurring, budgetStatus, categoryStyle, donutSegments, nextBooking, toCsv, type BudgetStatus } from '../lib/finance';
+import { applyRecurring, balanceCorrection, budgetStatus, categoryStyle, donutSegments, nextBooking, toCsv, type BudgetStatus } from '../lib/finance';
 import { defaultFinance } from '../demo';
 import { everyLabel, isRunning, perMonth } from '../lib/subscriptions';
 
@@ -77,26 +77,77 @@ export function sortTx(txs: Transaction[]): Transaction[] {
   return [...txs].sort((a, b) => b.date.localeCompare(a.date));
 }
 
-/** Karte wie in Apple Wallet: Budget und „Verfügbar“ */
-export function WalletCard({ status, month, compact }: { status: BudgetStatus; month: string; compact?: boolean }) {
+const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${formatMoney(Math.abs(v))}`;
+
+/** Karte wie in Apple Wallet: Budget und „Verfügbar“, darunter der Kontostand mit Übertrag */
+export function WalletCard({ status, month, compact, editable }: { status: BudgetStatus; month: string; compact?: boolean; editable?: boolean }) {
   const monthName = new Date(`${month}-01T12:00`).toLocaleDateString('de-DE', { month: 'long' });
+  const prevName = new Date(`${shiftMonth(month, -1)}-01T12:00`).toLocaleDateString('de-DE', { month: 'long' });
   const share = status.budget > 0 ? Math.min(1, status.spent / status.budget) : 0;
+  const { balance } = status;
+  const withBudget = status.budget > 0;
   return (
     <div className={`wallet-card ${compact ? 'compact' : ''}`}>
       <div className="wallet-top">
-        <span>{status.budget > 0 ? `Budget ${monthName}` : `Saldo ${monthName}`}</span>
-        {status.budget > 0 && <strong>{euro(status.budget)}</strong>}
+        <span>{withBudget ? `Budget ${monthName}` : `Kontostand ${monthName}`}</span>
+        {withBudget && <strong>{euro(status.budget)}</strong>}
       </div>
       <div className="wallet-bottom">
-        <span className="wallet-label">{status.budget > 0 ? 'Verfügbar' : 'Einnahmen − Ausgaben'}</span>
-        <span className={`wallet-value ${status.available < 0 ? 'negative' : ''}`}>{formatMoney(status.available)}</span>
-        {status.budget > 0 && (
+        <span className="wallet-label">{withBudget ? 'Verfügbar' : 'Kontostand'}</span>
+        <span className={`wallet-value ${(withBudget ? status.available : balance.end) < 0 ? 'negative' : ''}`}>{formatMoney(withBudget ? status.available : balance.end)}</span>
+        {withBudget && (
           <span className="wallet-bar" aria-hidden>
             <span style={{ width: `${share * 100}%`, background: share >= 0.9 ? '#FF9500' : '#34C759' }} />
           </span>
         )}
+        {!compact && (
+          <span className="wallet-balance">
+            {withBudget && <>Kontostand <strong>{formatMoney(balance.end)}</strong> · </>}
+            Übertrag aus {prevName} {formatMoney(balance.start)} · Monat {signed(status.income - status.spent)}
+            {balance.corrected !== 0 && <> · Korrektur {signed(balance.corrected)}</>}
+          </span>
+        )}
+        {editable && <BalanceEditor month={month} current={balance.end} corrected={balance.corrected} />}
       </div>
     </div>
+  );
+}
+
+/** Kontostand direkt korrigieren – zählt weder als Einnahme noch als Ausgabe */
+function BalanceEditor({ month, current, corrected }: { month: string; current: number; corrected: number }) {
+  const { data, updateSettings } = useStore();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('');
+  const t = today();
+  if (month > monthKey(t)) return null;
+  const finance = data.settings.finance ?? defaultFinance();
+  const list = finance.balanceCorrections ?? [];
+  const save = (balanceCorrections: BalanceCorrection[]) => updateSettings({ finance: { ...finance, balanceCorrections } });
+  if (!open) {
+    return (
+      <button type="button" className="wallet-edit" onClick={() => { setValue(current.toFixed(2).replace('.', ',')); setOpen(true); }}>
+        Kontostand korrigieren
+      </button>
+    );
+  }
+  return (
+    <form
+      className="wallet-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const c = balanceCorrection(data.transactions, list, month, parseAmount(value), t);
+        if (c) save([...list, { id: `korr-${Date.now().toString(36)}`, ...c }]);
+        setOpen(false);
+      }}
+    >
+      <input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Richtiger Kontostand in Euro" autoFocus />
+      <button className="primary" type="submit">Übernehmen</button>
+      <button type="button" onClick={() => setOpen(false)}>Abbrechen</button>
+      {corrected !== 0 && (
+        <button type="button" onClick={() => { save(list.filter((c) => c.date.slice(0, 7) !== month)); setOpen(false); }}>Korrekturen entfernen</button>
+      )}
+      <span className="wallet-hint">{month === monthKey(t) ? 'Stand von heute.' : 'Stand am Monatsende.'} Zählt nicht als Einnahme oder Ausgabe.</span>
+    </form>
   );
 }
 
@@ -436,7 +487,7 @@ export function Finance() {
         }
       />
       <div className="wallet-row">
-        <WalletCard status={status} month={month} />
+        <WalletCard status={status} month={month} editable />
         <Panel>
           <div className="donut-row">
             <Donut status={status} />

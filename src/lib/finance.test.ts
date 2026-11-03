@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recurring, Transaction } from '../types';
-import { applyRecurring, bookingDate, budgetStatus, donutSegments, dueRecurring, nextBooking, toCsv } from './finance';
+import { accountBalance, applyRecurring, balanceCorrection, bookingDate, budgetStatus, donutSegments, dueRecurring, nextBooking, toCsv } from './finance';
 
 const rent: Recurring = { id: 'r', type: 'Ausgabe', description: 'Miete', amount: 390, category: 'Miete', account: 'Giro', day: 1, start: '2026-08', lastBooked: null };
 const tx = (p: Partial<Transaction>): Transaction => ({ id: Math.random().toString(), type: 'Ausgabe', description: '', amount: 10, category: 'Sonstiges', account: 'Giro', date: '2026-10-05', ...p });
@@ -74,6 +74,34 @@ describe('Budget', () => {
   it('teilt den Ring auf', () => {
     expect(donutSegments([{ amount: 3 }, { amount: 0 }, { amount: 1 }])).toEqual([{ amount: 3, from: 0, to: 0.75 }, { amount: 1, from: 0.75, to: 1 }]);
     expect(donutSegments([])).toEqual([]);
+  });
+});
+
+describe('Kontostand', () => {
+  const txs = [
+    tx({ type: 'Einnahme', amount: 1000, date: '2026-09-01' }),
+    tx({ amount: 300, date: '2026-09-15' }),
+    tx({ amount: 50, date: '2026-10-05' }),
+    tx({ type: 'Einnahme', amount: 20, date: '2026-10-31' }),
+  ];
+  it('übernimmt den Stand vom Monatsende in den nächsten Monat', () => {
+    expect(accountBalance(txs, [], '2026-09')).toEqual({ start: 0, end: 700, corrected: 0 });
+    expect(accountBalance(txs, [], '2026-10')).toEqual({ start: 700, end: 670, corrected: 0 });
+    expect(accountBalance(txs, [], '2026-11')).toEqual({ start: 670, end: 670, corrected: 0 });
+  });
+  it('korrigiert den Stand ohne Einnahme oder Ausgabe', () => {
+    const c = balanceCorrection(txs, [], '2026-10', 1000.5, '2026-10-20');
+    expect(c).toEqual({ date: '2026-10-20', amount: 330.5 });
+    const list = [{ id: 'k', ...c! }];
+    expect(accountBalance(txs, list, '2026-10')).toEqual({ start: 700, end: 1000.5, corrected: 330.5 });
+    expect(accountBalance(txs, list, '2026-11').start).toBe(1000.5);
+    const s = budgetStatus(txs, { budget: 0, categoryBudgets: [], balanceCorrections: list }, '2026-10', '2026-10-20');
+    expect([s.income, s.spent, s.available]).toEqual([20, 50, -30]);
+    expect(s.balance.end).toBe(1000.5);
+  });
+  it('bucht frühere Monate am Monatsletzten und lässt Gleiches weg', () => {
+    expect(balanceCorrection(txs, [], '2026-09', 650, '2026-10-20')).toEqual({ date: '2026-09-30', amount: -50 });
+    expect(balanceCorrection(txs, [], '2026-10', 670, '2026-10-20')).toBeNull();
   });
 });
 

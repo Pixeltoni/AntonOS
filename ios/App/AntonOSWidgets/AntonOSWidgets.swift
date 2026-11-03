@@ -791,6 +791,7 @@ struct AntonOSWidgetBundle: WidgetBundle {
         BudgetWidget()
         ShoppingWidget()
         NextEventWidget()
+        LaeuferWidget()
         FocusLiveActivity()
         if #available(iOS 18.0, *) {
             QuickAddControl()

@@ -2122,3 +2122,24 @@ label.tone-clip { color: var(--text); display: flex; flex-direction: column; gap
 .evening-done { align-self: stretch; padding: 12px; font-size: 1rem; }
 .evening-settings summary { cursor: pointer; }
 .evening-settings .row { gap: 8px; align-items: center; }
+
+/* Face ID */
+.lock-gate { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 18vh 16px 0; }
+.lock-gate h2 { margin: 0; }
+.lock-face { font-size: 44px; width: 84px; height: 84px; display: grid; place-items: center; border-radius: 22px; background: var(--surface-2); }
+
+/* iPhone-Funktionen in den Einstellungen */
+.iphone-stack { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.iphone-stack > .ios-list, .iphone-stack > .form-grid { align-self: stretch; }
+.chip-check { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); }
+.siri-phrases { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+.receipt-check { border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+.receipt-check .row { gap: 8px; align-items: center; }
+
+/* Apple Health bei den Gewohnheiten */
+.health-strip { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.health-now { display: flex; flex-direction: column; gap: 4px; }
+.health-bars { display: grid; grid-template-columns: repeat(7, 10px); gap: 5px; height: 44px; align-items: end; }
+.health-bars span { height: 100%; display: flex; align-items: flex-end; background: color-mix(in srgb, #ff2d55 12%, transparent); border-radius: 4px; }
+.health-bars i { display: block; width: 100%; border-radius: 4px; background: #ff2d55; min-height: 2px; }

@@ -14,6 +14,7 @@ export function nextLabel(r: Recurring, on: string): string {
   return r.endsOn && r.endsOn < on ? `beendet am ${formatDate(r.endsOn)}` : `gekündigt zum ${formatDate(r.endsOn!)}`;
 }
 import { Empty, PageHeader, Panel } from '../components/ui';
+import { ReceiptButton } from '../components/receipt';
 
 const CATEGORIES = ['Lebensmittel', 'Miete', 'Mobilität', 'Freizeit', 'Studium', 'Abos', 'Kleidung', 'Gesundheit', 'Sparen', 'Gehalt', 'BAföG', 'Sonstiges'];
 const ACCOUNTS = ['Girokonto', 'Bar', 'Kreditkarte', 'Sparkonto'];
@@ -427,6 +428,7 @@ export function Finance() {
         subtitle={monthLabel(month)}
         actions={
           <>
+            <ReceiptButton />
             <button onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Voriger Monat">‹</button>
             <button onClick={() => setMonth(monthKey(t))}>Aktueller Monat</button>
             <button onClick={() => setMonth(shiftMonth(month, 1))} aria-label="Nächster Monat">›</button>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { isLockedNow } from './extras';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { today } from '../lib/dates';
@@ -112,7 +113,8 @@ export function Spotlight() {
       });
     }
 
-    const hits = searchAll(data, q, pages);
+    // Mit Face ID gesperrte Bereiche erscheinen erst nach dem Entsperren in der Suche
+    const hits = searchAll(data, q, pages).filter((h) => h.key.startsWith('page-') || !isLockedNow(data.settings.lock, h.href.replace(/^#\//, '').split('/')[0]));
     const top = topHit(hits);
     const navIcon = (h: SearchHit) => {
       const page = h.key.startsWith('page-') ? pages.find((p) => `page-${p.path}` === h.key) : undefined;

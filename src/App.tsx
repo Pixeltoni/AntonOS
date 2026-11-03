@@ -49,6 +49,7 @@ import { AlarmRinger } from './components/alarm';
 import { Alarms } from './pages/Alarms';
 import { useCalendarFeeds } from './components/feeds';
 import { Evening, useDayCloseReminder } from './pages/Evening';
+import { LockGate, useNativeExtras } from './components/extras';
 
 function useRoute(): string[] {
   const read = () => location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -178,6 +179,7 @@ function Shell() {
   useNativeWidgets();
   useCalendarFeeds();
   useDayCloseReminder();
+  useNativeExtras();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);
@@ -269,7 +271,9 @@ function Shell() {
         <OfflineBanner />
         <UpdateBanner />
         <ConflictBanner />
-        <Page route={route} />
+        <LockGate key={current} page={current}>
+          <Page route={route} />
+        </LockGate>
       </main>
       <MiniPlayer hidden={current === 'musik' || current === 'dashboard'} />
       <FocusPill hidden={current === 'fokus'} />

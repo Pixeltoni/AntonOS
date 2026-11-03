@@ -60,6 +60,8 @@ struct CountdownProvider: AppIntentTimelineProvider {
 struct WidgetBackground: ViewModifier {
     @Environment(\.widgetFamily) private var family
     var color: Color? = nil
+    /// Zarte Tönung in der Farbe des Widgets, wie die Karten in der App
+    var tint: Color? = nil
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -69,6 +71,13 @@ struct WidgetBackground: ViewModifier {
         default:
             if let color {
                 content.containerBackground(for: .widget) { color }
+            } else if let tint {
+                content.containerBackground(for: .widget) {
+                    ZStack {
+                        Color(uiColor: .systemBackground)
+                        LinearGradient(colors: [tint.opacity(0.16), tint.opacity(0.03)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    }
+                }
             } else {
                 content.containerBackground(.background, for: .widget)
             }
@@ -77,7 +86,7 @@ struct WidgetBackground: ViewModifier {
 }
 
 extension View {
-    func widgetBackground(_ color: Color? = nil) -> some View { modifier(WidgetBackground(color: color)) }
+    func widgetBackground(_ color: Color? = nil, tint: Color? = nil) -> some View { modifier(WidgetBackground(color: color, tint: tint)) }
 }
 
 struct Caption: View {
@@ -88,9 +97,9 @@ struct Caption: View {
     var body: some View {
         HStack(spacing: 4) {
             if let icon { Image(systemName: icon).foregroundStyle(color) }
-            Text(text.uppercased()).foregroundStyle(icon == nil ? color : Color.secondary)
+            Text(text.uppercased()).tracking(0.4).foregroundStyle(icon == nil ? color : Color.secondary)
         }
-        .font(.system(size: 11, weight: .semibold))
+        .font(.system(size: 11, weight: .bold))
         .lineLimit(1)
     }
 }
@@ -140,7 +149,7 @@ struct TaskRow: View {
                     .font(.system(size: 17))
                     .foregroundStyle(task.done ? Color.green : (task.overdue ? Color.red : Color.secondary))
                 Text(task.title)
-                    .font(.caption)
+                    .font(.caption.weight(.medium))
                     .strikethrough(task.done)
                     .foregroundStyle(task.done ? Color.secondary : Color.primary)
                     .lineLimit(1)
@@ -243,7 +252,7 @@ struct AlarmView: View {
 struct AlarmWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSAlarm", provider: SnapshotProvider()) { entry in
-            AlarmView(entry: entry).widgetBackground().widgetURL(AppLink.page("wecker"))
+            AlarmView(entry: entry).widgetBackground(tint: .orange).widgetURL(AppLink.page("wecker"))
         }
         .configurationDisplayName("Nächster Wecker")
         .description("Wann dein nächster AntonOS-Wecker klingelt.")
@@ -325,7 +334,7 @@ struct TodayView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("\(Fmt.weekday(entry.date)), \(Fmt.longDay(entry.date))")
-                    .font(.subheadline.weight(.bold))
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
                     .lineLimit(1)
                 Spacer()
                 Text("HEUTE").font(.system(size: 11, weight: .semibold)).foregroundStyle(.red)
@@ -369,7 +378,7 @@ struct TodayView: View {
 struct TodayWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSToday", provider: SnapshotProvider()) { entry in
-            TodayView(entry: entry).widgetBackground().widgetURL(AppLink.page("kalender"))
+            TodayView(entry: entry).widgetBackground(tint: .blue).widgetURL(AppLink.page("kalender"))
         }
         .configurationDisplayName("Heute")
         .description("Nächste Termine und Aufgaben für heute – zum Abhaken.")
@@ -469,7 +478,7 @@ struct HabitsView: View {
 struct HabitsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSHabits", provider: SnapshotProvider()) { entry in
-            HabitsView(entry: entry).widgetBackground().widgetURL(AppLink.page("gewohnheiten"))
+            HabitsView(entry: entry).widgetBackground(tint: .green).widgetURL(AppLink.page("gewohnheiten"))
         }
         .configurationDisplayName("Gewohnheiten")
         .description("Gewohnheiten von heute mit einem Tipp abhaken.")
@@ -520,7 +529,7 @@ struct TrainingView: View {
 struct TrainingWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSTraining", provider: SnapshotProvider()) { entry in
-            TrainingView(entry: entry).widgetBackground().widgetURL(AppLink.page("training"))
+            TrainingView(entry: entry).widgetBackground(tint: .green).widgetURL(AppLink.page("training"))
         }
         .configurationDisplayName("Training heute")
         .description("Was im Training dran ist und dein Wochenstand.")
@@ -604,7 +613,7 @@ struct CountdownView: View {
 struct CountdownWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: "AntonOSCountdown", intent: CountdownConfigIntent.self, provider: CountdownProvider()) { entry in
-            CountdownView(entry: entry).widgetBackground().widgetURL(AppLink.page(entry.snapshot.exam != nil && entry.target != .trip ? "pruefungen" : "reisen"))
+            CountdownView(entry: entry).widgetBackground(tint: .orange).widgetURL(AppLink.page(entry.snapshot.exam != nil && entry.target != .trip ? "pruefungen" : "reisen"))
         }
         .configurationDisplayName("Countdown")
         .description("Tage bis zur nächsten Prüfung oder Reise. Lange drücken zum Auswählen.")
@@ -667,7 +676,7 @@ struct BudgetView: View {
 struct BudgetWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSBudget", provider: SnapshotProvider()) { entry in
-            BudgetView(entry: entry).widgetBackground().widgetURL(AppLink.page("finanzen"))
+            BudgetView(entry: entry).widgetBackground(tint: .orange).widgetURL(AppLink.page("finanzen"))
         }
         .configurationDisplayName("Budget")
         .description("Wie viel vom Monatsbudget noch übrig ist.")
@@ -729,7 +738,7 @@ struct ShoppingView: View {
 struct ShoppingWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSShopping", provider: SnapshotProvider()) { entry in
-            ShoppingView(entry: entry).widgetBackground().widgetURL(AppLink.page("einkauf"))
+            ShoppingView(entry: entry).widgetBackground(tint: .green).widgetURL(AppLink.page("einkauf"))
         }
         .configurationDisplayName("Einkaufsliste")
         .description("Offene Einträge zum Abhaken im Laden.")
@@ -769,7 +778,7 @@ struct NextEventView: View {
 struct NextEventWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSNextEvent", provider: SnapshotProvider()) { entry in
-            NextEventView(entry: entry).widgetBackground().widgetURL(AppLink.page("kalender"))
+            NextEventView(entry: entry).widgetBackground(tint: .red).widgetURL(AppLink.page("kalender"))
         }
         .configurationDisplayName("Nächster Termin")
         .description("Der nächste Termin auf dem Sperrbildschirm, auch über der Uhr.")

@@ -59,7 +59,8 @@ describe('Sidebar', () => {
   it('ergänzt neue Seiten bei alten Anpassungen', () => {
     const stored = DEFAULT_SIDEBAR.filter((i) => i.path !== 'musik').map((i) => ({ ...i, label: i.label.toUpperCase() }));
     const merged = mergeWithDefaults(stored, DEFAULT_SIDEBAR, 'path');
-    expect(merged[0].label).toBe('ÜBERSICHT');
+    expect(merged[0].label).toBe('HEUTE');
+    expect(merged[1].label).toBe('ÜBERSICHT');
     // „Musik“ steht im Standard hinter „Fokus“ und kommt wieder dorthin
     const paths = merged.map((m) => m.path);
     expect(paths.indexOf('musik')).toBe(paths.indexOf('fokus') + 1);
@@ -69,7 +70,8 @@ describe('Sidebar', () => {
     const own = ['einstellungen', 'finanzen', 'dashboard'].map((p) => DEFAULT_SIDEBAR.find((d) => d.path === p)!);
     const merged = mergeWithDefaults(own, DEFAULT_SIDEBAR, 'path').map((m) => m.path);
     expect(merged.indexOf('einkauf')).toBe(merged.indexOf('finanzen') + 1);
-    expect(merged.slice(0, 3)).toEqual(['einstellungen', 'finanzen', 'einkauf']);
+    // „Heute“ hat keinen Vorgänger und kommt ganz nach vorn
+    expect(merged.slice(0, 4)).toEqual(['heute', 'einstellungen', 'finanzen', 'einkauf']);
     expect(merged).toHaveLength(DEFAULT_SIDEBAR.length);
   });
 

@@ -15,8 +15,8 @@ import { Icon } from './icons';
 
 const OPEN_EVENT = 'antonos:assistentin';
 
-/** Öffnet die Assistentin von überall (Knopf, Suche). */
-export const openAssistant = () => window.dispatchEvent(new Event(OPEN_EVENT));
+/** Öffnet die Assistentin von überall (Knopf, Suche); `prefill` steht dann schon im Eingabefeld (z. B. „Termin: “). */
+export const openAssistant = (prefill?: unknown): void => void window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: typeof prefill === 'string' ? prefill : undefined }));
 const RUN_EVENT = 'antonos:assistentin-ausfuehren';
 /** Öffnet die Assistentin und trägt `text` gleich ein (z. B. von Siri) – mit Widerrufen im Popup */
 export const runInAssistant = (text: string) => window.dispatchEvent(new CustomEvent(RUN_EVENT, { detail: text }));
@@ -122,7 +122,11 @@ export function Assistant() {
         setOpen((o) => !o);
       }
     };
-    const onOpen = () => setOpen(true);
+    const onOpen = (e: Event) => {
+      const prefill = (e as CustomEvent).detail;
+      if (typeof prefill === 'string') setText(prefill);
+      setOpen(true);
+    };
     const onRun = (e: Event) => {
       const text = String((e as CustomEvent).detail ?? '').trim();
       setOpen(true);

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Erzeugt die Schriften für das Widget „Haustier“ (Knubbel).
 
-Je Laune eine Schrift mit 60 Bildern (eins pro Sekunde, siehe sekundenschrift.py):
+Knubbel ist ein kleines Tamagotchi: Seine Laune hängt nur daran, wann er gefüttert wurde
+(Logik in ios/App/AntonOSWidgets/HaustierWidget.swift). Je Laune eine Schrift mit 60 Bildern (eins pro Sekunde, siehe sekundenschrift.py):
   AntonTierNormal  – bummelt hin und her, blinzelt
   AntonTierFroh    – hüpft hin und her, strahlt
-  AntonTierParty   – tanzt, Noten fliegen, Sterne funkeln (Ringe zu / alles erledigt)
-  AntonTierTraurig – sitzt unter einer Regenwolke, eine Träne kullert
+  AntonTierParty   – tanzt, Noten fliegen, Sterne funkeln (kurz nach dem Essen)
+  AntonTierTraurig – sitzt unter einer Regenwolke, eine Träne kullert (lange nichts bekommen)
   AntonTierSchlaf  – liegt und schnarcht, Zs steigen auf, Mond
+  AntonTierEssen   – mampft einen Apfel, Herzchen steigen auf (gleich nach dem Füttern)
+  AntonTierHunger  – sitzt vor dem leeren Napf und träumt von einem Apfel
 Aufruf: pip install fonttools && python3 scripts/haustier-font.py
 Schreibt ios/App/AntonOSWidgets/AntonTier*.otf
 """
@@ -162,6 +165,31 @@ def cloud(x, y):
     return [ccw(circle(x + dx, y + dy, r, 20)) for dx, dy, r in [(-130, 0, 85), (0, 40, 115), (130, 0, 90), (0, -20, 95)]]
 
 
+def heart(x, y, r):
+    pts = []
+    for i in range(24):
+        a = 2 * math.pi * i / 24
+        hx = 16 * math.sin(a) ** 3
+        hy = 13 * math.cos(a) - 5 * math.cos(2 * a) - 2 * math.cos(3 * a) - math.cos(4 * a)
+        pts.append((x + hx * r / 16, y + hy * r / 16))
+    return [ccw(pts)]
+
+
+def apple(x, y, r, hole=False):
+    """Apfel mit Stiel und Blatt; hole=True zeichnet ihn als Loch (z. B. in einer Denkblase)"""
+    f = cw if hole else ccw
+    body = [(x + r * 1.05 * math.cos(a) * (1 - 0.08 * math.sin(a)), y + r * math.sin(a) - (0.18 * r if abs(math.cos(a)) < 0.3 and math.sin(a) > 0 else 0))
+            for a in [2 * math.pi * i / 24 for i in range(24)]]
+    out = [f(body)]
+    out.append(f([(x - 0.06 * r, y + 0.85 * r), (x + 0.06 * r, y + 0.85 * r), (x + 0.12 * r, y + 1.35 * r), (x, y + 1.35 * r)]))
+    out.append(f(ellipse(x + 0.38 * r, y + 1.2 * r, 0.3 * r, 0.13 * r, 12, 0.5)))
+    return out
+
+
+def bowl(x, w=200):
+    return [ccw([(x - w / 2 - 20, GROUND + 80), (x + w / 2 + 20, GROUND + 80)] + [(x + w / 2 - w * i / 12 * 1.0, GROUND + 80 - 70 * math.sin(math.pi * i / 12)) for i in range(1, 12)])]
+
+
 # ---------- Launen ----------
 
 def normal(t):
@@ -234,8 +262,46 @@ def schlaf(t):
     return out
 
 
+def essen(t):
+    x = WIDTH * 0.40
+    chew = t % 2 == 0
+    out = ground() + knubbel(x, sx=1.04 if chew else 1.0, sy=0.96 if chew else 1.0, look=1,
+                             eyes="happy" if t % 4 < 2 else "open", mouth="big" if chew else "smile", step=0)
+    # Der Apfel wird kleiner, nach einer Minute kommt ein neuer
+    r = 120 * (1 - (t % 30) / 36)
+    out += apple(x + RX + 170, GROUND + r + 10, r)
+    if not chew:
+        for k in range(3):
+            out.append(ccw(circle(x + RX + 40 + k * 35, GROUND + 60 + (k * 37 + t * 11) % 90, 12, 8)))
+    for k in range(3):
+        p = ((t + k * 2) % 6) / 6
+        out += heart(x - 120 + k * 120 + p * 60, 600 + p * 330, 34 + 26 * p)
+    return out
+
+
+def hunger(t):
+    x = WIDTH * 0.36
+    out = ground() + knubbel(x, sx=1.02, sy=0.94, look=1, eyes="sad" if t % 8 < 5 else "open",
+                             mouth="o" if t % 3 else "frown")
+    out += bowl(x + RX + 190)
+    # Denkblase mit Apfel, pulsiert
+    bx, by = x + RX + 470, 720
+    br = 210 if t % 2 else 190
+    out.append(ccw(ellipse(bx, by, br * 1.25, br, 28)))
+    out += apple(bx, by - 40, 85 if t % 2 else 75, hole=True)
+    out.append(ccw(circle(x + RX + 120, 520, 30, 12)))
+    out.append(ccw(circle(x + RX + 210, 590, 44, 14)))
+    # Magenknurren
+    if t % 3 == 0:
+        for k in range(2):
+            zx = x - RX - 120 - k * 50
+            out.append(ccw(band([(zx, 200 + k * 40), (zx - 30, 230 + k * 40), (zx, 260 + k * 40), (zx - 30, 290 + k * 40)], 18)))
+    return out
+
+
 MOODS = {"AntonTierNormal": normal, "AntonTierFroh": froh, "AntonTierParty": party,
-         "AntonTierTraurig": traurig, "AntonTierSchlaf": schlaf}
+         "AntonTierTraurig": traurig, "AntonTierSchlaf": schlaf,
+         "AntonTierEssen": essen, "AntonTierHunger": hunger}
 
 if __name__ == "__main__":
     for family, fn in MOODS.items():

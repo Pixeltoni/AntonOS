@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1A1A1A12F00000500000025 /* AntonTierEssen.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000035 /* AntonTierEssen.otf */; };
+		A1A1A1A12F00000500000026 /* AntonTierHunger.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000036 /* AntonTierHunger.otf */; };
 		A1A1A1A12F00000500000011 /* HaustierWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000012 /* HaustierWidget.swift */; };
 		A1A1A1A12F00000500000020 /* AntonTierNormal.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000030 /* AntonTierNormal.otf */; };
 		A1A1A1A12F00000500000021 /* AntonTierFroh.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000031 /* AntonTierFroh.otf */; };
@@ -71,6 +73,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1A1A1A12F00000500000035 /* AntonTierEssen.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierEssen.otf; sourceTree = "<group>"; };
+		A1A1A1A12F00000500000036 /* AntonTierHunger.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierHunger.otf; sourceTree = "<group>"; };
 		A1A1A1A12F00000500000012 /* HaustierWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaustierWidget.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000500000030 /* AntonTierNormal.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierNormal.otf; sourceTree = "<group>"; };
 		A1A1A1A12F00000500000031 /* AntonTierFroh.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierFroh.otf; sourceTree = "<group>"; };
@@ -198,6 +202,8 @@
 				A1A1A1A12F00000500000032 /* AntonTierParty.otf */,
 				A1A1A1A12F00000500000033 /* AntonTierTraurig.otf */,
 				A1A1A1A12F00000500000034 /* AntonTierSchlaf.otf */,
+				A1A1A1A12F00000500000035 /* AntonTierEssen.otf */,
+				A1A1A1A12F00000500000036 /* AntonTierHunger.otf */,
 				A1A1A1A12F00000300000019 /* Info.plist */,
 				A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */,
 			);
@@ -321,6 +327,8 @@
 				A1A1A1A12F00000500000022 /* AntonTierParty.otf in Resources */,
 				A1A1A1A12F00000500000023 /* AntonTierTraurig.otf in Resources */,
 				A1A1A1A12F00000500000024 /* AntonTierSchlaf.otf in Resources */,
+				A1A1A1A12F00000500000025 /* AntonTierEssen.otf in Resources */,
+				A1A1A1A12F00000500000026 /* AntonTierHunger.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

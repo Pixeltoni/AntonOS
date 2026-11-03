@@ -5,3 +5,4 @@ dist
 # Eigene Lieder: nur verschlüsselt im Repo (ios/eigene-toene.tar.gz.enc), entpackt beim iOS-Build
 ios/App/App/Tones/antonos-lied-*.wav
 public/tones/
+__pycache__/

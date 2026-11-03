@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { WidgetConfig, WidgetId, WidgetSize, WidgetVariant } from '../types';
 import { addDays, parseDate, relativeLabel, today } from '../lib/dates';
+import { listTasks } from '../lib/tasks';
 import { onDay, sortEntries } from '../lib/calendar';
 import { stackOrder, WIDGET_LABELS, type StackPage } from '../lib/layout';
 import { monthKey } from '../lib/life';
@@ -71,7 +72,7 @@ export function CountdownWidget() {
 function StackTasks() {
   const { data } = useStore();
   const t = today();
-  const open = data.tasks
+  const open = listTasks(data.tasks)
     .filter((x) => x.status !== 'erledigt')
     .sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999'));
   return (

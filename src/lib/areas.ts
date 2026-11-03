@@ -1,5 +1,6 @@
 import type { Data, DateStr, NavItem } from '../types';
 import { addDays, daysBetween, parseDate, relativeLabel } from './dates';
+import { listTasks } from './tasks';
 import { formatMoney, isHabitDone, monthTotals } from './life';
 import { isDue } from './srs';
 import { subscriptionTotals } from './subscriptions';
@@ -55,7 +56,7 @@ const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.g
 /** Kurzer Stand je Seite für die Bereichs-Kacheln (fehlt = nichts Besonderes) */
 export function areaHints(data: Data, t: DateStr, now: Date): Record<string, string> {
   const hints: Record<string, string> = {};
-  const open = data.tasks.filter((x) => x.status !== 'erledigt');
+  const open = listTasks(data.tasks).filter((x) => x.status !== 'erledigt');
   const due = open.filter((x) => x.due !== null && x.due <= t).length;
   if (open.length) hints.aufgaben = due ? `${due} fällig` : `${open.length} offen`;
 

@@ -5,6 +5,7 @@ import { addDays, isoWeek, parseDate, today } from '../lib/dates';
 import { areaHints, dayPhase, greeting, storyWeek, todaySections, type TodaySection } from '../lib/areas';
 import { onDay, sortEntries } from '../lib/calendar';
 import { inToday } from '../lib/things';
+import { listTasks } from '../lib/tasks';
 import { defaultDayClose, tomorrowAlarm } from '../lib/dayclose';
 import { headline, weekReview } from '../lib/review';
 import { useCalendarEntries } from '../components/calendar';
@@ -150,7 +151,7 @@ export function Today() {
   const nextEvent = timed[0] ?? upcoming[0];
   const tomorrow = sortEntries(entries.filter((e) => onDay(e, addDays(t, 1)) && !e.done && e.kind !== 'task'));
 
-  const tasks = data.tasks
+  const tasks = listTasks(data.tasks)
     .filter((x) => x.status !== 'erledigt' && (inToday(x, t) || (x.due !== null && x.due <= t)));
   const alarm = tomorrowAlarm(data.alarms, now);
   const mealsToday = data.meals.some((m) => m.date === t);

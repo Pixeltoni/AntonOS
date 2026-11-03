@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../store';
 import type { WidgetConfig, WidgetId, WidgetSize, WidgetVariant } from '../types';
 import { addDays, formatDate, hours, relativeLabel, today } from '../lib/dates';
+import { listTasks } from '../lib/tasks';
 import { courseGrade, formatGrade, summary } from '../lib/grades';
 import { formatMoney, isHabitDone, monthTotals, safeHttpUrl, safeImageSrc } from '../lib/life';
 import { DEFAULT_DASHBOARD, HEIGHTS, mergeWithDefaults, moveItem, moveTo, normalizeWidgets, SIZES, VARIANT_LABELS, WIDGET_LABELS } from '../lib/layout';
@@ -104,7 +105,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
   const t = today();
   const weekEnd = addDays(t, 7);
 
-  const open = data.tasks.filter((x) => x.status !== 'erledigt');
+  const open = listTasks(data.tasks).filter((x) => x.status !== 'erledigt');
   const thisWeek = open.filter((x) => x.due !== null && x.due <= weekEnd);
   // Ohne Datum notierte Aufgaben (z. B. aus der Schnellnotiz) sollen nicht aus dem Blick geraten
   const upNext = open.filter((x) => x.due === null || x.due <= weekEnd);

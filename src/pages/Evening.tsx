@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { addDays, today } from '../lib/dates';
+import { listTasks } from '../lib/tasks';
 import { onDay, sortEntries, timeRange } from '../lib/calendar';
 import { isHabitDone } from '../lib/life';
 import { hhmm, skipNext } from '../lib/alarm';
@@ -24,8 +25,8 @@ export function Evening() {
   const settings = data.settings.dayClose ?? defaultDayClose();
   const name = data.settings.name.trim().split(' ')[0];
 
-  const doneToday = data.tasks.filter((x) => x.status === 'erledigt' && x.completedAt === t).length;
-  const open = openForToday(data.tasks, t);
+  const doneToday = listTasks(data.tasks).filter((x) => x.status === 'erledigt' && x.completedAt === t).length;
+  const open = openForToday(listTasks(data.tasks), t);
   const habitsOpen = data.habits.filter((h) => !isHabitDone(data.habitLogs, h, t));
   const events = sortEntries(entries.filter((e) => onDay(e, tomorrow) && e.kind !== 'task' && !e.done)).slice(0, 6);
   const wake = tomorrowAlarm(data.alarms, now);

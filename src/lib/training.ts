@@ -26,9 +26,31 @@ export const PUSH_PULL_TEMPLATE: { name: string; exercises: { name: string; sets
   },
 ];
 
-export function buildPlan(makeId: () => ID): TrainingDay[] {
-  return PUSH_PULL_TEMPLATE.map((d) => ({ id: makeId(), name: d.name, exercises: d.exercises.map((e) => ({ id: makeId(), ...e })) }));
+/** Dritter Plan: eigenes Körpertraining, läuft neben Push/Pull und verschiebt deren Reihenfolge nicht */
+export const SEPARATE_TEMPLATE: { name: string; exercises: { name: string; sets: number; reps: string }[] } = {
+  name: 'Körpertraining',
+  exercises: [
+    { name: 'Kniebeugen', sets: 3, reps: '8–12' },
+    { name: 'Rumänisches Kreuzheben', sets: 3, reps: '8–12' },
+    { name: 'Ausfallschritte', sets: 3, reps: '10–12' },
+    { name: 'Wadenheben', sets: 3, reps: '12–15' },
+    { name: 'Beinheben', sets: 3, reps: '10–15' },
+    { name: 'Plank (Sek.)', sets: 3, reps: '30–60' },
+  ],
+};
+
+export function buildSeparateDay(makeId: () => ID): TrainingDay {
+  return { id: makeId(), name: SEPARATE_TEMPLATE.name, separate: true, exercises: SEPARATE_TEMPLATE.exercises.map((e) => ({ id: makeId(), ...e })) };
 }
+
+/** Push, Pull und das separate Körpertraining */
+export function buildPlan(makeId: () => ID): TrainingDay[] {
+  const rotation = PUSH_PULL_TEMPLATE.map((d) => ({ id: makeId(), name: d.name, exercises: d.exercises.map((e) => ({ id: makeId(), ...e })) }));
+  return [...rotation, buildSeparateDay(makeId)];
+}
+
+/** Tage, die sich in der Reihenfolge abwechseln (ohne separate Trainings) */
+export const rotationDays = (plan: TrainingDay[]) => plan.filter((d) => !d.separate);
 
 /** Zahl aus einem Eingabefeld, auch mit Komma („62,5“). Leer oder ungültig = null. */
 export function parseNumber(input: string): number | null {
@@ -126,8 +148,12 @@ export function describeComparison(c: Comparison): string {
   return parts.length ? parts.join(', ') : 'gleich';
 }
 
-/** Welcher Tag ist dran? Der, der am längsten nicht (oder noch nie) trainiert wurde. */
-export function nextTrainingDay(plan: TrainingDay[], workouts: Workout[]): TrainingDay | null {
+/**
+ * Welcher Tag ist dran? Der, der am längsten nicht (oder noch nie) trainiert wurde.
+ * Separate Trainings (z. B. Körpertraining) zählen dabei nicht mit.
+ */
+export function nextTrainingDay(allDays: TrainingDay[], workouts: Workout[]): TrainingDay | null {
+  const plan = rotationDays(allDays);
   if (plan.length === 0) return null;
   const last = (id: ID) => workouts.filter((w) => w.done && w.planDayId === id).reduce<DateStr>((m, w) => (w.date > m ? w.date : m), '');
   let pick = plan[0];

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TrainingDay, Workout } from '../types';
-import { MAX_SERIES, removeSeriesFrom, seriesDates, bestSet, buildPlan, compareSets, describeComparison, exerciseHistory, formatSets, nextTrainingDay, parseNumber, prefillSets, previousEntry, volume } from './training';
+import { MAX_SERIES, removeSeriesFrom, seriesDates, bestSet, buildPlan, buildSeparateDay, compareSets, describeComparison, exerciseHistory, formatSets, nextTrainingDay, parseNumber, prefillSets, previousEntry, volume } from './training';
 
 const day = (id: string, name: string): TrainingDay => ({ id, name, exercises: [{ id: `${id}-1`, name: 'Bankdrücken', sets: 3 }] });
 const session = (id: string, date: string, planDayId: string, sets: { weight: number; reps: number }[], name = 'Bankdrücken', exerciseId = 'push-1'): Workout => ({
@@ -11,9 +11,17 @@ describe('Trainingsplan', () => {
   it('legt einen Push/Pull-Plan an', () => {
     let n = 0;
     const plan = buildPlan(() => `id${n++}`);
-    expect(plan.map((d) => d.name)).toEqual(['Push', 'Pull']);
+    expect(plan.map((d) => d.name)).toEqual(['Push', 'Pull', 'Körpertraining']);
+    expect(plan.map((d) => !!d.separate)).toEqual([false, false, true]);
     expect(plan[0].exercises.length).toBeGreaterThan(3);
     expect(new Set([plan[0].id, ...plan[0].exercises.map((e) => e.id)]).size).toBe(plan[0].exercises.length + 1);
+  });
+
+  it('baut ein separates Körpertraining', () => {
+    let n = 0;
+    const d = buildSeparateDay(() => `k${n++}`);
+    expect(d.separate).toBe(true);
+    expect(d.exercises.length).toBeGreaterThan(3);
   });
 
   it('versteht Zahlen mit Komma', () => {
@@ -66,6 +74,17 @@ describe('Trainingsplan', () => {
     expect(nextTrainingDay(plan, [session('a', '2026-10-01', 'push', [])])?.name).toBe('Pull');
     expect(nextTrainingDay(plan, [session('a', '2026-10-01', 'pull', []), session('b', '2026-10-03', 'push', [])])?.name).toBe('Pull');
     expect(nextTrainingDay([], [])).toBeNull();
+  });
+
+  it('lässt das separate Körpertraining aus der Reihenfolge heraus', () => {
+    const koerper: TrainingDay = { ...day('koerper', 'Körpertraining'), separate: true };
+    const plan = [koerper, day('push', 'Push'), day('pull', 'Pull')];
+    // Nie trainiert: trotzdem nicht „Als Nächstes“
+    expect(nextTrainingDay(plan, [])?.name).toBe('Push');
+    // Körpertraining zwischendurch verschiebt Push/Pull nicht
+    const ws = [session('a', '2026-10-01', 'push', []), session('b', '2026-10-02', 'koerper', [])];
+    expect(nextTrainingDay(plan, ws)?.name).toBe('Pull');
+    expect(nextTrainingDay([koerper], [])).toBeNull();
   });
 
   it('übernimmt die Sätze vom letzten Mal', () => {

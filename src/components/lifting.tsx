@@ -3,7 +3,7 @@ import { newId, useStore } from '../store';
 import type { DateStr, ExerciseLog, ID, PlanExercise, SetLog, TrainingDay, Workout } from '../types';
 import { formatDate, relativeLabel, today } from '../lib/dates';
 import {
-  bestSet, buildPlan, compareSets, describeComparison, exerciseHistory, formatNumber, formatSets,
+  bestSet, buildPlan, buildSeparateDay, compareSets, describeComparison, exerciseHistory, formatNumber, formatSets,
   lastSessionOf, nextTrainingDay, parseNumber, previousEntry, removeSeriesFrom, volume, type ExerciseEntry,
 } from '../lib/training';
 import { Empty } from './ui';
@@ -174,6 +174,7 @@ function PlanSheet({ onClose }: { onClose: () => void }) {
         <section key={d.id} className="lift-ex" style={{ ['--c' as string]: DAY_COLORS[i % DAY_COLORS.length] }}>
           <div className="lift-plan-day">
             <input className="lift-day-name" aria-label="Name des Tages" value={d.name} onChange={(e) => setDay(i, (x) => ({ ...x, name: e.target.value }))} />
+            <button type="button" className={`lift-sep-toggle ${d.separate ? 'on' : ''}`} aria-pressed={!!d.separate} title="Separates Training zählt nicht zur Reihenfolge der anderen Tage" onClick={() => setDay(i, (x) => ({ ...x, separate: !x.separate || undefined }))}>{d.separate ? 'Separat' : 'In Reihenfolge'}</button>
             <button type="button" className="icon" aria-label={`${d.name} löschen`} onClick={() => { if (confirm(`„${d.name}“ aus dem Plan löschen? Eingetragene Trainings bleiben erhalten.`)) setPlan((p) => p.filter((_, j) => j !== i)); }}>🗑</button>
           </div>
           {d.exercises.map((e, k) => (
@@ -189,7 +190,9 @@ function PlanSheet({ onClose }: { onClose: () => void }) {
           <button type="button" className="link lift-add-set" onClick={() => setDay(i, (x) => ({ ...x, exercises: [...x.exercises, { id: newId(), name: '', sets: 3, reps: '8–12' }] }))}>+ Übung</button>
         </section>
       ))}
+      <p className="muted small">„Separat“ heißt: eigenes Training neben der Reihenfolge. Es wird nie als Nächstes vorgeschlagen und verschiebt die anderen Tage nicht.</p>
       <button type="button" onClick={() => setPlan((p) => [...p, { id: newId(), name: 'Beine', exercises: [] }])}>+ Trainingstag</button>
+      {!plan.some((d) => d.separate) && <button type="button" onClick={() => setPlan((p) => [...p, buildSeparateDay(newId)])}>+ Separates Körpertraining</button>}
     </Sheet>
   );
 }
@@ -273,8 +276,8 @@ export function TrainingPlanPanel() {
       </div>
       {plan.length === 0 ? (
         <div className="lift-empty">
-          <p className="muted">Lege deinen Push/Pull-Split an. Danach trägst du pro Training einfach Gewicht und Wiederholungen ein und siehst sofort, ob du besser bist als letztes Mal.</p>
-          <button type="button" className="primary" onClick={() => mutate((d) => ({ ...d, trainingPlan: buildPlan(newId) }))}>Push/Pull-Plan anlegen</button>
+          <p className="muted">Lege deinen Push/Pull-Split mit separatem Körpertraining an. Danach trägst du pro Training einfach Gewicht und Wiederholungen ein und siehst sofort, ob du besser bist als letztes Mal.</p>
+          <button type="button" className="primary" onClick={() => mutate((d) => ({ ...d, trainingPlan: buildPlan(newId) }))}>Push/Pull-Plan + Körpertraining anlegen</button>
           <button type="button" className="link" onClick={() => setSheet({ kind: 'plan' })}>Eigenen Plan zusammenstellen</button>
         </div>
       ) : (
@@ -286,6 +289,7 @@ export function TrainingPlanPanel() {
                 <span className="lift-day-top">
                   <strong>{d.name}</strong>
                   {next?.id === d.id && <span className="lift-badge">Als Nächstes</span>}
+                  {d.separate && <span className="lift-badge separate">Separat</span>}
                 </span>
                 <span className="muted small">{d.exercises.length} Übungen · {last ? `zuletzt ${relativeLabel(last.date, t)}` : 'noch nie'}</span>
                 <span className="muted small lift-day-list">{d.exercises.map((e) => e.name).join(', ')}</span>
@@ -293,6 +297,12 @@ export function TrainingPlanPanel() {
               </button>
             );
           })}
+          {!plan.some((d) => d.separate) && (
+            <button type="button" className="lift-day lift-day-add" onClick={() => mutate((d) => ({ ...d, trainingPlan: [...d.trainingPlan, buildSeparateDay(newId)] }))}>
+              <strong>+ Körpertraining</strong>
+              <span className="muted small">Dritter Plan, separat von Push/Pull. Verschiebt die Reihenfolge nicht.</span>
+            </button>
+          )}
         </div>
       )}
       {sheet?.kind === 'log' && <LogSheet day={sheet.day} onClose={() => setSheet(null)} />}

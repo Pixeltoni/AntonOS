@@ -2,7 +2,7 @@ import type { Appearance, Data, FinanceSettings, SemesterSettings, Settings } fr
 import { addDays, today } from './lib/dates';
 import { START_EASE } from './lib/srs';
 import { defaultRingGoals } from './lib/rings';
-import { PUSH_PULL_TEMPLATE } from './lib/training';
+import { PUSH_PULL_TEMPLATE, SEPARATE_TEMPLATE } from './lib/training';
 
 export const defaultSettings = (): Settings => ({
   name: 'Anton',
@@ -170,7 +170,10 @@ export function demoData(): Data {
       { id: 'demo-w2', title: 'Ganzkörper', type: 'Krafttraining', date: addDays(t, -1), done: true, notes: '', minutes: 45 },
       { id: 'demo-w3', title: 'Dehnen & Mobility', type: 'Dehnen', date: addDays(t, 1), done: false, notes: '' },
     ],
-    trainingPlan: PUSH_PULL_TEMPLATE.map((d, i) => ({ id: `demo-tp${i}`, name: d.name, exercises: d.exercises.map((e, k) => ({ id: `demo-tp${i}-${k}`, ...e })) })),
+    trainingPlan: [
+      ...PUSH_PULL_TEMPLATE.map((d, i) => ({ id: `demo-tp${i}`, name: d.name, exercises: d.exercises.map((e, k) => ({ id: `demo-tp${i}-${k}`, ...e })) })),
+      { id: 'demo-tpk', name: SEPARATE_TEMPLATE.name, separate: true, exercises: SEPARATE_TEMPLATE.exercises.map((e, k) => ({ id: `demo-tpk-${k}`, ...e })) },
+    ],
     events: [
       { id: 'demo-ev1', title: 'Lerngruppe Analysis', note: '', location: 'Bibliothek, Raum 2.14', start: addDays(t, 1), end: null, startTime: '14:00', endTime: '16:00', priority: 'mittel', repeat: { freq: 'woechentlich', until: null, except: [] }, remind: 15, color: 'lila' },
       { id: 'demo-ev2', title: 'Zahnarzt', note: '', start: addDays(t, 3), end: null, startTime: '09:30', endTime: '', priority: 'hoch' },

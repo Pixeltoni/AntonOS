@@ -1479,6 +1479,10 @@ button.lift-day { --c: var(--accent); display: flex; flex-direction: column; ali
 button.lift-day.next { background: color-mix(in srgb, var(--c) 9%, var(--surface)); border-color: color-mix(in srgb, var(--c) 45%, var(--border)); border-left-color: var(--c); }
 .lift-day-top { display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; }
 .lift-badge { font-size: 0.72rem; font-weight: 700; color: #fff; background: var(--c); border-radius: 999px; padding: 0.1rem 0.5rem; }
+.lift-badge.separate { background: transparent; color: var(--c); border: 1px solid var(--c); }
+button.lift-day.lift-day-add { border-style: dashed; border-left: 1px dashed var(--border); background: transparent; justify-content: center; }
+.lift-sep-toggle { font-size: 0.78rem; padding: 0.25rem 0.6rem; border-radius: 999px; white-space: nowrap; }
+.lift-sep-toggle.on { background: color-mix(in srgb, var(--c) 15%, var(--surface)); color: var(--c); border-color: var(--c); }
 .lift-day-list { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .lift-start { margin-top: 0.3rem; font-weight: 600; color: var(--c); }
 .lift-hint { margin: 0; }

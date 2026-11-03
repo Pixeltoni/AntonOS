@@ -1,17 +1,33 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useStore } from '../store';
 import type { Course, ID } from '../types';
 
+/**
+ * Kopf jeder Seite mit großem Titel wie in iOS. Am iPhone wandert der Titel beim
+ * Scrollen klein in eine durchscheinende Leiste oben.
+ */
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const el = heading.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setCompact(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   return (
-    <header className="page-header">
-      <div>
-        <h1>{title}</h1>
-        {subtitle && <p className="muted">{subtitle}</p>}
-      </div>
-      {actions && <div className="row">{actions}</div>}
-    </header>
+    <>
+      <div className={`nav-compact ${compact ? 'show' : ''}`} aria-hidden="true"><span>{title}</span></div>
+      <header className="page-header">
+        <div>
+          <h1 ref={heading}>{title}</h1>
+          {subtitle && <p className="muted">{subtitle}</p>}
+        </div>
+        {actions && <div className="row">{actions}</div>}
+      </header>
+    </>
   );
 }
 

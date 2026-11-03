@@ -13,7 +13,8 @@ Funktionsübersicht für Nutzer steht in `README.md` (nur bei Bedarf lesen).
 
 ## Aufbau
 - Stack: React 19, TypeScript, Vite, Vitest, lucide-react, Supabase (nur Sync). Kein Router, kein CSS-Framework.
-- `src/App.tsx` – Shell, Sidebar und Hash-Routing (`#/seite/param`, Switch in `Page`)
+- `src/App.tsx` – Shell, Sidebar und Hash-Routing (`#/seite/param`, Switch in `Page`); Startseite am Handy `heute`, am PC `dashboard`
+- Handy-Gerüst in `components/shell.tsx`: Tab-Leiste (3 wählbare Tabs in `settings.tabs` + Bereiche + Suche), Plus-Knopf, Wischen zum Schließen von Blättern; Seiten `pages/Today.tsx` (Heute, nach Tageszeit) und `pages/Areas.tsx` (Kacheln). Bereichsfarben, Kachel-Hinweise und Tageszeit in `lib/areas.ts`
 - `src/store.tsx` – zentraler Zustand (`useStore`: `add`, `update`, `remove`, `mutate` …), gespeichert in `localStorage` (`antonos:v1`), `normalize()` für alte/fremde Daten
 - `src/types.ts` – alle Datentypen (`Data` = komplette App-Daten)
 - `src/demo.ts` – Beispieldaten und Standard-Einstellungen

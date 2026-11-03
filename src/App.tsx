@@ -8,11 +8,15 @@ import { OfflineBanner, ShareSheet, useAppBadge } from './components/pwa';
 import { Icon, Logo, NavIcon, PAGE_ICONS } from './components/icons';
 import { useRecurringBookings } from './pages/Finance';
 import { useStore } from './store';
-import type { NavItem } from './types';
 import { today } from './lib/dates';
 import { isDue } from './lib/srs';
 import { isHabitDone } from './lib/life';
-import { DEFAULT_SIDEBAR, groupNav, mergeWithDefaults, moveItem } from './lib/layout';
+import { groupNav } from './lib/layout';
+import { pageColor } from './lib/areas';
+import { SidebarEditor } from './components/navedit';
+import { PlusButton, TabBar, useNavItems, useSheetSwipe } from './components/shell';
+import { Today } from './pages/Today';
+import { Areas } from './pages/Areas';
 import { MiniPlayer, SpotifyProvider } from './components/spotify';
 import { AppearanceLayer } from './components/appearance';
 import { ConflictBanner, SyncBadge } from './components/sync';
@@ -65,9 +69,16 @@ function useRoute(): string[] {
   return route;
 }
 
+/** Startseite: am iPhone „Heute“, am großen Bildschirm die Übersicht mit Widgets */
+const START = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 800px)').matches ? 'heute' : 'dashboard';
+
 function Page({ route }: { route: string[] }) {
-  const [page = 'dashboard', param = null] = route;
+  const [page = START, param = null] = route;
   switch (page) {
+    case 'heute':
+      return <Today />;
+    case 'bereiche':
+      return <Areas />;
     case 'kurse':
       return param ? <CourseDetail id={param} /> : <Courses />;
     case 'aufgaben':
@@ -127,46 +138,12 @@ function Page({ route }: { route: string[] }) {
   }
 }
 
-function SidebarEditor({ items, onChange, onDone }: { items: NavItem[]; onChange: (items: NavItem[]) => void; onDone: () => void }) {
-  const groups = [...new Set(items.map((i) => i.group).filter(Boolean))];
-  const set = (index: number, patch: Partial<NavItem>) => onChange(items.map((x, i) => (i === index ? { ...x, ...patch } : x)));
-  return (
-    <div className="sidebar-editor">
-      <p className="muted small">Umbenennen, verschieben, Gruppe wählen oder ausblenden. Ein Emoji ersetzt das Symbol – leer lassen für das Standard-Symbol.</p>
-      <datalist id="nav-groups">{groups.map((g) => <option key={g} value={g} />)}</datalist>
-      {items.map((item, i) => (
-        <div key={item.path} className={`nav-edit ${item.hidden ? 'is-hidden' : ''}`}>
-          <div className="row">
-            <span className="nav-edit-icon" title="Standard-Symbol"><NavIcon item={item} /></span>
-            <input className="emoji-input" value={item.icon} placeholder="Emoji" onChange={(e) => set(i, { icon: e.target.value })} aria-label={`Eigenes Emoji für ${item.label} (leer = Standard-Symbol)`} maxLength={4} />
-            <input className="grow" value={item.label} onChange={(e) => set(i, { label: e.target.value })} aria-label={`Name für ${item.path}`} />
-          </div>
-          <div className="row">
-            <input className="grow" list="nav-groups" placeholder="ohne Gruppe" value={item.group} onChange={(e) => set(i, { group: e.target.value })} aria-label={`Gruppe für ${item.label}`} />
-            <button className="icon" onClick={() => onChange(moveItem(items, i, -1))} aria-label={`${item.label} nach oben`} title="Nach oben">↑</button>
-            <button className="icon" onClick={() => onChange(moveItem(items, i, 1))} aria-label={`${item.label} nach unten`} title="Nach unten">↓</button>
-            {item.path !== 'einstellungen' && (
-              <button className="icon" onClick={() => set(i, { hidden: !item.hidden })} aria-label={item.hidden ? `${item.label} einblenden` : `${item.label} ausblenden`} title={item.hidden ? 'Einblenden' : 'Ausblenden'}>
-                {item.hidden ? '🙈' : '👁'}
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
-      <div className="row between">
-        <button onClick={() => confirm('Sidebar auf den Standard zurücksetzen?') && onChange([])}>Zurücksetzen</button>
-        <button className="primary" onClick={onDone}>Fertig</button>
-      </div>
-    </div>
-  );
-}
-
 function Shell() {
   const route = useRoute();
   const { data, saveFailed, updateSettings } = useStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editingSidebar, setEditingSidebar] = useState(false);
-  const current = route[0] ?? 'dashboard';
+  const current = route[0] ?? START;
   const routeKey = route.join('/');
   useRingReminder();
   useRecurringBookings();
@@ -180,6 +157,7 @@ function Shell() {
   useCalendarFeeds();
   useDayCloseReminder();
   useNativeExtras();
+  useSheetSwipe();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);
@@ -197,10 +175,10 @@ function Shell() {
     lernen: data.cards.filter((c) => isDue(c, t)).length,
     gewohnheiten: data.habits.filter((h) => !isHabitDone(data.habitLogs, h, t)).length,
   };
-  const items = mergeWithDefaults(data.settings.sidebar, DEFAULT_SIDEBAR, 'path', 'group');
+  const items = useNavItems();
 
   return (
-    <div className="layout">
+    <div className="layout area-tint" style={{ ['--accent' as string]: pageColor(current, items) }}>
       <AppearanceLayer />
       <aside className={`sidebar ${menuOpen ? 'open' : ''} ${editingSidebar ? 'editing' : ''}`}>
         <div className="brand">
@@ -227,7 +205,7 @@ function Shell() {
               <div key={i} className="nav-group" onClick={() => setMenuOpen(false)}>
                 {section.group && <span className="nav-label">{section.group}</span>}
                 {section.items.map((n) => (
-                  <a key={n.path} href={`#/${n.path}`} className={current === n.path ? 'active' : ''} title={n.label}>
+                  <a key={n.path} href={`#/${n.path}`} className={current === n.path ? 'active' : ''} title={n.label} style={{ ['--area' as string]: pageColor(n.path, items) }}>
                     <span className="nav-icon" aria-hidden><NavIcon item={n} /></span>
                     <span className="grow nav-text">{n.label}</span>
                     {counts[n.path] > 0 && <span className="count">{counts[n.path]}</span>}
@@ -275,6 +253,8 @@ function Shell() {
           <Page route={route} />
         </LockGate>
       </main>
+      <TabBar current={current} />
+      <PlusButton />
       <MiniPlayer hidden={current === 'musik' || current === 'dashboard'} />
       <FocusPill hidden={current === 'fokus'} />
       <Spotlight />

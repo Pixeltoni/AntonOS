@@ -646,6 +646,8 @@ export interface Settings {
   places?: Place[];
   /** Apple Health */
   health?: HealthSettings;
+  /** Die drei frei wählbaren Seiten vorne in der Tab-Leiste am iPhone (leer = Standard) */
+  tabs?: string[];
 }
 
 export interface SemesterSettings {

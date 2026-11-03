@@ -96,28 +96,16 @@ function Delta({ value }: { value: number | null }) {
   return <small className="story-delta">{value > 0 ? '▲' : '▼'} {Math.abs(value)} % zur Vorwoche</small>;
 }
 
-/** Wischbare Karten wie bei „Wrapped“ */
-function Story({ week, prev, title, weekLabel }: { week: WeekReview; prev: WeekReview; title: string; weekLabel: string }) {
+export type StoryCard = { key: string; className: string; body: ReactNode };
+
+/** Inhalt der Rückblick-Karten – für die Seite und die Vollbild-Story auf „Heute“ */
+export function useStoryCards(week: WeekReview, prev: WeekReview, title: string, weekLabel: string): StoryCard[] {
   const { data } = useStore();
-  const [index, setIndex] = useState(0);
-  const track = useRef<HTMLDivElement>(null);
   const goals = data.settings.rings ?? defaultRingGoals();
   const course = (id: string | null) => data.courses.find((c) => c.id === id);
   const maxCourse = Math.max(1, ...week.courses.map((c) => c.minutes));
 
-  useEffect(() => {
-    const el = track.current;
-    if (!el) return;
-    const on = () => setIndex(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
-    el.addEventListener('scroll', on, { passive: true });
-    return () => el.removeEventListener('scroll', on);
-  }, []);
-  useEffect(() => {
-    track.current?.scrollTo({ left: 0 });
-    setIndex(0);
-  }, [weekLabel]);
-
-  const cards: { key: string; className: string; body: ReactNode }[] = [
+  return [
     {
       key: 'start',
       className: 'story-1',
@@ -223,6 +211,25 @@ function Story({ week, prev, title, weekLabel }: { week: WeekReview; prev: WeekR
       ),
     },
   ];
+}
+
+/** Wischbare Karten wie bei „Wrapped“ */
+function Story({ week, prev, title, weekLabel }: { week: WeekReview; prev: WeekReview; title: string; weekLabel: string }) {
+  const [index, setIndex] = useState(0);
+  const track = useRef<HTMLDivElement>(null);
+  const cards = useStoryCards(week, prev, title, weekLabel);
+
+  useEffect(() => {
+    const el = track.current;
+    if (!el) return;
+    const on = () => setIndex(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
+    el.addEventListener('scroll', on, { passive: true });
+    return () => el.removeEventListener('scroll', on);
+  }, []);
+  useEffect(() => {
+    track.current?.scrollTo({ left: 0 });
+    setIndex(0);
+  }, [weekLabel]);
 
   return (
     <div className="story">

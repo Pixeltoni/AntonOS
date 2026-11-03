@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1A1A1A12F00000500000001 /* LaeuferWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000002 /* LaeuferWidget.swift */; };
+		A1A1A1A12F00000500000003 /* AntonLaeufer.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000004 /* AntonLaeufer.otf */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -63,6 +65,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1A1A1A12F00000500000002 /* LaeuferWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaeuferWidget.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000500000004 /* AntonLaeufer.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonLaeufer.otf; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -174,6 +178,8 @@
 				A1A1A1A12F00000300000015 /* WidgetIntents.swift */,
 				A1A1A1A12F00000300000017 /* AntonOSControls.swift */,
 				A1A1A1A12F00000400000009 /* FocusLiveActivity.swift */,
+				A1A1A1A12F00000500000002 /* LaeuferWidget.swift */,
+				A1A1A1A12F00000500000004 /* AntonLaeufer.otf */,
 				A1A1A1A12F00000300000019 /* Info.plist */,
 				A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */,
 			);
@@ -291,6 +297,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1A1A1A12F00000500000003 /* AntonLaeufer.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,6 +327,7 @@
 				A1A1A1A12F00000300000018 /* AntonOSControls.swift in Sources */,
 				A1A1A1A12F00000400000007 /* FocusActivity.swift in Sources */,
 				A1A1A1A12F00000400000008 /* FocusLiveActivity.swift in Sources */,
+				A1A1A1A12F00000500000001 /* LaeuferWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

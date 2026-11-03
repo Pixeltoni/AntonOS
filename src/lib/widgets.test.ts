@@ -149,7 +149,9 @@ describe('parseWidgetLink', () => {
     expect(parseWidgetLink('antonos://open/kalender')).toEqual({ type: 'page', hash: '#/kalender' });
     expect(parseWidgetLink('antonos://open')).toEqual({ type: 'page', hash: '#/' });
     expect(parseWidgetLink('antonos://assistent')).toEqual({ type: 'assistant' });
-    expect(parseWidgetLink('antonos://fokus-start')).toEqual({ type: 'focus' });
+    expect(parseWidgetLink('antonos://fokus-start')).toEqual({ type: 'focus', action: 'start' });
+    expect(parseWidgetLink('antonos://fokus-pause')).toEqual({ type: 'focus', action: 'pause' });
+    expect(parseWidgetLink('antonos://fokus-stop')).toEqual({ type: 'focus', action: 'stop' });
     expect(parseWidgetLink('antonos://spotify-callback?code=1')).toBeNull();
     expect(parseWidgetLink('https://example.com')).toBeNull();
   });

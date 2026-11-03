@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { bump } from '../lib/haptics';
 import { Archive, Bell, CalendarDays, Check, ChevronRight, Flag, GripVertical, Moon, Play, Repeat, Sun, Timer, Trash2 } from 'lucide-react';
 import { useStore } from '../store';
 import type { ID, Task } from '../types';
@@ -277,7 +278,7 @@ export function TaskList({ tasks, showCourse = true, compact = false, sortable =
     setSwipeOpen(null);
     setDrag({ id: g.id, dy: 0, over: g.index, dropping: false });
     document.body.classList.add('task-dragging');
-    navigator.vibrate?.(10);
+    bump();
   };
 
   const onPointerDown = (e: ReactPointerEvent<HTMLLIElement>, task: Task, index: number) => {

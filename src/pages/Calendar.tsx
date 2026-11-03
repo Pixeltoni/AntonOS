@@ -4,6 +4,7 @@ import { PageHeader, Panel } from '../components/ui';
 import { useToast } from '../components/toast';
 import { useStore } from '../store';
 import { newEventsOnly, parseICS, toICS } from '../lib/ics';
+import { FeedsPanel } from '../components/feeds';
 
 /** Eigene Termine als .ics herunterladen bzw. aus einer .ics-Datei übernehmen */
 function IcsTools() {
@@ -12,7 +13,7 @@ function IcsTools() {
   const file = useRef<HTMLInputElement>(null);
 
   const download = () => {
-    const url = URL.createObjectURL(new Blob([toICS(data.events)], { type: 'text/calendar;charset=utf-8' }));
+    const url = URL.createObjectURL(new Blob([toICS(data.events.filter((e) => !e.feedId))], { type: 'text/calendar;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url;
     a.download = 'antonos-kalender.ics';
@@ -60,6 +61,9 @@ export function Calendar() {
         <CalendarView remember />
       </Panel>
       <IcsTools />
+      <Panel title="Abonnierte Kalender">
+        <FeedsPanel />
+      </Panel>
     </>
   );
 }

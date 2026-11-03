@@ -30,6 +30,11 @@
 		A1A1A1A12F00000300000014 /* WidgetData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000013 /* WidgetData.swift */; };
 		A1A1A1A12F00000300000016 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000015 /* WidgetIntents.swift */; };
 		A1A1A1A12F00000300000018 /* AntonOSControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000017 /* AntonOSControls.swift */; };
+		A1A1A1A12F00000400000001 /* AntonExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000400000002 /* AntonExtras.swift */; };
+		A1A1A1A12F00000400000003 /* AntonIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000400000004 /* AntonIntents.swift */; };
+		A1A1A1A12F00000400000005 /* FocusActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000400000006 /* FocusActivity.swift */; };
+		A1A1A1A12F00000400000007 /* FocusActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000400000006 /* FocusActivity.swift */; };
+		A1A1A1A12F00000400000008 /* FocusLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000400000009 /* FocusLiveActivity.swift */; };
 		A1A1A1A12F00000300000028 /* AntonOSWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000010 /* AntonOSWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -85,6 +90,10 @@
 		A1A1A1A12F00000300000013 /* WidgetData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetData.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000300000015 /* WidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetIntents.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000300000017 /* AntonOSControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntonOSControls.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000400000002 /* AntonExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntonExtras.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000400000004 /* AntonIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntonIntents.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000400000006 /* FocusActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusActivity.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00000400000009 /* FocusLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusLiveActivity.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000300000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AntonOSWidgets.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -134,6 +143,9 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				A1A1A1A12F00000100000002 /* AntonAlarm.swift */,
 				A1A1A1A12F00000300000002 /* AntonWidgets.swift */,
+				A1A1A1A12F00000400000002 /* AntonExtras.swift */,
+				A1A1A1A12F00000400000004 /* AntonIntents.swift */,
+				A1A1A1A12F00000400000006 /* FocusActivity.swift */,
 				A1A1A1A12F00000300000003 /* App.entitlements */,
 				A1A1A1A12F00000200000002 /* antonos-aufgang.wav */,
 				A1A1A1A12F00000200000004 /* antonos-marimba.wav */,
@@ -161,6 +173,7 @@
 				A1A1A1A12F00000300000013 /* WidgetData.swift */,
 				A1A1A1A12F00000300000015 /* WidgetIntents.swift */,
 				A1A1A1A12F00000300000017 /* AntonOSControls.swift */,
+				A1A1A1A12F00000400000009 /* FocusLiveActivity.swift */,
 				A1A1A1A12F00000300000019 /* Info.plist */,
 				A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */,
 			);
@@ -291,6 +304,9 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				A1A1A1A12F00000100000001 /* AntonAlarm.swift in Sources */,
 				A1A1A1A12F00000300000001 /* AntonWidgets.swift in Sources */,
+				A1A1A1A12F00000400000001 /* AntonExtras.swift in Sources */,
+				A1A1A1A12F00000400000003 /* AntonIntents.swift in Sources */,
+				A1A1A1A12F00000400000005 /* FocusActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -302,6 +318,8 @@
 				A1A1A1A12F00000300000014 /* WidgetData.swift in Sources */,
 				A1A1A1A12F00000300000016 /* WidgetIntents.swift in Sources */,
 				A1A1A1A12F00000300000018 /* AntonOSControls.swift in Sources */,
+				A1A1A1A12F00000400000007 /* FocusActivity.swift in Sources */,
+				A1A1A1A12F00000400000008 /* FocusLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

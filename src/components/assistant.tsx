@@ -17,6 +17,9 @@ const OPEN_EVENT = 'antonos:assistentin';
 
 /** Öffnet die Assistentin von überall (Knopf, Suche). */
 export const openAssistant = () => window.dispatchEvent(new Event(OPEN_EVENT));
+const RUN_EVENT = 'antonos:assistentin-ausfuehren';
+/** Öffnet die Assistentin und trägt `text` gleich ein (z. B. von Siri) – mit Widerrufen im Popup */
+export const runInAssistant = (text: string) => window.dispatchEvent(new CustomEvent(RUN_EVENT, { detail: text }));
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 export const ASSISTANT_SHORTCUT = isMac ? '⌘J' : 'Strg+J';
@@ -120,11 +123,18 @@ export function Assistant() {
       }
     };
     const onOpen = () => setOpen(true);
+    const onRun = (e: Event) => {
+      const text = String((e as CustomEvent).detail ?? '').trim();
+      setOpen(true);
+      if (text) setTimeout(() => runRef.current(text), 0);
+    };
     window.addEventListener('keydown', onKey);
     window.addEventListener(OPEN_EVENT, onOpen);
+    window.addEventListener(RUN_EVENT, onRun);
     return () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener(OPEN_EVENT, onOpen);
+      window.removeEventListener(RUN_EVENT, onRun);
     };
   }, []);
 
@@ -143,7 +153,10 @@ export function Assistant() {
   const run = (raw: string) => {
     const d = dataRef.current;
     const intent = interpret(raw, new Date(), { habits: d.habits, courses: d.courses });
-    if (!intent) return;
+    if (!intent) {
+      setText(raw);
+      return;
+    }
     let result: Omit<Done, 'intent' | 'title'>;
     switch (intent.kind) {
       case 'task': {
@@ -200,6 +213,9 @@ export function Assistant() {
     setDone({ ...result, intent, title });
     setText('');
   };
+
+  const runRef = useRef(run);
+  runRef.current = run;
 
   // Zuhören läuft weiter, bis eine Pause von SILENCE_MS kommt oder „Stopp“ gedrückt wird –
   // auch wenn der Browser die Erkennung zwischendurch selbst beendet (dann neu starten).

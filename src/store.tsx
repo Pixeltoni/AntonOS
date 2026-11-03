@@ -6,6 +6,7 @@ import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
 import { today } from './lib/dates';
 import { migrateSidebar, SIDEBAR_LAYOUT } from './lib/layout';
+import { tap } from './lib/haptics';
 
 const STORAGE_KEY = 'antonos:v1';
 /** Wartezeit nach der letzten Änderung, bevor gespeichert wird (ms) */
@@ -41,6 +42,7 @@ export const emptyData = (): Data => ({
   tools: [],
   alarms: [],
   wakeLogs: [],
+  healthDays: [],
   settings: defaultSettings(),
   schemaVersion: SCHEMA_VERSION,
 });
@@ -156,11 +158,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const add = useCallback(<C extends Collection>(collection: C, item: Omit<Item<C>, 'id'>) => {
     const id = newId();
+    if (collection === 'habitLogs') tap();
     setData((d) => ({ ...d, [collection]: [...d[collection], { ...item, id }] }));
     return id;
   }, []);
 
   const update = useCallback(<C extends Collection>(collection: C, id: ID, patch: Partial<Item<C>>) => {
+    // Spürbares Abhaken (Aufgaben, Einkauf)
+    const p = patch as { status?: string; done?: boolean };
+    if ((collection === 'tasks' && p.status === 'erledigt') || (collection === 'shopping' && p.done === true)) tap();
     setData((d) => {
       const list = (d[collection] as Item<C>[]).map((x) => (x.id === id ? withCompletion(collection, x, patch) : x));
       // Wiederholte Aufgaben: beim Abhaken entsteht die nächste, beim Widerrufen verschwindet sie wieder

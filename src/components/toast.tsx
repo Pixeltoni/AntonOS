@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { undo } from '../lib/haptics';
 
 interface Toast {
   id: number;
@@ -41,6 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => {
+                  if (toast.actionLabel === 'Widerrufen') undo();
                   toast.onAction?.();
                   setToast(null);
                 }}

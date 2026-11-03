@@ -127,17 +127,19 @@ export function parseICS(text: string): Draft[] {
   let alarm: number | null = null;
   for (const raw of lines) {
     const line = raw.trimEnd();
-    if (line === 'BEGIN:VEVENT') {
+    // Namen wie BEGIN:VEVENT sind laut RFC 5545 unabhängig von Groß-/Kleinschreibung
+    const upper = line.toUpperCase();
+    if (upper === 'BEGIN:VEVENT') {
       cur = [];
       alarm = null;
       continue;
     }
     if (!cur) continue;
-    if (line === 'BEGIN:VALARM') {
+    if (upper === 'BEGIN:VALARM') {
       inAlarm = true;
       continue;
     }
-    if (line === 'END:VALARM') {
+    if (upper === 'END:VALARM') {
       inAlarm = false;
       continue;
     }
@@ -147,7 +149,7 @@ export function parseICS(text: string): Draft[] {
       if (m && alarm === null) alarm = Number(m[1] ?? 0) * 1440 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0) || null;
       continue;
     }
-    if (line === 'END:VEVENT') {
+    if (upper === 'END:VEVENT') {
       const ev = toDraft(cur, alarm);
       if (ev) out.push(ev);
       cur = null;

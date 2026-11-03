@@ -113,3 +113,94 @@ interface AntonWidgetsPlugin {
 }
 
 export const AntonWidgets = registerPlugin<AntonWidgetsPlugin>('AntonWidgets');
+
+/* ---------- Weitere iPhone-Funktionen – Plugin in ios/App/App/AntonExtras.swift ---------- */
+
+export type NativePermission = 'granted' | 'denied' | 'prompt' | 'unavailable';
+
+/** Stand des Fokus-Timers für die Live-Aktivität (Sperrbildschirm und Dynamic Island) */
+export interface FocusActivityState {
+  /** Name des Modus bzw. Kurses, z. B. „Analysis“ */
+  label: string;
+  /** Modus-Symbol (Emoji) */
+  icon: string;
+  /** Farbe als #RRGGBB */
+  color: string;
+  phase: 'fokus' | 'pause' | 'lange-pause';
+  /** Beginn und Ende der Phase (ms) */
+  startAt: number;
+  endAt: number;
+  paused: boolean;
+  /** Restzeit in Sekunden (für die Anzeige im Pausenzustand) */
+  leftSeconds: number;
+  round: number;
+  rounds: number;
+}
+
+/** Aus Siri, Kurzbefehlen oder der Aktionstaste – wartet, bis AntonOS es übernimmt */
+export interface NativeIntent {
+  kind: 'text' | 'einkauf' | 'fokus' | 'seite';
+  text: string;
+  at: number;
+}
+
+export interface HealthWorkout {
+  id: string;
+  /** Beginn (ms) */
+  start: number;
+  minutes: number;
+  /** z. B. „Laufen“ */
+  type: string;
+}
+
+export interface HealthDayValues {
+  date: string;
+  steps: number;
+  sleepMinutes: number;
+}
+
+/** Ort mit Mitteilung beim Ankommen bzw. Verlassen */
+export interface NativePlaceNotice {
+  id: string;
+  lat: number;
+  lon: number;
+  radius: number;
+  title: string;
+  body: string;
+  /** true = beim Verlassen statt beim Ankommen */
+  onExit: boolean;
+  href: string;
+}
+
+interface AntonExtrasPlugin {
+  /** Face ID / Touch ID */
+  biometry(): Promise<{ kind: 'faceID' | 'touchID' | 'opticID' | 'none' }>;
+  authenticate(opts: { reason: string }): Promise<{ ok: boolean }>;
+  /** Live-Aktivität starten bzw. aktualisieren (`state`) oder beenden (ohne `state`) */
+  focusActivity(opts: { state?: FocusActivityState }): Promise<{ active: boolean }>;
+  /** Wartende Einträge aus Siri und Kurzbefehlen (JSON-Liste) – werden dabei gelöscht */
+  takeIntents(): Promise<{ items: string }>;
+  healthStatus(): Promise<{ state: NativePermission }>;
+  healthAuthorize(): Promise<{ state: NativePermission }>;
+  healthRead(opts: { days: number }): Promise<{ days: HealthDayValues[]; workouts: HealthWorkout[] }>;
+  /** Texterkennung auf dem Gerät (Base64-Bild ohne data:-Vorspann) */
+  recognizeText(opts: { image: string }): Promise<{ lines: string[] }>;
+  locationStatus(opts: { ask: boolean }): Promise<{ state: NativePermission }>;
+  currentLocation(): Promise<{ lat: number; lon: number }>;
+  geocode(opts: { address: string }): Promise<{ lat: number; lon: number; name: string }>;
+  /** Ersetzt alle Orts-Mitteilungen */
+  syncPlaces(opts: { items: NativePlaceNotice[] }): Promise<{ count: number }>;
+  addListener(event: 'intent', fn: () => void): Promise<PluginListenerHandle>;
+}
+
+export const AntonExtras = registerPlugin<AntonExtrasPlugin>('AntonExtras');
+
+/** Ruft eine Funktion des Plugins auf; in älteren App-Versionen oder im Web: `fallback` */
+export async function extras<T>(fn: (p: AntonExtrasPlugin) => Promise<T>, fallback: T): Promise<T> {
+  if (!isNativeApp()) return fallback;
+  try {
+    return await fn(AntonExtras);
+  } catch {
+    return fallback;
+  }
+}

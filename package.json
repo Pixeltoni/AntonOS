@@ -15,6 +15,7 @@
     "@capacitor/app": "^7.1.2",
     "@capacitor/browser": "^7.0.5",
     "@capacitor/core": "^7.6.10",
+    "@capacitor/haptics": "^7.0.5",
     "@capacitor/ios": "^7.6.10",
     "@capacitor/local-notifications": "^7.0.7",
     "@supabase/supabase-js": "^2.118.0",

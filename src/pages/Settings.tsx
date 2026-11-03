@@ -8,6 +8,8 @@ import { AppearanceEditor } from '../components/appearance';
 import { CloudPanel, useSync } from '../components/sync';
 import { AppPanel } from '../components/pwa';
 import { PageHeader, Panel } from '../components/ui';
+import { HealthPanel, LockPanel, PlacesPanel, SiriPanel } from '../components/iphone';
+import { isNativeApp } from '../lib/native';
 
 export function Settings() {
   const { data, replaceAll, updateSettings } = useStore();
@@ -58,6 +60,20 @@ export function Settings() {
       <Panel title="📱 Als App auf dem Handy">
         <AppPanel />
       </Panel>
+      {isNativeApp() && (<>
+      <Panel title="🔒 Face ID">
+        <LockPanel />
+      </Panel>
+      <Panel title="❤️ Apple Health">
+        <HealthPanel />
+      </Panel>
+      <Panel title="📍 Erinnern am Ort">
+        <PlacesPanel />
+      </Panel>
+      <Panel title="🎙️ Siri und Kurzbefehle">
+        <SiriPanel />
+      </Panel>
+      </>)}
       <Panel title="☁️ Synchronisierung">
         <CloudPanel />
       </Panel>

@@ -64,7 +64,9 @@ export function useNativeWidgets() {
       else {
         location.hash = '#/fokus';
         const { focus } = latest.current;
-        if (!focus.timer.running) focus.start();
+        if (link.action === 'stop') focus.stop(true);
+        else if (link.action === 'pause' && focus.timer.running) focus.pause();
+        else if (!focus.timer.running) focus.start();
       }
     };
 

@@ -1093,6 +1093,9 @@ main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
 /* ---------- Stundenplan & Wiederholungen (Vorschlag 11) ---------- */
 .cal-item.lecture, .tl-event.lecture { --p: var(--c, var(--accent)); border-left: 3px solid var(--p); background: color-mix(in srgb, var(--p) 16%, var(--surface)); }
 .cal-dot.lecture, .dl-bar.lecture { --p: var(--c, var(--accent)); background: var(--p); }
+/* Lernplan: gestrichelt, damit Lernblöcke als Vorschlag erkennbar bleiben */
+.cal-item.study, .tl-event.study { --p: var(--c, #30b0c7); border-left: 3px dashed var(--p); background: color-mix(in srgb, var(--p) 9%, var(--surface)); }
+.cal-dot.study, .dl-bar.study { --p: var(--c, #30b0c7); background: var(--p); opacity: .7; }
 .slot-day { display: inline-grid; place-items: center; min-width: 2rem; height: 2rem; border-radius: 8px; color: #fff; font-weight: 700; font-size: 0.8rem; flex: none; }
 .slot-row { align-items: center; gap: 0.6rem; }
 .slot-form input[type='time'] { width: auto; }
@@ -2094,3 +2097,49 @@ label.tone-clip { color: var(--text); display: flex; flex-direction: column; gap
 .tone-preview { align-self: flex-start; }
 .ios-note { margin: 0; padding: 0.7rem 0.9rem; border-radius: 12px; background: color-mix(in srgb, #FF9500 10%, transparent); font-size: 0.85rem; line-height: 1.4; }
 .tone-play { width: 28px; height: 28px; flex: none !important; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, #FF9500 16%, transparent); color: #FF9500; font-size: 0.7rem; }
+
+/* Lernplan auf der Prüfungskarte */
+.study-plan { display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--border); }
+.study-plan .ok { color: var(--green, #34c759); }
+.study-bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--c) 18%, transparent); overflow: hidden; }
+.study-bar i { display: block; height: 100%; border-radius: 3px; background: var(--c); }
+.study-next { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.study-next li { display: flex; justify-content: space-between; gap: 8px; }
+.study-plan button { align-self: flex-start; }
+
+/* Abonnierte Kalender */
+.feeds { display: flex; flex-direction: column; gap: 10px; }
+.feeds .ios-list li { gap: 8px; align-items: center; }
+.feed-name { border: 0; background: transparent; padding: 0; font-weight: 600; width: 100%; }
+.feeds select { max-width: 7.5em; }
+
+/* Tag abschließen */
+.evening { display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
+.evening-card h3 { margin: 0 0 8px; font-size: 1rem; }
+.evening-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.evening-list li { display: flex; align-items: center; gap: 10px; }
+.evening-alarm { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); flex-wrap: wrap; }
+.evening-done { align-self: stretch; padding: 12px; font-size: 1rem; }
+.evening-settings summary { cursor: pointer; }
+.evening-settings .row { gap: 8px; align-items: center; }
+
+/* Face ID */
+.lock-gate { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 18vh 16px 0; }
+.lock-gate h2 { margin: 0; }
+.lock-face { font-size: 44px; width: 84px; height: 84px; display: grid; place-items: center; border-radius: 22px; background: var(--surface-2); }
+
+/* iPhone-Funktionen in den Einstellungen */
+.iphone-stack { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.iphone-stack > .ios-list, .iphone-stack > .form-grid { align-self: stretch; }
+.chip-check { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); }
+.siri-phrases { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+.receipt-check { border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+.receipt-check .row { gap: 8px; align-items: center; }
+
+/* Apple Health bei den Gewohnheiten */
+.health-strip { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.health-now { display: flex; flex-direction: column; gap: 4px; }
+.health-bars { display: grid; grid-template-columns: repeat(7, 10px); gap: 5px; height: 44px; align-items: end; }
+.health-bars span { height: 100%; display: flex; align-items: flex-end; background: color-mix(in srgb, #ff2d55 12%, transparent); border-radius: 4px; }
+.health-bars i { display: block; width: 100%; border-radius: 4px; background: #ff2d55; min-height: 2px; }

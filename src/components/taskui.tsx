@@ -470,6 +470,15 @@ function TaskInspector({ task, onClose }: { task: Task; onClose: () => void }) {
             <span><Bell size={14} aria-hidden /> Zur Uhrzeit erinnern</span>
             <input type="checkbox" checked={!!task.remind} onChange={(e) => set({ remind: e.target.checked })} disabled={!task.due || !task.dueTime} />
           </label>
+          {(data.settings.places ?? []).some((p) => p.kind === 'ort') && (
+            <label className="inspector-row">
+              <span>📍 Erinnern am Ort</span>
+              <select value={task.placeId ?? ''} onChange={(e) => set({ placeId: e.target.value || null })}>
+                <option value="">kein Ort</option>
+                {(data.settings.places ?? []).filter((p) => p.kind === 'ort').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>
+          )}
         </details>
 
         <div className="inspector-foot">

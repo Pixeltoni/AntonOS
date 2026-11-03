@@ -70,6 +70,16 @@
 	<string>AntonOS zählt beim Wecker, wie oft du das Handy schüttelst, damit du wach wirst.</string>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>AntonOS stellt deine Wecker als echte iPhone-Wecker, damit sie auch im Lautlos-Modus und bei „Nicht stören“ laut klingeln.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>AntonOS sperrt mit Face ID private Bereiche wie Finanzen und Tagebuch.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>AntonOS liest Workouts, Schritte und Schlaf aus Apple Health – für den Bewegungsring und dein Stimmungstagebuch.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>AntonOS schreibt nichts in Apple Health.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AntonOS erinnert dich, wenn du an einem gespeicherten Ort ankommst – zum Beispiel an die Einkaufsliste im Supermarkt.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { stepsLabel } from '../lib/health';
 import { useStore } from '../store';
 import type { DateStr, Habit, ID, RingGoals, RingSlot, RingSource, WidgetVariant } from '../types';
 import { addDays, parseDate, today } from '../lib/dates';
@@ -283,6 +284,31 @@ function HabitSheet({ habit, onClose }: { habit?: Habit; onClose: () => void }) 
   );
 }
 
+/** Schritte und Schlaf aus Apple Health, die letzten sieben Tage */
+function HealthStrip() {
+  const { data } = useStore();
+  const t = today();
+  const days = Array.from({ length: 7 }, (_, i) => addDays(t, i - 6));
+  const values = days.map((d) => data.healthDays.find((h) => h.date === d));
+  const max = Math.max(1, ...values.map((v) => v?.steps ?? 0));
+  const now = values[6];
+  return (
+    <section className="panel health-strip" aria-label="Apple Health">
+      <div className="health-now">
+        <span>👟 <b>{stepsLabel(now?.steps ?? 0)}</b> Schritte heute</span>
+        {now?.sleepMinutes ? <span>😴 <b>{Math.floor(now.sleepMinutes / 60)} Std. {now.sleepMinutes % 60} Min.</b> geschlafen</span> : null}
+      </div>
+      <div className="health-bars" aria-hidden>
+        {values.map((v, i) => (
+          <span key={days[i]} title={`${days[i]}: ${stepsLabel(v?.steps ?? 0)} Schritte`}>
+            <i style={{ height: `${((v?.steps ?? 0) / max) * 100}%` }} />
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Habits() {
   const { data, remove } = useStore();
   const toggle = useToggleHabit();
@@ -296,6 +322,7 @@ export function Habits() {
     <>
       <PageHeader title="Gewohnheiten" subtitle="Schließ jeden Tag deine Ringe" actions={<AddButton label="Neue Gewohnheit" onClick={() => setAdding(true)} />} />
       <RingsCard />
+      {data.settings.health?.enabled && <HealthStrip />}
       <div className="grid-2">
         <Panel title="Heute">
           {data.habits.length === 0 ? <Empty>Noch keine Gewohnheiten.</Empty> : (

@@ -459,6 +459,8 @@ export interface TrainingDay {
   id: ID;
   name: string;
   exercises: PlanExercise[];
+  /** Eigenes Training außerhalb der Reihenfolge (z. B. Körpertraining): zählt nie als „Als Nächstes“ */
+  separate?: boolean;
 }
 
 export interface Album {

@@ -47,6 +47,8 @@ import { useNativeNotifications } from './components/native';
 import { useNativeWidgets } from './components/ioswidgets';
 import { AlarmRinger } from './components/alarm';
 import { Alarms } from './pages/Alarms';
+import { useCalendarFeeds } from './components/feeds';
+import { Evening, useDayCloseReminder } from './pages/Evening';
 
 function useRoute(): string[] {
   const read = () => location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -99,6 +101,8 @@ function Page({ route }: { route: string[] }) {
       return <Shopping />;
     case 'rueckblick':
       return <Review />;
+    case 'abend':
+      return <Evening />;
     case 'schauen':
       return <MediaPage key="schauen" mode="schauen" />;
     case 'lesen':
@@ -172,6 +176,8 @@ function Shell() {
   useLifeReminders();
   useNativeNotifications();
   useNativeWidgets();
+  useCalendarFeeds();
+  useDayCloseReminder();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);

@@ -14,7 +14,7 @@ export interface CalendarEntry {
   time: string;
   endTime: string;
   label: string;
-  kind: 'event' | 'task' | 'exam' | 'project' | 'lecture' | 'birthday' | 'trip';
+  kind: 'event' | 'task' | 'exam' | 'project' | 'lecture' | 'birthday' | 'trip' | 'study';
   href?: string;
   done?: boolean;
   priority?: EventPriority;
@@ -40,6 +40,7 @@ export const KIND_LABELS: Record<EntryKind, string> = {
   project: 'Projekte',
   birthday: 'Geburtstage',
   trip: 'Reisen',
+  study: 'Lernplan',
 };
 
 /** Gedämpfte Notion-Palette für eigene Termine */

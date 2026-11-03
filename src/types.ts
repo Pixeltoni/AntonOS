@@ -84,6 +84,8 @@ export interface Task {
   listId?: ID | null;
   /** Tags wie „zuhause“ (ohne @) */
   tags?: string[];
+  /** Erinnern, sobald man an diesem Ort ankommt (siehe Settings.places) */
+  placeId?: ID | null;
   /** Geschätzter Aufwand in Minuten */
   estimate?: number;
   /** Im Fokus-Timer gearbeitete Minuten */
@@ -147,6 +149,10 @@ export interface Exam {
   date: DateStr;
   time: string;
   location: string;
+  /** Lernplan: so viele Stunden bis zur Prüfung lernen (leer = kein Plan) */
+  studyHours?: number | null;
+  /** Lernplan: ab diesem Tag zählt die Lernzeit */
+  planFrom?: DateStr;
 }
 
 export interface Grade {
@@ -419,6 +425,8 @@ export interface Workout {
   minutes?: number;
   /** Trainingstag aus dem Trainingsplan (z. B. Push) */
   planDayId?: ID;
+  /** Aus Apple Health übernommen (Kennung des Workouts dort) */
+  healthId?: string;
   /** Eingetragene Übungen mit Gewicht und Wiederholungen */
   exercises?: ExerciseLog[];
   /** Gemeinsame Kennung, wenn das Training als Serie (z. B. jeden Mo + Do) geplant wurde */
@@ -487,6 +495,77 @@ export interface CalEvent {
   location?: string;
   /** Eigene Farbe; leer = Farbe nach Wichtigkeit */
   color?: EventColor | null;
+  /** Kommt aus einem abonnierten Kalender (wird beim Aktualisieren ersetzt) */
+  feedId?: ID;
+}
+
+/** Abonnierter Kalender (ICS-Link, z. B. Stundenplan aus dem Campus-Portal) */
+export interface CalFeed {
+  id: ID;
+  name: string;
+  url: string;
+  color: EventColor;
+  /** Letzter erfolgreicher Abruf (ms) */
+  lastSync: number | null;
+  /** Fehlermeldung des letzten Abrufs */
+  error?: string;
+  /** Anzahl der Termine beim letzten Abruf */
+  count?: number;
+}
+
+/** Abend-Abschluss: Erinnerung und wann zuletzt abgeschlossen */
+export interface DayCloseSettings {
+  enabled: boolean;
+  /** Uhrzeit der Erinnerung HH:MM */
+  time: string;
+  /** Zuletzt abgeschlossener Tag */
+  last?: DateStr;
+}
+
+/** Lernplan: in welchem Zeitfenster Lernblöcke geplant werden */
+export interface StudySettings {
+  from: string;
+  to: string;
+  /** Höchstens so viele Minuten pro Tag */
+  maxPerDay: number;
+}
+
+/** Face ID für private Bereiche (nur iPhone-App) */
+export interface LockSettings {
+  enabled: boolean;
+  /** Gesperrte Seiten (Pfade wie „finanzen“) */
+  pages: string[];
+}
+
+/** Ort für Erinnerungen beim Ankommen */
+export interface Place {
+  id: ID;
+  name: string;
+  lat: number;
+  lon: number;
+  /** Radius in Metern */
+  radius: number;
+  /** einkauf = Einkaufsliste zeigen, zuhause = Packliste beim Losgehen vor einer Reise */
+  kind: 'einkauf' | 'zuhause' | 'ort';
+}
+
+/** Apple Health: was übernommen wird */
+export interface HealthSettings {
+  enabled: boolean;
+  workouts: boolean;
+  sleep: boolean;
+  steps: boolean;
+  /** Letzter Abgleich (ms) */
+  lastSync?: number;
+}
+
+/** Tageswerte aus Apple Health */
+export interface HealthDay {
+  id: ID;
+  date: DateStr;
+  steps: number;
+  /** Schlaf in der Nacht vor diesem Tag, Minuten */
+  sleepMinutes: number;
 }
 
 export interface Tool {
@@ -555,6 +634,18 @@ export interface Settings {
   packTemplates?: PackTemplate[];
   /** Schlafziel und Erinnerung zur Schlafenszeit (Wecker) */
   sleep?: SleepSettings;
+  /** Abonnierte Kalender */
+  feeds?: CalFeed[];
+  /** Tag abschließen am Abend */
+  dayClose?: DayCloseSettings;
+  /** Lernplan bis zur Prüfung */
+  study?: StudySettings;
+  /** Face ID für private Bereiche */
+  lock?: LockSettings;
+  /** Orte für Erinnerungen beim Ankommen */
+  places?: Place[];
+  /** Apple Health */
+  health?: HealthSettings;
 }
 
 export interface SemesterSettings {
@@ -711,6 +802,8 @@ export interface Data {
   tools: Tool[];
   alarms: Alarm[];
   wakeLogs: WakeLog[];
+  /** Tageswerte aus Apple Health (Schritte, Schlaf) */
+  healthDays: HealthDay[];
   settings: Settings;
 }
 

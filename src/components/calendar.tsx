@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { bump } from '../lib/haptics';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import type { CalEvent, DateStr, EventColor, EventPriority, RepeatFreq } from '../types';
@@ -14,6 +15,7 @@ import {
 } from '../lib/calendar';
 import { parseEventQuickAdd } from '../lib/quickadd';
 import { ageOn, birthdayIn } from '../lib/people';
+import { defaultStudy, planStudy } from '../lib/studyplan';
 
 export const PRIORITIES: { value: EventPriority; label: string }[] = [
   { value: 'niedrig', label: 'Niedrig' },
@@ -24,6 +26,31 @@ export const PRIORITIES: { value: EventPriority; label: string }[] = [
 /** Alle Einträge für den Kalender: eigene Termine plus Fristen aus anderen Bereichen. */
 export function useCalendarEntries(): (CalendarEntry & { remind?: number | null })[] {
   const { data } = useStore();
+  return useMemo(() => {
+    const base = baseEntries(data);
+    // Lernplan: Blöcke in freien Lücken bis zu den Prüfungen
+    const { blocks } = planStudy(data.exams, data.sessions, base, data.settings.study ?? defaultStudy(), new Date());
+    const study = blocks.map((b) => {
+      const course = data.courses.find((c) => c.id === b.courseId);
+      const exam = data.exams.find((x) => x.id === b.examId);
+      return {
+        key: `s-${b.examId}-${b.day}-${b.start}`,
+        start: b.day,
+        end: b.day,
+        time: b.start,
+        endTime: b.end,
+        label: `Lernen: ${course?.code || course?.name || exam?.title || 'Prüfung'}`,
+        note: exam ? `Lernplan für ${exam.title}` : 'Lernplan',
+        kind: 'study' as const,
+        href: '#/pruefungen',
+        color: course?.color,
+      };
+    });
+    return [...base, ...study];
+  }, [data]);
+}
+
+function baseEntries(data: ReturnType<typeof useStore>['data']): (CalendarEntry & { remind?: number | null })[] {
   const single = (date: DateStr) => ({ start: date, end: date, endTime: '' });
   return [
     ...data.events.map((e) => ({
@@ -657,7 +684,7 @@ function Timeline({ days, entries, compact, onOpen, onNew, onPickDay, onMove, on
     if (!state.active) {
       state.timer = setTimeout(() => {
         state.active = true;
-        navigator.vibrate?.(10);
+        bump();
         setPreview({ key: entry.key, mode, dayDelta: 0, minDelta: 0 });
       }, 350);
     }

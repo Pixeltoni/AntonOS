@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../store';
 import type { Exam, ID } from '../types';
 import { daysBetween, formatDate, parseDate, today } from '../lib/dates';
 import { isDue } from '../lib/srs';
 import { CourseSelect, Empty, PageHeader } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
+import { useCalendarEntries } from '../components/calendar';
+import { useFocus } from '../components/focus';
+import { defaultStudy, planStudy, statusLabel, type StudyBlock } from '../lib/studyplan';
+import { focusMode } from '../lib/focus';
 
 type Draft = Omit<Exam, 'id'>;
 
@@ -20,6 +24,8 @@ function ExamSheet({ initial, id, onClose }: { initial: Draft; id?: ID; onClose:
       submitDisabled={!e.title.trim() || !e.date}
       onSubmit={() => {
         const final = { ...e, title: e.title.trim(), location: e.location.trim() };
+        // Lernplan beginnt mit dem Tag, an dem er eingetragen wird
+        if (final.studyHours && !initial.studyHours) final.planFrom = today();
         if (id) update('exams', id, final);
         else add('exams', final);
         onClose();
@@ -32,6 +38,20 @@ function ExamSheet({ initial, id, onClose }: { initial: Draft; id?: ID; onClose:
         <label>Uhrzeit<input type="time" value={e.time} onChange={(x) => set('time', x.target.value)} /></label>
       </div>
       <label>Ort<input value={e.location} placeholder="z. B. Audimax" onChange={(x) => set('location', x.target.value)} /></label>
+      <label>
+        Lernplan: Stunden bis zur Prüfung
+        <input
+          type="number"
+          min={0}
+          max={500}
+          step={1}
+          inputMode="numeric"
+          placeholder="leer = kein Lernplan"
+          value={e.studyHours ?? ''}
+          onChange={(x) => set('studyHours', x.target.value === '' ? null : Math.max(0, Math.min(500, Number(x.target.value))))}
+        />
+        <span className="muted small">AntonOS verteilt die Zeit in freie Lücken im Kalender und plant jeden Tag neu. Gezählt wird der Fokus-Timer im Lernmodus für den Kurs.</span>
+      </label>
       {id && (
         <button type="button" className="danger" onClick={() => { if (confirm('Prüfung löschen?')) { remove('exams', id); onClose(); } }}>
           Prüfung löschen
@@ -41,8 +61,50 @@ function ExamSheet({ initial, id, onClose }: { initial: Draft; id?: ID; onClose:
   );
 }
 
+/** Lernplan einer Prüfung: Fortschritt, Status und die nächsten Blöcke */
+function StudyPlanCard({ exam, blocks, status }: { exam: Exam; blocks: StudyBlock[]; status: ReturnType<typeof planStudy>['status'][number] }) {
+  const focus = useFocus();
+  const t = today();
+  const next = blocks.filter((b) => b.examId === exam.id).slice(0, 3);
+  const share = status.goal ? Math.min(1, status.done / status.goal) : 0;
+  const label = statusLabel(status);
+  const startFocus = () => {
+    focus.configure({ mode: 'lernen', courseId: exam.courseId });
+    focus.start();
+    location.hash = '#/fokus';
+  };
+  return (
+    <div className="study-plan">
+      <div className="row between small">
+        <span>📚 {Math.round(status.done / 6) / 10} von {Math.round(status.goal / 6) / 10} Std.</span>
+        <span className={status.behind > 30 && status.done < status.goal ? 'danger' : 'ok'}>{label}</span>
+      </div>
+      <div className="study-bar" aria-hidden><i style={{ width: `${share * 100}%` }} /></div>
+      {next.length > 0 ? (
+        <ul className="study-next small">
+          {next.map((b) => (
+            <li key={`${b.day}-${b.start}`}>
+              <span>{b.day === t ? 'Heute' : parseDate(b.day).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' })}</span>
+              <span className="muted">{b.start}–{b.end}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        status.done < status.goal && <p className="muted small">Bis zur Prüfung ist im Kalender keine Lücke mehr frei.</p>
+      )}
+      {status.unplanned > 0 && next.length > 0 && <p className="muted small">{Math.round(status.unplanned / 6) / 10} Std. passen nicht mehr in den Kalender.</p>}
+      <button type="button" className="primary small" onClick={startFocus}>{focusMode('lernen').icon} Jetzt lernen</button>
+    </div>
+  );
+}
+
 export function Exams() {
   const { data } = useStore();
+  const entries = useCalendarEntries();
+  const plan = useMemo(
+    () => planStudy(data.exams, data.sessions, entries.filter((x) => x.kind !== 'study'), data.settings.study ?? defaultStudy(), new Date()),
+    [data.exams, data.sessions, data.settings.study, entries],
+  );
   const [sheet, setSheet] = useState<{ initial: Draft; id?: ID } | null>(null);
   const t = today();
 
@@ -81,6 +143,9 @@ export function Exams() {
                     {e.location && ` · ${e.location}`}
                   </span>
                 </button>
+                {plan.status.some((s) => s.examId === e.id) && (
+                  <StudyPlanCard exam={e} blocks={plan.blocks} status={plan.status.find((s) => s.examId === e.id)!} />
+                )}
                 {c && (
                   <div className="exam-prep">
                     <a href={`#/lernen/${c.id}`}>🧠 {due} Karten fällig</a>

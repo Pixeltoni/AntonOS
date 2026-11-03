@@ -135,6 +135,7 @@ const KIND_COLORS: Record<CalendarEntry['kind'], string> = {
   trip: '#34C759',
   project: '#FF9500',
   task: '#8E8E93',
+  study: '#30B0C7',
 };
 
 function alarmSound(a: Alarm): string {

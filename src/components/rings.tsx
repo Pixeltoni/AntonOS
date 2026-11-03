@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { success } from '../lib/haptics';
 import { useStore } from '../store';
 import type { DateStr, WidgetVariant } from '../types';
 import { today } from '../lib/dates';
@@ -157,6 +158,14 @@ export function useRingReminder() {
   const { data } = useStore();
   const { show } = useToast();
   const goals = data.settings.rings ?? defaultRingGoals();
+
+  // Spürbar, sobald heute ein Ring zugeht
+  const closed = ringDay(data, goals, today()).rings.filter((r) => r.share >= 1).length;
+  const lastClosed = useRef(closed);
+  useEffect(() => {
+    if (closed > lastClosed.current) success();
+    lastClosed.current = closed;
+  }, [closed]);
 
   useEffect(() => {
     if (!goals.reminder) return;

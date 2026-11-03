@@ -4,13 +4,14 @@ import { useStore } from '../store';
 import { isNativeApp, onNoticeTap, replacePlanned } from '../lib/native';
 import { MAX_PLANNED, plannedNotices } from '../lib/schedule';
 import { bedtimeNotices, defaultSleep } from '../lib/alarm';
+import { dayCloseNotices, defaultDayClose } from '../lib/dayclose';
 import type { CalendarEntry } from '../lib/calendar';
 import type { Data } from '../types';
 
 /** Alle Mitteilungen samt Erinnerung zur Schlafenszeit */
 function allPlanned(entries: (CalendarEntry & { remind?: number | null })[], data: Data) {
   const now = new Date();
-  return [...plannedNotices(entries, data, now), ...bedtimeNotices(data.alarms, data.settings.sleep ?? defaultSleep(), now)].sort((a, b) => a.at - b.at).slice(0, MAX_PLANNED);
+  return [...plannedNotices(entries, data, now), ...bedtimeNotices(data.alarms, data.settings.sleep ?? defaultSleep(), now), ...dayCloseNotices(data.settings.dayClose ?? defaultDayClose(), now)].sort((a, b) => a.at - b.at).slice(0, MAX_PLANNED);
 }
 import { useCalendarEntries } from './calendar';
 

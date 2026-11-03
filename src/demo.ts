@@ -180,6 +180,7 @@ export function demoData(): Data {
     ],
     alarms: [],
     wakeLogs: [],
+    healthDays: [],
     tools: [
       { id: 'demo-tl1', name: 'Moodle', url: 'https://moodle.org/', category: 'Studium' },
       { id: 'demo-tl2', name: 'Google Scholar', url: 'https://scholar.google.com/', category: 'Studium' },

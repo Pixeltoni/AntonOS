@@ -5,7 +5,8 @@ import WidgetKit
 /* ---------- Haustier „Knubbel“ (Tamagotchi) ----------
    Bewegt sich wie der Läufer per Sekunden-Schrift (scripts/haustier-font.py), je Laune eine Schrift.
    Die Laune hängt nur am Füttern: Der Knopf im Widget (FeedPetIntent) merkt sich die Zeit im
-   gemeinsamen Speicher, daraus folgen Essen → Party → froh → normal → Hunger → traurig. Nachts schläft er. */
+   gemeinsamen Speicher, daraus folgen Essen → Party → froh → normal → Hunger → traurig → krank (ab 24 h)
+   → tot (nach 48 h). Füttern macht ihn wieder gesund; nach dem Tod schlüpft per Knopf ein neues Ei. Nachts schläft er. */
 
 enum TierZustand {
     static let fedKey = "tier.gefuettert"
@@ -30,6 +31,13 @@ enum TierZustand {
 
     static var meals: Int { WidgetStore.defaults?.integer(forKey: mealsKey) ?? 0 }
 
+    /// Neues Ei: Alter und Mahlzeiten von vorn
+    static func hatch(now: Date = Date()) {
+        WidgetStore.defaults?.set(now.timeIntervalSince1970, forKey: bornKey)
+        WidgetStore.defaults?.set(now.addingTimeInterval(-3600).timeIntervalSince1970, forKey: fedKey)
+        WidgetStore.defaults?.set(0, forKey: mealsKey)
+    }
+
     static func feed(now: Date = Date()) {
         _ = born(now: now)
         WidgetStore.defaults?.set(now.timeIntervalSince1970, forKey: fedKey)
@@ -38,7 +46,7 @@ enum TierZustand {
 }
 
 enum TierLaune: String {
-    case essen, party, froh, normal, hunger, traurig, schlaf
+    case essen, party, froh, normal, hunger, traurig, krank, tot, schlaf
 
     var font: String {
         switch self {
@@ -48,6 +56,8 @@ enum TierLaune: String {
         case .normal: "AntonTierNormal-Regular"
         case .hunger: "AntonTierHunger-Regular"
         case .traurig: "AntonTierTraurig-Regular"
+        case .krank: "AntonTierKrank-Regular"
+        case .tot: "AntonTierTot-Regular"
         case .schlaf: "AntonTierSchlaf-Regular"
         }
     }
@@ -60,6 +70,8 @@ enum TierLaune: String {
         case .normal: "Knubbel bummelt herum"
         case .hunger: "Knubbel hat Hunger"
         case .traurig: "Knubbel ist sehr hungrig"
+        case .krank: "Knubbel ist krank! Füttern hilft"
+        case .tot: "Knubbel ist gestorben"
         case .schlaf: "Knubbel schläft"
         }
     }
@@ -72,6 +84,8 @@ enum TierLaune: String {
         case .normal: .teal
         case .hunger: .brown
         case .traurig: .indigo
+        case .krank: .green
+        case .tot: .gray
         case .schlaf: .purple
         }
     }
@@ -82,11 +96,17 @@ enum TierLaune: String {
     static let frohEnd: TimeInterval = 3 * 3600
     static let normalEnd: TimeInterval = 8 * 3600
     static let hungerEnd: TimeInterval = 16 * 3600
+    static let sickStart: TimeInterval = 24 * 3600
+    static let deathAfter: TimeInterval = 48 * 3600
+
+    static func deathDate(fed: Date) -> Date { fed.addingTimeInterval(deathAfter) }
 
     static func aus(fed: Date, at date: Date) -> TierLaune {
         let since = date.timeIntervalSince(fed)
         if since < eatEnd { return .essen }
         if since < partyEnd { return .party }
+        if since >= deathAfter { return .tot }
+        if since >= sickStart { return .krank }
         let hour = Calendar.current.component(.hour, from: date)
         if hour >= 23 || hour < 6 { return .schlaf }
         if since < frohEnd { return .froh }
@@ -115,6 +135,20 @@ struct FeedPetIntent: AppIntent {
     }
 }
 
+/// Nach dem Tod: neues Ei schlüpfen lassen
+struct HatchPetIntent: AppIntent {
+    static let title: LocalizedStringResource = "Neues Knubbel-Ei"
+    static let isDiscoverable: Bool = false
+
+    init() {}
+
+    func perform() async throws -> some IntentResult {
+        TierZustand.hatch()
+        WidgetCenter.shared.reloadTimelines(ofKind: "AntonOSHaustier")
+        return .result()
+    }
+}
+
 struct HaustierEntry: TimelineEntry {
     let date: Date
     let fed: Date
@@ -122,7 +156,22 @@ struct HaustierEntry: TimelineEntry {
     let meals: Int
     var laune: TierLaune { TierLaune.aus(fed: fed, at: date) }
     var fullness: Double { TierLaune.fullness(fed: fed, at: date) }
-    var day: Int { (Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: born), to: date).day ?? 0) + 1 }
+    var death: Date { TierLaune.deathDate(fed: fed) }
+
+    /// Alter bis jetzt (bzw. bis zum Tod), z. B. „3 Tage“ oder „5 Std.“
+    var ageText: String {
+        let end = laune == .tot ? death : date
+        let hours = max(0, Int(end.timeIntervalSince(born) / 3600))
+        if hours < 24 { return "\(hours) Std." }
+        let days = hours / 24
+        return days == 1 ? "1 Tag" : "\(days) Tage"
+    }
+
+    var ageShort: String {
+        let end = laune == .tot ? death : date
+        let hours = max(0, Int(end.timeIntervalSince(born) / 3600))
+        return hours < 24 ? "\(hours)h" : "\(hours / 24)T"
+    }
 }
 
 struct HaustierProvider: TimelineProvider {
@@ -146,7 +195,8 @@ struct HaustierProvider: TimelineProvider {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
         let horizon = now.addingTimeInterval(24 * 3600)
-        var times = [TierLaune.eatEnd, TierLaune.partyEnd, TierLaune.frohEnd, TierLaune.normalEnd, TierLaune.hungerEnd].map { fed.addingTimeInterval($0) }
+        var times = [TierLaune.eatEnd, TierLaune.partyEnd, TierLaune.frohEnd, TierLaune.normalEnd, TierLaune.hungerEnd,
+                     TierLaune.sickStart, TierLaune.deathAfter].map { fed.addingTimeInterval($0) }
         for day in 0...1 {
             for hour in [6, 23] {
                 if let d = cal.date(byAdding: DateComponents(day: day, hour: hour), to: today) { times.append(d) }
@@ -158,22 +208,49 @@ struct HaustierProvider: TimelineProvider {
     }
 }
 
-struct FeedButton: View {
+/// Füttern-Knopf, nach dem Tod „Neues Ei“
+struct PetButton: View {
+    let dead: Bool
     var compact = false
 
     var body: some View {
-        Button(intent: FeedPetIntent()) {
-            if compact {
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: 22))
-                    .widgetAccentable()
-            } else {
-                Label("Füttern", systemImage: "fork.knife")
-                    .font(.caption.weight(.semibold))
+        if dead {
+            Button(intent: HatchPetIntent()) {
+                if compact {
+                    Image(systemName: "oval.portrait.fill").font(.system(size: 18)).widgetAccentable()
+                } else {
+                    Label("Neues Ei", systemImage: "oval.portrait.fill").font(.caption.weight(.semibold))
+                }
             }
+            .tint(.gray)
+            .accessibilityLabel("Neues Ei schlüpfen lassen")
+        } else {
+            Button(intent: FeedPetIntent()) {
+                if compact {
+                    Image(systemName: "fork.knife.circle.fill").font(.system(size: 20)).widgetAccentable()
+                } else {
+                    Label("Füttern", systemImage: "fork.knife").font(.caption.weight(.semibold))
+                }
+            }
+            .tint(.red)
+            .accessibilityLabel("Knubbel füttern")
         }
-        .tint(.red)
-        .accessibilityLabel("Knubbel füttern")
+    }
+}
+
+/// Live laufender Countdown bis zum Tod (nur wenn krank)
+struct DeathCountdown: View {
+    let entry: HaustierEntry
+    var prefix = true
+
+    var body: some View {
+        HStack(spacing: 2) {
+            if prefix { Text("Stirbt in") }
+            Text(timerInterval: entry.date...max(entry.death, entry.date.addingTimeInterval(1)), countsDown: true)
+                .monospacedDigit()
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
     }
 }
 
@@ -183,6 +260,7 @@ struct HaustierView: View {
 
     var body: some View {
         let laune = entry.laune
+        let dead = laune == .tot
         let bild = SekundenBild(font: laune.font, date: entry.date,
                                 color: family == .accessoryRectangular ? .primary : laune.color,
                                 label: laune.text)
@@ -190,20 +268,35 @@ struct HaustierView: View {
         case .accessoryRectangular:
             HStack(spacing: 2) {
                 bild
-                VStack(spacing: 4) {
-                    FeedButton(compact: true).buttonStyle(.plain)
-                    Gauge(value: entry.fullness) { EmptyView() }
-                        .gaugeStyle(.accessoryLinearCapacity)
-                        .frame(width: 24)
+                VStack(spacing: 2) {
+                    PetButton(dead: dead, compact: true).buttonStyle(.plain)
+                    if laune == .krank {
+                        Image(systemName: "cross.case.fill").font(.system(size: 9))
+                        DeathCountdown(entry: entry, prefix: false).font(.system(size: 9, weight: .semibold))
+                    } else {
+                        Text(entry.ageShort).font(.system(size: 10, weight: .semibold))
+                        if !dead {
+                            Gauge(value: entry.fullness) { EmptyView() }
+                                .gaugeStyle(.accessoryLinearCapacity)
+                        }
+                    }
                 }
+                .frame(width: 40)
             }
         case .systemSmall:
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 bild
-                HStack {
-                    Text(laune.text).font(.caption2).foregroundStyle(.secondary).lineLimit(2).minimumScaleFactor(0.7)
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        if laune == .krank {
+                            DeathCountdown(entry: entry).font(.caption2.weight(.semibold)).foregroundStyle(.red)
+                        } else {
+                            Text(laune.text).font(.caption2).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
+                        }
+                        Text("Alter: \(entry.ageText)").font(.caption2).foregroundStyle(.secondary)
+                    }
                     Spacer(minLength: 2)
-                    FeedButton(compact: true).buttonStyle(.plain).foregroundStyle(.red)
+                    PetButton(dead: dead, compact: true).buttonStyle(.plain).foregroundStyle(dead ? .gray : .red)
                 }
             }
         default:
@@ -212,12 +305,17 @@ struct HaustierView: View {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(laune.text).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
-                        Gauge(value: entry.fullness) { EmptyView() }
-                            .gaugeStyle(.accessoryLinearCapacity)
-                            .tint(laune.color)
-                        Text("Tag \(entry.day) · \(entry.meals) Mahlzeiten").font(.caption2).foregroundStyle(.secondary)
+                        if laune == .krank {
+                            DeathCountdown(entry: entry).font(.caption.weight(.bold)).foregroundStyle(.red)
+                        } else if !dead {
+                            Gauge(value: entry.fullness) { EmptyView() }
+                                .gaugeStyle(.accessoryLinearCapacity)
+                                .tint(laune.color)
+                        }
+                        Text(dead ? "Wurde \(entry.ageText) alt · \(entry.meals) Mahlzeiten" : "Alter: \(entry.ageText) · \(entry.meals) Mahlzeiten")
+                            .font(.caption2).foregroundStyle(.secondary)
                     }
-                    FeedButton().buttonStyle(.borderedProminent)
+                    PetButton(dead: dead).buttonStyle(.borderedProminent)
                 }
             }
         }
@@ -230,7 +328,7 @@ struct HaustierWidget: Widget {
             HaustierView(entry: entry).widgetBackground()
         }
         .configurationDisplayName("Haustier")
-        .description("Knubbel, dein Tamagotchi. Füttere ihn direkt im Widget, sonst bekommt er Hunger.")
+        .description("Knubbel, dein Tamagotchi. Füttere ihn direkt im Widget, sonst wird er hungrig, krank und stirbt.")
         .supportedFamilies([.accessoryRectangular, .systemSmall, .systemMedium])
     }
 }

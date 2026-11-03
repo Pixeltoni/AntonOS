@@ -7,6 +7,12 @@ const open = (t: Task) => t.status !== 'erledigt';
 /** Wochentag 1 (Montag) bis 7 (Sonntag) */
 const weekday = (d: DateStr) => ((parseDate(d).getDay() + 6) % 7) + 1;
 
+/** Aufgaben eines Projekts stehen nur im Projekt, nicht in den normalen Aufgabenlisten */
+export const inTaskList = (t: Pick<Task, 'projectId'>): boolean => !t.projectId;
+
+/** Nur Aufgaben ohne Projekt (für Heute, Widgets, Zähler …) */
+export const listTasks = <T extends Pick<Task, 'projectId'>>(tasks: T[]): T[] => tasks.filter(inTaskList);
+
 export const WEEKDAY_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const WEEKDAY_LONG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 

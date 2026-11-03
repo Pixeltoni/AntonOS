@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { today } from '../lib/dates';
+import { listTasks } from '../lib/tasks';
 import { askNotifications, notifyProblemText, showNotice } from '../lib/notify';
 import { isNativeApp, nativePermission } from '../lib/native';
 import { canPromptInstall, isIOS, isStandalone, onInstallChange, parseShared, promptInstall, setBadge, type SharedContent } from '../lib/pwa';
@@ -11,7 +12,7 @@ import { useToast } from './toast';
 export function useAppBadge() {
   const { data } = useStore();
   const t = today();
-  const count = data.tasks.filter((x) => x.status !== 'erledigt' && x.due !== null && x.due <= t).length;
+  const count = listTasks(data.tasks).filter((x) => x.status !== 'erledigt' && x.due !== null && x.due <= t).length;
   useEffect(() => setBadge(count), [count]);
 }
 

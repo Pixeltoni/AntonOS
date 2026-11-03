@@ -8,6 +8,7 @@
  */
 import type { Alarm, Data, DateStr, ID, Task } from '../types';
 import { addDays, daysBetween, parseDate, toDateStr } from './dates';
+import { listTasks } from './tasks';
 import { nextRings, repeatLabel, alarmTitle } from './alarm';
 import { onDay, sortEntries, startAt, type CalendarEntry } from './calendar';
 import { defaultRingGoals, ringDay, weekOf } from './rings';
@@ -219,7 +220,7 @@ export function widgetTraining(data: Pick<Data, 'workouts' | 'trainingPlan'>, da
 export function widgetSnapshot(data: Data, entries: CalendarEntry[], now: Date): WidgetSnapshot {
   const day = toDateStr(now);
   const ring = ringDay(data, data.settings.rings ?? defaultRingGoals(), day);
-  const { tasks, open } = widgetTasks(data.tasks, day);
+  const { tasks, open } = widgetTasks(listTasks(data.tasks), day);
 
   const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   // Heute schon vorbei? Dann zählt die nächste

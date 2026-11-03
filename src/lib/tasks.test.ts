@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../types';
-import { collectTags, describeTaskRepeat, doneToday, dropPatch, firstRepeatDate, formatMinutes, freeMinutes, groupUpcoming, matchesQuery, moveId, nextRepeatDate, parseTags, repeatTasks, sortTasks, spawnRepeat, upcomingDate } from './tasks';
+import { collectTags, describeTaskRepeat, doneToday, dropPatch, firstRepeatDate, formatMinutes, freeMinutes, groupUpcoming, listTasks, matchesQuery, moveId, nextRepeatDate, parseTags, repeatTasks, sortTasks, spawnRepeat, upcomingDate } from './tasks';
 
 // 2026-10-28 ist ein Mittwoch
 const T = '2026-10-28';
@@ -102,5 +102,12 @@ describe('Suche, Tags, Aufwand', () => {
     // 8–12 Uhr, Termine 9–10 und 9:30–11 → 2 h frei
     expect(freeMinutes([[540, 600], [570, 660]], 480, 720)).toBe(120);
     expect(freeMinutes([], 600, 500)).toBe(0);
+  });
+});
+
+describe('Projektaufgaben', () => {
+  it('blendet Aufgaben mit Projekt aus der normalen Liste aus', () => {
+    const tasks = [{ id: 'a', projectId: null }, { id: 'b', projectId: 'p1' }, { id: 'c' }] as Task[];
+    expect(listTasks(tasks).map((t) => t.id)).toEqual(['a', 'c']);
   });
 });

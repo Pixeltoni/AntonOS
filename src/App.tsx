@@ -9,6 +9,7 @@ import { Icon, Logo, NavIcon, PAGE_ICONS } from './components/icons';
 import { useRecurringBookings } from './pages/Finance';
 import { useStore } from './store';
 import { today } from './lib/dates';
+import { listTasks } from './lib/tasks';
 import { isDue } from './lib/srs';
 import { isHabitDone } from './lib/life';
 import { groupNav } from './lib/layout';
@@ -171,7 +172,7 @@ function Shell() {
   }, [menuOpen]);
   const t = today();
   const counts: Record<string, number> = {
-    aufgaben: data.tasks.filter((x) => x.status !== 'erledigt' && x.due !== null && x.due <= t).length,
+    aufgaben: listTasks(data.tasks).filter((x) => x.status !== 'erledigt' && x.due !== null && x.due <= t).length,
     lernen: data.cards.filter((c) => isDue(c, t)).length,
     gewohnheiten: data.habits.filter((h) => !isHabitDone(data.habitLogs, h, t)).length,
   };

@@ -7,7 +7,7 @@ import { TaskEmpty, TaskForm, TaskList } from '../components/TaskList';
 import { useTaskActions, useTaskUI, visibleTaskIds } from '../components/taskui';
 import { useCalendarEntries } from '../components/calendar';
 import { inSomeday, inToday, logbook } from '../lib/things';
-import { collectTags, doneToday, formatMinutes, freeMinutes, groupUpcoming, matchesQuery, upcomingDate } from '../lib/tasks';
+import { collectTags, listTasks, doneToday, formatMinutes, freeMinutes, groupUpcoming, matchesQuery, upcomingDate } from '../lib/tasks';
 import { isTimedOn, onDay, sortEntries, toMin } from '../lib/calendar';
 
 type ListId = 'heute' | 'geplant' | 'alle' | 'markiert' | 'irgendwann' | 'erledigt' | `kurs:${string}` | 'ohne-kurs' | `liste:${string}`;
@@ -27,8 +27,6 @@ const svg = (d: ReactNode) => (
 );
 
 const open = (t: Task) => t.status !== 'erledigt';
-/** Aufgaben eines Projekts stehen nur im Projekte-Tab */
-const inTab = (t: Task) => !t.projectId;
 
 export const SMART_LISTS: SmartList[] = [
   { id: 'heute', label: 'Heute', color: '#007AFF', drop: 'smart:heute', icon: svg(<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" />), filter: (t, d) => inToday(t, d) },
@@ -103,7 +101,7 @@ export function Tasks() {
   const ownList = ownLists.find((l) => l.id === listId)?.list;
   const title = smart?.label ?? userList?.label ?? 'Aufgaben';
   const color = smart?.color ?? userList?.color ?? '#007AFF';
-  const pool = data.tasks.filter(inTab);
+  const pool = listTasks(data.tasks);
   const baseTasks = pool.filter((task) => (smart ? smart.filter(task, t) : userList ? userList.filter(task) : open(task)));
   const tags = collectTags(baseTasks);
   const tasks = baseTasks.filter((x) => matchesQuery(x, query) && (!tag || (x.tags ?? []).includes(tag)));
@@ -359,7 +357,7 @@ function TodayView({ tasks, filtered, entries }: { tasks: Task[]; filtered: bool
   const t = today();
   const overdue = tasks.filter((x) => x.due !== null && x.due < t);
   const rest = tasks.filter((x) => !overdue.includes(x));
-  const done = doneToday(data.tasks.filter(inTab), t).filter((x) => !filtered || tasks.includes(x));
+  const done = doneToday(listTasks(data.tasks), t).filter((x) => !filtered || tasks.includes(x));
   const total = tasks.length + done.length;
   const planned = tasks.reduce((s, x) => s + (x.estimate ?? 0), 0);
   const now = new Date();

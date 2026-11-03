@@ -23,6 +23,11 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>AntonLaeufer.otf</string>
+		<string>AntonTierNormal.otf</string>
+		<string>AntonTierFroh.otf</string>
+		<string>AntonTierParty.otf</string>
+		<string>AntonTierTraurig.otf</string>
+		<string>AntonTierSchlaf.otf</string>
 	</array>
 	<key>NSExtension</key>
 	<dict>

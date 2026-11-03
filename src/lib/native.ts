@@ -110,6 +110,9 @@ interface AntonWidgetsPlugin {
   update(opts: { snapshot: string; applied: number }): Promise<void>;
   /** Die im Widget abgehakten Einträge (JSON-Liste) */
   takeActions(): Promise<{ actions: string }>;
+  /** Knubbel aus dem gemeinsamen Speicher (ms); leer, wenn noch keiner geschlüpft ist */
+  getPet(): Promise<{ born?: number; fed?: number; meals?: number }>;
+  setPet(opts: { born: number; fed: number; meals: number }): Promise<void>;
 }
 
 export const AntonWidgets = registerPlugin<AntonWidgetsPlugin>('AntonWidgets');

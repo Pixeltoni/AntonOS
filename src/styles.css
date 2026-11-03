@@ -2352,3 +2352,24 @@ label.tone-clip { color: var(--text); display: flex; flex-direction: column; gap
 .areas-hint { text-align: center; }
 .pin-bar { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border-radius: 14px; padding: 0.8rem 1rem; box-shadow: var(--glass-shadow); }
 @media (max-width: 400px) { .area-tiles { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- Knubbel (Tamagotchi) – Sekunden-Schriften wie im iOS-Widget ---------- */
+@font-face { font-family: 'AntonTierEssen'; src: url('../ios/App/AntonOSWidgets/AntonTierEssen.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'AntonTierParty'; src: url('../ios/App/AntonOSWidgets/AntonTierParty.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'AntonTierFroh'; src: url('../ios/App/AntonOSWidgets/AntonTierFroh.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'AntonTierNormal'; src: url('../ios/App/AntonOSWidgets/AntonTierNormal.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'AntonTierHunger'; src: url('../ios/App/AntonOSWidgets/AntonTierHunger.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'AntonTierTraurig'; src: url('../ios/App/AntonOSWidgets/AntonTierTraurig.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'AntonTierKrank'; src: url('../ios/App/AntonOSWidgets/AntonTierKrank.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'AntonTierTot'; src: url('../ios/App/AntonOSWidgets/AntonTierTot.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'AntonTierSchlaf'; src: url('../ios/App/AntonOSWidgets/AntonTierSchlaf.otf') format('opentype'); font-display: block; }
+.pet-stage { container-type: inline-size; width: 100%; max-width: 560px; margin: 0 auto; overflow: hidden; }
+.pet-stage span { display: block; font-size: 45cqw; line-height: 1; text-align: center; font-feature-settings: 'calt', 'liga'; }
+.pet-mood { text-align: center; font-weight: 600; font-size: 1.1rem; margin: 0.6rem 0 0.4rem; }
+.pet-countdown { text-align: center; color: var(--danger); margin: 0.2rem 0; }
+.pet-countdown strong { font-variant-numeric: tabular-nums; }
+.pet-full { display: flex; align-items: center; gap: 0.6rem; max-width: 360px; margin: 0.4rem auto; }
+.pet-full span { color: var(--muted); font-size: 0.85rem; }
+.pet-full .progress { flex: 1; }
+.pet-facts { display: flex; justify-content: center; gap: 1.2rem; color: var(--muted); font-size: 0.9rem; margin: 0.6rem 0 1rem; }
+.pet-help { margin: 0; padding-left: 1.1rem; color: var(--muted); line-height: 1.6; }

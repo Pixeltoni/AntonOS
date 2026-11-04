@@ -107,6 +107,28 @@ export function demoData(): Data {
       { id: `demo-hl1-${d}`, habitId: 'demo-h1', date: addDays(t, -d) },
       { id: `demo-hl3-${d}`, habitId: 'demo-h3', date: addDays(t, -d), amount: 2 },
     ]),
+    routines: [
+      {
+        id: 'demo-r1', name: 'Morgenroutine', icon: '🌅', color: '#FF9500', when: 'morgen',
+        steps: [
+          { id: 'demo-r1-1', title: 'Wasser trinken', icon: '💧', minutes: 1, habitId: 'demo-h3' },
+          { id: 'demo-r1-2', title: 'Meditieren', icon: '🧘', minutes: 10, habitId: 'demo-h1' },
+          { id: 'demo-r1-3', title: 'Duschen', icon: '🚿', minutes: 10 },
+          { id: 'demo-r1-4', title: 'Plan ansehen', icon: '🗓️', minutes: 2 },
+        ],
+        runs: [1, 2, 3].map((d) => ({ date: addDays(t, -d), minutes: 24, done: 4, skipped: 0 })),
+      },
+      {
+        id: 'demo-r2', name: 'Abendroutine', icon: '🌙', color: '#5856D6', when: 'abend',
+        steps: [
+          { id: 'demo-r2-1', title: 'Aufräumen', icon: '🧺', minutes: 5 },
+          { id: 'demo-r2-2', title: 'Tagesrückblick', icon: '📝', minutes: 3, habitId: 'demo-h4' },
+          { id: 'demo-r2-3', title: 'Lesen', icon: '📖', minutes: 15, habitId: 'demo-h2' },
+          { id: 'demo-r2-4', title: 'Zähne putzen', icon: '🪥', minutes: 3 },
+        ],
+        runs: [],
+      },
+    ],
     transactions: [
       { id: 'demo-x1', type: 'Einnahme', description: 'Werkstudentenjob', amount: 620, category: 'Gehalt', account: 'Girokonto', date: addDays(t, -6) },
       { id: 'demo-x2', type: 'Ausgabe', description: 'WG-Zimmer', amount: 390, category: 'Miete', account: 'Girokonto', date: addDays(t, -5) },

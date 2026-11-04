@@ -6,6 +6,7 @@ import { SyncProvider } from './components/sync';
 import { ToastProvider } from './components/toast';
 import { FocusProvider } from './components/focus';
 import { RestProvider } from './components/rest';
+import { RoutineProvider } from './components/routine';
 import { TaskUIProvider } from './components/taskui';
 import { setupPwa } from './lib/pwa';
 import { disableZoom, lockScrollBehindOverlays } from './lib/mobile';
@@ -22,9 +23,11 @@ createRoot(document.getElementById('root')!).render(
         <ToastProvider>
           <FocusProvider>
             <RestProvider>
-              <TaskUIProvider>
-                <App />
-              </TaskUIProvider>
+              <RoutineProvider>
+                <TaskUIProvider>
+                  <App />
+                </TaskUIProvider>
+              </RoutineProvider>
             </RestProvider>
           </FocusProvider>
         </ToastProvider>

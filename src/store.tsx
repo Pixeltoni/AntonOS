@@ -27,6 +27,7 @@ export const emptyData = (): Data => ({
   projects: [],
   habits: [],
   habitLogs: [],
+  routines: [],
   transactions: [],
   recurring: [],
   pots: [],

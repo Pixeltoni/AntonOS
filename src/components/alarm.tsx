@@ -7,6 +7,7 @@ import { alarmSoundFile, isSong, synthTone, toneFile, toneOf, toneWav } from '..
 import { clampClipStart, CLIP_SECONDS, clipFile, clipWav } from '../lib/clip';
 import { today } from '../lib/dates';
 import { MorningBrief } from './morning';
+import { useRoutine } from './routine';
 import { api, pickDevice, type Device } from '../lib/spotify';
 import { isMobile, notify } from '../lib/notify';
 import { useSpotify } from './spotify';
@@ -851,6 +852,13 @@ export function AlarmRinger() {
   const ringingRef = useRef(ringing);
   ringingRef.current = ringing;
   const nativeState = useNativeAlarmSync(data.alarms);
+  const routines = useRoutine();
+  /** Startet die Routine, die an diesem Wecker hängt – true, wenn es eine gibt */
+  const startRoutineAfter = useLatest((alarmId: string): boolean => {
+    const routine = data.routines.find((r) => r.alarmId === alarmId && r.steps.length > 0);
+    if (routine) routines.start(routine.id);
+    return !!routine;
+  });
 
   // iOS-App: Einmalige Wecker, die das iPhone schon geklingelt hat, ausschalten
   useEffect(() => {
@@ -909,7 +917,11 @@ export function AlarmRinger() {
       const test = !!probe;
       const alarm = probe ?? saved ?? { ...defaultAlarm(), id: stopped.id || 'wecker' };
       if (!test && saved && saved.days.length === 0 && saved.enabled) update('alarms', saved.id, { enabled: false });
-      if (!hasTask(alarm)) return void AntonAlarm.solved().catch(() => undefined);
+      if (!hasTask(alarm)) {
+        // Ohne Aufgabe: die Routine zum Wecker startet gleich – aber nur kurz nach dem Ausschalten
+        if (!test && Date.now() - (stopped.at || Date.now()) < 30 * 60_000) startRoutineAfter.current(alarm.id);
+        return void AntonAlarm.solved().catch(() => undefined);
+      }
       const seconds = solveSeconds(alarm.challenge === 'qr' && !alarm.qr ? 'rechnen' : alarm.challenge);
       const deadline = Date.now() + seconds * 1000;
       setNow(Date.now());
@@ -1083,7 +1095,9 @@ export function AlarmRinger() {
     writeJson(ACTIVE_KEY, null);
     setRinging(null);
     if (!ringing.test) add('wakeLogs', { date: today(), alarmId: alarm.id, ringAt: ringing.ringAt, offAt, snoozes: ringing.snoozes });
-    if (alarm.morning !== false) setBrief({ alarm, snoozes: ringing.snoozes, offAt });
+    // Hängt eine Routine am Wecker, geht es gleich mit ihrem ersten Schritt los (statt des Morgen-Überblicks)
+    const routineStarted = !ringing.test && startRoutineAfter.current(alarm.id);
+    if (!routineStarted && alarm.morning !== false) setBrief({ alarm, snoozes: ringing.snoozes, offAt });
     const checkWake = !!alarm.wakeCheck && !ringing.test;
     const wakeMs = (alarm.wakeCheckMinutes ?? 5) * 60_000;
     if (checkWake) {

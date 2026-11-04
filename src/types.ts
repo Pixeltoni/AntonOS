@@ -296,6 +296,43 @@ export interface Habit {
   steps?: number[];
 }
 
+/** Ein Schritt einer Routine, z. B. „Dehnen“ (5 Min.) */
+export interface RoutineStep {
+  id: ID;
+  title: string;
+  icon: string;
+  /** Dauer in Minuten (0 = ohne Uhr, einfach abhaken) */
+  minutes: number;
+  /** Beim Erledigen wird diese Gewohnheit abgehakt (bei Mengen: eine Portion) */
+  habitId?: ID | null;
+}
+
+/** Ein abgeschlossener Durchlauf (für Serie und Statistik) */
+export interface RoutineRun {
+  date: DateStr;
+  /** Gebrauchte Minuten */
+  minutes: number;
+  done: number;
+  skipped: number;
+}
+
+/** Geführte Routine: Schritte mit Dauer, Start per Knopf, nach dem Wecker oder beim Ankommen an einem Ort */
+export interface Routine {
+  id: ID;
+  name: string;
+  icon: string;
+  color: string;
+  steps: RoutineStep[];
+  /** Startet von selbst, wenn dieser Wecker ausgeschaltet wird */
+  alarmId?: ID | null;
+  /** Meldet sich beim Ankommen an diesem Ort (iPhone-App) */
+  placeId?: ID | null;
+  /** Tageszeit, zu der „Heute“ sie anbietet */
+  when?: 'morgen' | 'tag' | 'abend' | null;
+  /** Letzte Durchläufe, neueste zuletzt */
+  runs?: RoutineRun[];
+}
+
 export interface HabitLog {
   id: ID;
   habitId: ID;
@@ -906,6 +943,8 @@ export interface Data {
   projects: Project[];
   habits: Habit[];
   habitLogs: HabitLog[];
+  /** Geführte Routinen (Morgen, Abend, Lernen …) */
+  routines: Routine[];
   transactions: Transaction[];
   recurring: Recurring[];
   pots: SavingsPot[];

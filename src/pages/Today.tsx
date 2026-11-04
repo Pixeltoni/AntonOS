@@ -14,6 +14,8 @@ import { RingsWidget } from '../components/rings';
 import { Icon, PAGE_ICONS } from '../components/icons';
 import { GoalsThisWeek } from '../components/goals';
 import { hasWeekCard, WeekCard } from '../components/weekplan';
+import { RoutineToday, useRoutine } from '../components/routine';
+import { suggestedRoutine } from '../lib/routines';
 import { mondayOf, planFor, planningWeek, weekNumber } from '../lib/weekplan';
 import { DayPlanView } from '../components/dayplan';
 import { weekContributions } from '../lib/goals';
@@ -196,6 +198,8 @@ export function Today() {
   const alarm = tomorrowAlarm(data.alarms, now);
   const mealsToday = data.meals.some((m) => m.date === t);
   const closed = dayClose.last === t;
+  const { routine: activeRoutine } = useRoutine();
+  const offeredRoutine = activeRoutine ?? suggestedRoutine(data.routines, phase, t);
 
   const render = (s: TodaySection): ReactNode => {
     switch (s) {
@@ -248,6 +252,8 @@ export function Today() {
             <RingsWidget variant="standard" />
           </Section>
         );
+      case 'routine':
+        return offeredRoutine ? <RoutineToday routine={offeredRoutine} /> : null;
       case 'woche':
         return hasWeekCard(data.weekPlans, t) ? (
           <Section title="Deine Woche" link={['#/wochenplan', planFor(data.weekPlans, mondayOf(t))?.doneAt ? 'Plan' : 'Planen']}>

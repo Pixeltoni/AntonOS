@@ -183,6 +183,8 @@ describe('parseWidgetLink', () => {
     expect(parseWidgetLink('antonos://fokus-stop')).toEqual({ type: 'focus', action: 'stop' });
     expect(parseWidgetLink('antonos://satzpause-plus')).toEqual({ type: 'rest', action: 'plus' });
     expect(parseWidgetLink('antonos://satzpause-skip')).toEqual({ type: 'rest', action: 'skip' });
+    expect(parseWidgetLink('antonos://routine-weiter')).toEqual({ type: 'routine', action: 'next' });
+    expect(parseWidgetLink('antonos://routine-plus')).toEqual({ type: 'routine', action: 'plus' });
     expect(parseWidgetLink('antonos://spotify-callback?code=1')).toBeNull();
     expect(parseWidgetLink('https://example.com')).toBeNull();
   });

@@ -396,12 +396,14 @@ export type WidgetLink =
   | { type: 'page'; hash: string }
   | { type: 'assistant' }
   | { type: 'focus'; action: 'start' | 'pause' | 'stop' }
-  | { type: 'rest'; action: 'plus' | 'skip' };
+  | { type: 'rest'; action: 'plus' | 'skip' }
+  | { type: 'routine'; action: 'next' | 'plus' };
 
 /**
  * `antonos://open/kalender` → Seite, `antonos://assistent` → Schnell-Eintrag,
  * `antonos://fokus-start` → Fokus starten, `antonos://fokus-pause` → Pause/Weiter, `antonos://fokus-stop` → Beenden,
- * `antonos://satzpause-plus` → Satzpause +30 s, `antonos://satzpause-skip` → Pause überspringen
+ * `antonos://satzpause-plus` → Satzpause +30 s, `antonos://satzpause-skip` → Pause überspringen,
+ * `antonos://routine-weiter` → Schritt der Routine erledigt, `antonos://routine-plus` → +1 Min.
  * (aus der Live-Aktivität). Andere Adressen (z. B. Spotify) → null.
  */
 export function parseWidgetLink(url: string): WidgetLink | null {
@@ -414,6 +416,8 @@ export function parseWidgetLink(url: string): WidgetLink | null {
   if (path[0] === 'fokus-stop') return { type: 'focus', action: 'stop' };
   if (path[0] === 'satzpause-plus') return { type: 'rest', action: 'plus' };
   if (path[0] === 'satzpause-skip') return { type: 'rest', action: 'skip' };
+  if (path[0] === 'routine-weiter') return { type: 'routine', action: 'next' };
+  if (path[0] === 'routine-plus') return { type: 'routine', action: 'plus' };
   if (path[0] === 'open') {
     const rest = path.slice(1).filter((p) => /^[\w-]+$/.test(p));
     return { type: 'page', hash: `#/${rest.join('/')}` };

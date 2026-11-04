@@ -12,6 +12,8 @@ import { placeNotices } from '../lib/places';
 import { defaultLock, isLockedPage, RELOCK_MS } from '../lib/lock';
 import { useFocus } from './focus';
 import { useRest } from './rest';
+import { useRoutine } from './routine';
+import { routineActivityState } from '../lib/routines';
 import { runInAssistant } from './assistant';
 import { useToast } from './toast';
 
@@ -62,10 +64,14 @@ export function useNativeExtras() {
     };
   }, [add, show]);
 
-  /* Fokus-Timer bzw. Satzpause in der Dynamic Island und auf dem Sperrbildschirm (die Satzpause hat Vorrang) */
+  /* Fokus-Timer, Routine bzw. Satzpause in der Dynamic Island und auf dem Sperrbildschirm (Satzpause vor Routine vor Fokus) */
   const rest = useRest();
+  const routine = useRoutine();
   const course = data.courses.find((c) => c.id === focus.timer.config.courseId);
-  const state = rest.timer ? restActivityState(rest.timer, Date.now()) : focusActivityState(focus.timer, course, Date.now());
+  const now = Date.now();
+  const state = rest.timer
+    ? restActivityState(rest.timer, now)
+    : (routine.run && routine.routine ? routineActivityState(routine.run, routine.routine, now) : null) ?? focusActivityState(focus.timer, course, now);
   const key = activityKey(state);
   const stateRef = useRef(state);
   stateRef.current = state;

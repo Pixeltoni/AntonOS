@@ -7,6 +7,7 @@ import { useCalendarEntries } from './calendar';
 import { openAssistant } from './assistant';
 import { useFocus } from './focus';
 import { useRest } from './rest';
+import { useRoutine } from './routine';
 
 const APPLIED_KEY = 'antonos:widget-uebernommen';
 
@@ -35,8 +36,9 @@ export function useNativeWidgets() {
   const entries = useCalendarEntries();
   const focus = useFocus();
   const rest = useRest();
-  const latest = useRef({ data, entries, focus, rest });
-  latest.current = { data, entries, focus, rest };
+  const routine = useRoutine();
+  const latest = useRef({ data, entries, focus, rest, routine });
+  latest.current = { data, entries, focus, rest, routine };
   /** Bis zu diesem Zeitpunkt (ms) sind Aktionen aus dem Widget übernommen – gemerkt, damit z. B. Lernkarten nach einem Neustart nicht doppelt zählen */
   const applied = useRef(readApplied());
 
@@ -88,6 +90,13 @@ export function useNativeWidgets() {
         const { rest } = latest.current;
         if (link.action === 'plus') rest.extend(30);
         else rest.skip();
+      } else if (link.type === 'routine') {
+        // Aus der Live-Aktivität: Routine groß zeigen und dort weiterschalten
+        const { routine } = latest.current;
+        if (!routine.run) return;
+        routine.setOpen(true);
+        if (link.action === 'next') routine.done();
+        else routine.extend(60);
       } else {
         location.hash = '#/fokus';
         const { focus } = latest.current;

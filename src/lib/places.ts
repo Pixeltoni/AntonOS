@@ -2,6 +2,7 @@ import type { Data, Place } from '../types';
 import { addDays, toDateStr } from './dates';
 import { packProgress } from './trips';
 import type { NativePlaceNotice } from './native';
+import { routineMinutes } from './routines';
 
 /** iOS überwacht höchstens 20 Bereiche pro App */
 export const MAX_PLACES = 20;
@@ -14,8 +15,8 @@ export const PLACE_KINDS: { id: Place['kind']; label: string; hint: string }[] =
 
 const list = (names: string[], max = 4) => names.slice(0, max).join(', ') + (names.length > max ? ` und ${names.length - max} mehr` : '');
 
-/** Mitteilungen für die Orte nach aktuellem Stand (Einkaufsliste, Aufgaben, Packliste) */
-export function placeNotices(data: Pick<Data, 'shopping' | 'tasks' | 'trips' | 'settings'>, now: Date): NativePlaceNotice[] {
+/** Mitteilungen für die Orte nach aktuellem Stand (Einkaufsliste, Aufgaben, Packliste, Routinen) */
+export function placeNotices(data: Pick<Data, 'shopping' | 'tasks' | 'trips' | 'settings' | 'routines'>, now: Date): NativePlaceNotice[] {
   const t = toDateStr(now);
   const out: NativePlaceNotice[] = [];
   for (const p of data.settings.places ?? []) {
@@ -33,6 +34,11 @@ export function placeNotices(data: Pick<Data, 'shopping' | 'tasks' | 'trips' | '
         const { done, total } = packProgress(trip.packing);
         out.push({ ...base, title: `🧳 ${trip.title}: noch nicht eingepackt`, body: `${done} von ${total} eingepackt – fehlt noch: ${list(left)}`, onExit: true, href: `#/reisen/${trip.id}` });
       }
+    }
+    // Routinen für diesen Ort: ein Tipp auf die Mitteilung startet sie
+    for (const r of (data.routines ?? []).filter((x) => x.placeId === p.id && x.steps.length)) {
+      const minutes = routineMinutes(r).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+      out.push({ ...base, id: `${p.id}-r-${r.id}`, title: `${r.icon} ${r.name} starten?`, body: `Angekommen: ${p.name} · ${r.steps.length} Schritte, ${minutes} Min. – tippen zum Loslegen`, onExit: false, href: `#/routinen/start/${r.id}` });
     }
   }
   return out.slice(0, MAX_PLACES);

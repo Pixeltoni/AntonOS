@@ -52,6 +52,14 @@ describe('Hinweise auf den Kacheln', () => {
     expect(hints.aufgaben).toBeUndefined();
     expect(hints.einkauf).toBeUndefined();
   });
+  it('Routinen: Serie oder Stand von heute', () => {
+    const d = demoData();
+    const runs = ['2026-11-01', '2026-11-02', '2026-11-03'].map((date) => ({ date, minutes: 20, done: 4, skipped: 0 }));
+    d.routines = [{ id: 'r', name: 'Morgen', icon: '🌅', color: '#FF9500', steps: [{ id: 's', title: 'Wasser', icon: '💧', minutes: 1 }], runs }];
+    expect(areaHints(d, '2026-11-03', new Date(2026, 10, 3, 9)).routinen).toBe('🌅 3 Tage in Folge');
+    d.routines[0].runs = [];
+    expect(areaHints(d, '2026-11-03', new Date(2026, 10, 3, 9)).routinen).toBe('0 von 1 heute');
+  });
 });
 
 describe('Woche für die Story', () => {
@@ -78,6 +86,9 @@ describe('Heute nach Tageszeit', () => {
   it('abends steht der Abschluss oben, morgens der Termin', () => {
     expect(todaySections('abend')[0]).toBe('abschluss');
     expect(todaySections('morgen')[0]).toBe('termin');
+    // Die Routine zur Tageszeit gleich darunter
+    expect(todaySections('morgen')[1]).toBe('routine');
+    expect(todaySections('abend')[1]).toBe('routine');
   });
   it('Begrüßung', () => {
     expect(greeting(at(8))).toBe('Guten Morgen');

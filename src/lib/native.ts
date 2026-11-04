@@ -66,12 +66,48 @@ export async function cancelRestNotice(): Promise<void> {
   }
 }
 
+/** Mitteilungen der laufenden Routine – je Schritt eine, Kennungen ab hier */
+export const ROUTINE_NOTICE_BASE = 7_300_100;
+export const ROUTINE_NOTICE_COUNT = 30;
+
+/** Mitteilungen, die Satzpause und Routine selbst planen – bleiben beim Neuplanen der übrigen stehen */
+const isOwnNotice = (id: number) => id === REST_NOTICE_ID || (id >= ROUTINE_NOTICE_BASE && id < ROUTINE_NOTICE_BASE + ROUTINE_NOTICE_COUNT);
+
+const routineIds = (from = 0) => Array.from({ length: ROUTINE_NOTICE_COUNT - from }, (_, i) => ({ id: ROUTINE_NOTICE_BASE + from + i }));
+
+/** Meldet jeden Schrittwechsel der Routine beim System an – vibriert auch bei gesperrtem iPhone */
+export async function planRoutineNotices(list: { at: number; title: string; body: string }[]): Promise<void> {
+  if (!isNativeApp() || (await nativePermission(false)) !== 'granted') return;
+  try {
+    await LocalNotifications.cancel({ notifications: routineIds() });
+    const now = Date.now();
+    const items = list.filter((x) => x.at > now + 1000).slice(0, ROUTINE_NOTICE_COUNT);
+    if (items.length) {
+      await LocalNotifications.schedule({
+        notifications: items.map((x, i) => ({ id: ROUTINE_NOTICE_BASE + i, title: x.title, body: x.body, schedule: { at: new Date(x.at), allowWhileIdle: true }, extra: { href: '#/routinen' } })),
+      });
+    }
+  } catch {
+    // dann eben ohne Mitteilungen
+  }
+}
+
+/** Nur die nächste (bzw. alle) Mitteilungen der Routine zurückziehen – z. B. weil AntonOS gerade offen ist */
+export async function cancelRoutineNotices(onlyNext = false): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    await LocalNotifications.cancel({ notifications: onlyNext ? [{ id: ROUTINE_NOTICE_BASE }] : routineIds() });
+  } catch {
+    // nichts geplant
+  }
+}
+
 /** Ersetzt alle geplanten Mitteilungen durch `plan`. */
 export async function replacePlanned(plan: PlannedNotice[]): Promise<void> {
   if (plan.length === 0 && (await nativePermission(false)) !== 'granted') return;
   if ((await nativePermission(plan.length > 0)) !== 'granted') return;
-  // Die Satzpause plant ihre Mitteilung selbst und bleibt stehen
-  const pending = (await LocalNotifications.getPending()).notifications.filter((n) => n.id !== REST_NOTICE_ID);
+  // Satzpause und Routine planen ihre Mitteilungen selbst und bleiben stehen
+  const pending = (await LocalNotifications.getPending()).notifications.filter((n) => !isOwnNotice(n.id));
   if (pending.length) await LocalNotifications.cancel({ notifications: pending.map((n) => ({ id: n.id })) });
   if (plan.length) {
     await LocalNotifications.schedule({
@@ -155,8 +191,8 @@ export interface FocusActivityState {
   icon: string;
   /** Farbe als #RRGGBB */
   color: string;
-  /** satzpause = Pause zwischen zwei Sätzen beim Training */
-  phase: 'fokus' | 'pause' | 'lange-pause' | 'satzpause';
+  /** satzpause = Pause zwischen zwei Sätzen beim Training, routine = Schritt einer geführten Routine */
+  phase: 'fokus' | 'pause' | 'lange-pause' | 'satzpause' | 'routine';
   /** Beginn und Ende der Phase (ms) */
   startAt: number;
   endAt: number;
@@ -165,9 +201,9 @@ export interface FocusActivityState {
   leftSeconds: number;
   round: number;
   rounds: number;
-  /** Satzpause: was als Nächstes kommt, z. B. „Als Nächstes: Bankdrücken · Satz 3 von 4“ */
+  /** Satzpause: was als Nächstes kommt, z. B. „Als Nächstes: Bankdrücken · Satz 3 von 4“; Routine: die nächsten Schritte mit Uhrzeit, je Zeile „07:16 Plan ansehen“ */
   detail?: string;
-  /** Satzpause: Ziel für den nächsten Satz, z. B. „Ziel: 62,5 kg × 8“ */
+  /** Satzpause: Ziel für den nächsten Satz, z. B. „Ziel: 62,5 kg × 8“; Routine: der aktuelle Schritt, z. B. „🚿 Duschen“ */
   goal?: string;
 }
 

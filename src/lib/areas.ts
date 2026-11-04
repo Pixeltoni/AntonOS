@@ -7,6 +7,7 @@ import { subscriptionTotals } from './subscriptions';
 import { nextAlarm } from './alarm';
 import { daysLabel, upcomingBirthdays } from './people';
 import { tripPhase } from './trips';
+import { ranToday, routineStreak } from './routines';
 
 /** Feste Farbe je Bereich (wie die Kategorien in Apple Health) */
 export const AREA_COLORS: Record<string, string> = {
@@ -68,6 +69,12 @@ export function areaHints(data: Data, t: DateStr, now: Date): Record<string, str
     hints.gewohnheiten = `${done} von ${data.habits.length} heute`;
   }
 
+  const routines = data.routines.filter((r) => r.steps.length);
+  if (routines.length) {
+    const best = routines.map((r) => ({ r, streak: routineStreak(r, t) })).sort((a, b) => b.streak - a.streak)[0];
+    hints.routinen = best.streak > 1 ? `${best.r.icon} ${best.streak} Tage in Folge` : `${routines.filter((r) => ranToday(r, t)).length} von ${routines.length} heute`;
+  }
+
   const exam = [...data.exams].filter((e) => e.date >= t).sort((a, b) => a.date.localeCompare(b.date))[0];
   if (exam) hints.pruefungen = `${exam.title} ${relativeLabel(exam.date, t)}`;
 
@@ -121,7 +128,7 @@ export function storyWeek(t: DateStr): { day: DateStr; until: DateStr; current: 
 }
 
 export type DayPhase = 'morgen' | 'tag' | 'abend';
-export type TodaySection = 'abschluss' | 'wecker' | 'termin' | 'aufgaben' | 'ringe' | 'essen' | 'demnaechst';
+export type TodaySection = 'abschluss' | 'routine' | 'wecker' | 'termin' | 'aufgaben' | 'woche' | 'ringe' | 'ziele' | 'essen' | 'demnaechst';
 
 /**
  * Tageszeit für die Heute-Seite: morgens bis 11 Uhr, abends ab 18 Uhr
@@ -137,11 +144,11 @@ export function dayPhase(now: Date, dayCloseTime = '21:30'): DayPhase {
   return 'tag';
 }
 
-/** Reihenfolge der Abschnitte auf „Heute“ – morgens der Plan, abends der Abschluss oben */
+/** Reihenfolge der Abschnitte auf „Heute“ – morgens der Plan (mit der Morgenroutine gleich darunter), abends der Abschluss oben */
 export function todaySections(phase: DayPhase): TodaySection[] {
-  if (phase === 'morgen') return ['termin', 'aufgaben', 'ringe', 'essen', 'demnaechst'];
-  if (phase === 'abend') return ['abschluss', 'wecker', 'ringe', 'aufgaben', 'termin', 'demnaechst'];
-  return ['termin', 'aufgaben', 'ringe', 'essen', 'demnaechst'];
+  if (phase === 'morgen') return ['termin', 'routine', 'aufgaben', 'woche', 'ringe', 'ziele', 'essen', 'demnaechst'];
+  if (phase === 'abend') return ['abschluss', 'routine', 'wecker', 'woche', 'ringe', 'ziele', 'aufgaben', 'termin', 'demnaechst'];
+  return ['termin', 'aufgaben', 'routine', 'woche', 'ringe', 'ziele', 'essen', 'demnaechst'];
 }
 
 export function greeting(now: Date): string {

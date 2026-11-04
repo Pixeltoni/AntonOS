@@ -1,4 +1,4 @@
-import type { DateStr, ExerciseLog, ID, SetLog, TrainingDay, Workout } from '../types';
+import type { DateStr, ExerciseLog, ID, PlanExercise, SetLog, TrainingDay, Workout } from '../types';
 import { addDays } from './dates';
 import { weekdayOf } from './recurrence';
 
@@ -152,7 +152,7 @@ export function describeComparison(c: Comparison): string {
  * Welcher Tag ist dran? Der, der am längsten nicht (oder noch nie) trainiert wurde.
  * Separate Trainings (z. B. Körpertraining) zählen dabei nicht mit.
  */
-export function nextTrainingDay(allDays: TrainingDay[], workouts: Workout[]): TrainingDay | null {
+export function nextTrainingDay(allDays: TrainingDay[], workouts: Pick<Workout, 'done' | 'planDayId' | 'date'>[]): TrainingDay | null {
   const plan = rotationDays(allDays);
   if (plan.length === 0) return null;
   const last = (id: ID) => workouts.filter((w) => w.done && w.planDayId === id).reduce<DateStr>((m, w) => (w.date > m ? w.date : m), '');
@@ -210,4 +210,121 @@ export function seriesDates(repeat: WorkoutRepeat, start: DateStr, until: DateSt
 /** Entfernt die noch offenen Termine einer Serie ab `from` (erledigte Trainings bleiben). */
 export function removeSeriesFrom(workouts: Workout[], seriesId: ID, from: DateStr): Workout[] {
   return workouts.filter((w) => !(w.seriesId === seriesId && !w.done && w.date >= from));
+}
+
+/* ---------- Nächstes Ziel (doppelte Progression) ---------- */
+
+/** „8–12“ → [8, 12], „10“ → [10, 10]; leer oder ohne Zahl → null */
+export function parseRepRange(text?: string): [number, number] | null {
+  const nums = (text ?? '').match(/\d+/g)?.map(Number).filter((n) => n > 0) ?? [];
+  if (!nums.length) return null;
+  const a = nums[0];
+  const b = nums[1] ?? nums[0];
+  return [Math.min(a, b), Math.max(a, b)];
+}
+
+/** Gewichtsschritt: 2,5 kg, bei leichten Hanteln (unter 10 kg) 1 kg */
+export const weightStep = (weight: number) => (weight < 10 ? 1 : 2.5);
+
+/** Übungen auf Zeit (z. B. „Plank (Sek.)“) zählen Sekunden statt Wiederholungen und steigen in 5er-Schritten */
+export const timedExercise = (e: Pick<PlanExercise, 'name' | 'reps'>) => /sek/i.test(`${e.name} ${e.reps ?? ''}`);
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+export interface NextTarget {
+  /** Zielgewicht in kg (0 = Körpergewicht) */
+  weight: number;
+  /** Ziel-Wiederholungen (bzw. Sekunden) pro Satz */
+  reps: number[];
+  /**
+   * steigern = mehr Gewicht, mehr = gleiches Gewicht und mehr Wiederholungen,
+   * halten = alle Sätze so wie zuletzt schaffen, leichter = Entlastung nach Stillstand
+   */
+  kind: 'steigern' | 'mehr' | 'halten' | 'leichter';
+  /** steigern: kg mehr; mehr: Wiederholungen (Sekunden) mehr insgesamt; leichter: kg weniger */
+  plus: number;
+}
+
+/** Stillstand: drei Einheiten in Folge mit gleichem Arbeitsgewicht und ohne Fortschritt (Durchgänge neueste zuerst) */
+export function stalled(history: SetLog[][]): boolean {
+  if (history.length < 4) return false;
+  const weight = bestSet(history[0])?.weight ?? 0;
+  if (weight <= 0) return false;
+  for (let i = 0; i < 3; i++) {
+    if (bestSet(history[i + 1])?.weight !== weight) return false;
+    if (compareSets(history[i], history[i + 1])?.trend === 'besser') return false;
+  }
+  return true;
+}
+
+/**
+ * Ziel fürs nächste Training (doppelte Progression), aus den letzten Durchgängen (neueste zuerst):
+ * - Alle geplanten Sätze am oberen Ende des Bereichs („8–12“) → mehr Gewicht, wieder unten im Bereich anfangen
+ * - sonst gleiches Gewicht und in jedem Satz unter dem oberen Ende eine Wiederholung mehr
+ * - drei Einheiten Stillstand → leichtere Einheit mit etwa 10 % weniger Gewicht
+ * Ohne letzten Durchgang gibt es kein Ziel.
+ */
+export function nextTarget(planned: Pick<PlanExercise, 'name' | 'sets' | 'reps'>, history: SetLog[][]): NextTarget | null {
+  const sets = history[0] ? validSets(history[0]) : [];
+  const best = bestSet(sets);
+  if (!best) return null;
+  const working = sets.filter((x) => x.weight === best.weight);
+  const count = Math.max(1, planned.sets || working.length);
+  const step = timedExercise(planned) ? 5 : 1;
+  const [lo, hi] = parseRepRange(planned.reps) ?? [Math.min(...working.map((x) => x.reps)), Math.max(...working.map((x) => x.reps))];
+  const done = Array.from({ length: count }, (_, i) => (working[i] ?? working[working.length - 1]).reps);
+  if (stalled(history)) {
+    const s = weightStep(best.weight);
+    const lighter = round2(Math.max(0, Math.min(best.weight - s, Math.round((best.weight * 0.9) / s) * s)));
+    return { weight: lighter, reps: done, kind: 'leichter', plus: round2(best.weight - lighter) };
+  }
+  const allTop = working.length >= count && done.every((r) => r >= hi);
+  if (allTop && best.weight > 0) {
+    const plus = weightStep(best.weight);
+    return { weight: round2(best.weight + plus), reps: Array(count).fill(lo), kind: 'steigern', plus };
+  }
+  // Körpergewicht oben im Bereich: einfach weiter mehr Wiederholungen
+  if (allTop) return { weight: 0, reps: done.map((r) => r + step), kind: 'mehr', plus: step * count };
+  const reps = done.map((r) => (r < hi ? Math.min(hi, r + step) : r));
+  const plus = reps.reduce((sum, r, i) => sum + r - done[i], 0);
+  return { weight: best.weight, reps, kind: plus > 0 ? 'mehr' : 'halten', plus };
+}
+
+/** Ziel einer Übung für ein Training am Tag `date` (ohne das Training selbst, z. B. beim Bearbeiten) */
+export function targetFor(workouts: Workout[], exercise: Pick<PlanExercise, 'id' | 'name' | 'sets' | 'reps'>, date: DateStr, skipWorkoutId?: ID): NextTarget | null {
+  const history = exerciseHistory(workouts, exercise.id, exercise.name).filter((e) => e.workoutId !== skipWorkoutId && e.date <= date);
+  return nextTarget(exercise, history.slice(0, 4).map((e) => e.sets));
+}
+
+/** Ein Satz als Text: „62,5 kg × 8“, „12 Wdh.“ (Körpergewicht) oder „45 Sek.“ */
+export function setText(weight: number, reps: number, timed = false): string {
+  const count = reps > 0 ? (timed ? `${reps} Sek.` : `${reps} Wdh.`) : '';
+  if (weight > 0) return reps > 0 ? `${formatNumber(weight)} kg × ${reps}` : `${formatNumber(weight)} kg`;
+  return count;
+}
+
+/** „62,5 kg × 6 · 6 · 6“ bzw. „40 · 40 · 40 Sek.“ */
+export function formatTarget(t: NextTarget, timed = false): string {
+  if (t.weight <= 0) return `${t.reps.join(' · ')} ${timed ? 'Sek.' : 'Wdh.'}`;
+  return formatSets(t.reps.map((reps) => ({ weight: t.weight, reps })));
+}
+
+/** „↑ +2,5 kg“, „+2 Wdh.“, „alle Sätze schaffen“ bzw. „↓ −5 kg“ */
+export function describeTarget(t: NextTarget, timed = false): string {
+  if (t.kind === 'steigern') return `↑ +${formatNumber(t.plus)} kg`;
+  if (t.kind === 'leichter') return `↓ −${formatNumber(t.plus)} kg`;
+  if (t.kind === 'halten') return 'alle Sätze schaffen';
+  return `+${t.plus} ${timed ? 'Sek.' : 'Wdh.'}`;
+}
+
+/** Für die Karte eines Trainingstags: Wo kommt heute mehr Gewicht drauf, wo ist eine leichtere Einheit dran? */
+export function dayTargetSummary(day: TrainingDay, workouts: Workout[], date: DateStr): { up: string[]; lighter: string[] } {
+  const up: string[] = [];
+  const lighter: string[] = [];
+  for (const e of day.exercises) {
+    const t = targetFor(workouts, e, date);
+    if (t?.kind === 'steigern') up.push(e.name);
+    else if (t?.kind === 'leichter') lighter.push(e.name);
+  }
+  return { up, lighter };
 }

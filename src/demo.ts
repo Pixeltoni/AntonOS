@@ -38,7 +38,7 @@ export function demoData(): Data {
 
   return {
     courses: [
-      { id: ana, name: 'Analysis I', code: 'MA-101', semester: 'WiSe 26/27', lecturer: 'Prof. Weber', room: 'H 1', ects: 9, color: '#6366f1', slots: [
+      { id: ana, name: 'Analysis I', code: 'MA-101', semester: 'WiSe 26/27', lecturer: 'Prof. Weber', room: 'H 1', ects: 9, color: '#6366f1', target: 2, admission: { sheets: 12, maxPerSheet: 20, required: 50, unit: 'prozent' }, slots: [
         { id: 'demo-sl1', day: 1, start: '08:15', end: '09:45', room: 'H 1', kind: 'Vorlesung', every: 1 },
         { id: 'demo-sl2', day: 3, start: '08:15', end: '09:45', room: 'H 1', kind: 'Vorlesung', every: 1 },
         { id: 'demo-sl3', day: 4, start: '12:15', end: '13:45', room: 'S 3', kind: 'Übung', every: 1 },
@@ -76,10 +76,20 @@ export function demoData(): Data {
       { id: 'demo-g1', courseId: prog, title: 'Klausur', value: 1.7, weight: 80 },
       { id: 'demo-g2', courseId: prog, title: 'Projekt', value: 1.3, weight: 20 },
     ],
-    goals: [
-      { id: 'demo-z1', title: 'Analysis-Klausur mit 2,0 oder besser', area: 'Studium', why: 'Grundlage für alle weiteren Mathe-Module', deadline: addDays(t, 40), progress: 30 },
-      { id: 'demo-z2', title: '3× pro Woche Sport', area: 'Gesundheit', why: 'Mehr Energie beim Lernen', deadline: null, progress: 50 },
+    sheets: [
+      { id: 'demo-sh1', courseId: ana, number: 1, due: addDays(t, -12), points: 14, max: 20 },
+      { id: 'demo-sh2', courseId: ana, number: 2, due: addDays(t, -5), points: 12, max: 20 },
+      { id: 'demo-sh3', courseId: ana, number: 3, due: addDays(t, 2), points: null, max: 20, taskId: 'demo-t1' },
     ],
+    goals: [
+      {
+        id: 'demo-z1', title: 'Analysis-Klausur mit 2,0 oder besser', area: 'Studium', why: 'Grundlage für alle weiteren Mathe-Module', deadline: addDays(t, 40), progress: 30,
+        results: [{ id: 'demo-kr1', kind: 'note', refId: ana, target: 2 }, { id: 'demo-kr2', kind: 'karten', refId: ana }],
+      },
+      { id: 'demo-z2', title: '3× pro Woche Sport', area: 'Gesundheit', why: 'Mehr Energie beim Lernen', deadline: null, progress: 50, results: [{ id: 'demo-kr3', kind: 'training', target: 3 }] },
+      { id: 'demo-z3', title: 'Auslandssemester in Lissabon', area: 'Persönlich', why: 'Einmal woanders leben', deadline: addDays(t, 280), progress: 0, results: [{ id: 'demo-kr4', kind: 'spartopf', refId: 'demo-pot1' }, { id: 'demo-kr5', kind: 'projekt', refId: 'demo-p1' }] },
+    ],
+    weekPlans: [],
     sessions: [
       { id: 'demo-s1', date: addDays(t, -1), minutes: 50, courseId: ana, distractions: 2 },
     ],
@@ -97,6 +107,28 @@ export function demoData(): Data {
       { id: `demo-hl1-${d}`, habitId: 'demo-h1', date: addDays(t, -d) },
       { id: `demo-hl3-${d}`, habitId: 'demo-h3', date: addDays(t, -d), amount: 2 },
     ]),
+    routines: [
+      {
+        id: 'demo-r1', name: 'Morgenroutine', icon: '🌅', color: '#FF9500', when: 'morgen',
+        steps: [
+          { id: 'demo-r1-1', title: 'Wasser trinken', icon: '💧', minutes: 1, habitId: 'demo-h3' },
+          { id: 'demo-r1-2', title: 'Meditieren', icon: '🧘', minutes: 10, habitId: 'demo-h1' },
+          { id: 'demo-r1-3', title: 'Duschen', icon: '🚿', minutes: 10 },
+          { id: 'demo-r1-4', title: 'Plan ansehen', icon: '🗓️', minutes: 2 },
+        ],
+        runs: [1, 2, 3].map((d) => ({ date: addDays(t, -d), minutes: 24, done: 4, skipped: 0 })),
+      },
+      {
+        id: 'demo-r2', name: 'Abendroutine', icon: '🌙', color: '#5856D6', when: 'abend',
+        steps: [
+          { id: 'demo-r2-1', title: 'Aufräumen', icon: '🧺', minutes: 5 },
+          { id: 'demo-r2-2', title: 'Tagesrückblick', icon: '📝', minutes: 3, habitId: 'demo-h4' },
+          { id: 'demo-r2-3', title: 'Lesen', icon: '📖', minutes: 15, habitId: 'demo-h2' },
+          { id: 'demo-r2-4', title: 'Zähne putzen', icon: '🪥', minutes: 3 },
+        ],
+        runs: [],
+      },
+    ],
     transactions: [
       { id: 'demo-x1', type: 'Einnahme', description: 'Werkstudentenjob', amount: 620, category: 'Gehalt', account: 'Girokonto', date: addDays(t, -6) },
       { id: 'demo-x2', type: 'Ausgabe', description: 'WG-Zimmer', amount: 390, category: 'Miete', account: 'Girokonto', date: addDays(t, -5) },

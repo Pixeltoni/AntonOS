@@ -26,4 +26,4 @@ export function focusActivityState(timer: FocusTimer, course: Pick<Course, 'name
 
 /** Nur neu senden, wenn sich etwas Sichtbares geändert hat (nicht jede Sekunde) */
 export const activityKey = (s: FocusActivityState | null) =>
-  s ? [s.label, s.phase, s.paused, s.paused ? s.leftSeconds : Math.round(s.endAt / 1000), s.round, s.color].join('|') : '';
+  s ? [s.label, s.phase, s.paused, s.paused ? s.leftSeconds : Math.round(s.endAt / 1000), s.round, s.color, s.detail ?? '', s.goal ?? ''].join('|') : '';

@@ -9,6 +9,7 @@ import { useCalendarEntries } from '../components/calendar';
 import { useFocus } from '../components/focus';
 import { defaultStudy, planStudy, statusLabel, type StudyBlock } from '../lib/studyplan';
 import { focusMode } from '../lib/focus';
+import { admissionShort } from '../components/studium';
 
 type Draft = Omit<Exam, 'id'>;
 
@@ -133,6 +134,7 @@ export function Exams() {
             const c = course(e.courseId);
             const due = c ? data.cards.filter((x) => x.courseId === c.id && isDue(x, t)).length : 0;
             const tasks = c ? data.tasks.filter((x) => x.courseId === c.id && x.status !== 'erledigt').length : 0;
+            const admission = admissionShort(c, data.sheets);
             return (
               <article key={e.id} className={`exam-card ${days <= 7 ? 'soon' : ''}`} style={{ ['--c' as string]: c?.color ?? '#FF9500' }}>
                 <button type="button" className="exam-main" onClick={() => open(e)} aria-label={`${e.title} bearbeiten`}>
@@ -155,6 +157,7 @@ export function Exams() {
                   <div className="exam-prep">
                     <a href={`#/lernen/${c.id}`}>🧠 {due} Karten fällig</a>
                     <a href={`#/kurse/${c.id}`}>✅ {tasks} offene Aufgaben</a>
+                    {admission && <a href={`#/kurse/${c.id}`} style={{ color: admission.color }}>📝 {admission.text}</a>}
                   </div>
                 )}
               </article>

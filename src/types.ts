@@ -14,6 +14,39 @@ export interface Course {
   color: string;
   /** Feste Zeiten im Stundenplan (Vorlesung, Übung …) */
   slots?: CourseSlot[];
+  /** Notenziel für den Kurs, z. B. 2,0 (leer = keins) */
+  target?: number | null;
+  /** Klausurzulassung über Übungsblätter (leer = keine) */
+  admission?: Admission | null;
+}
+
+/** Klausurzulassung: so viele Punkte aus den Übungsblättern braucht man */
+export interface Admission {
+  /** Geplante Anzahl Übungsblätter im Semester */
+  sheets: number;
+  /** Punkte pro Blatt (Vorgabe für neue Blätter) */
+  maxPerSheet: number;
+  /** Nötig: Prozent der Gesamtpunkte bzw. feste Punktzahl */
+  required: number;
+  unit: 'prozent' | 'punkte';
+}
+
+/** Übungsblatt eines Kurses – die Abgabe steht zusätzlich als Aufgabe in der Liste */
+export interface ExerciseSheet {
+  id: ID;
+  courseId: ID;
+  /** Nummer des Blatts */
+  number: number;
+  /** Abgabetag (leer = ohne Frist) */
+  due: DateStr | null;
+  /** Uhrzeit der Abgabe HH:MM, optional */
+  dueTime?: string;
+  /** Erreichte Punkte, leer = noch nicht korrigiert */
+  points: number | null;
+  /** Mögliche Punkte */
+  max: number;
+  /** Aufgabe zur Abgabe (wird beim Anlegen erstellt) */
+  taskId?: ID | null;
 }
 
 /** Wöchentliche Zeit eines Kurses */
@@ -68,6 +101,8 @@ export interface Task {
   completedAt?: DateStr;
   /** Wie in Things: ab diesem Tag in „Heute“ (ohne Frist) */
   plannedFor?: DateStr | null;
+  /** In der Zeitleiste von „Heute“ eingeplant um HH:MM (am Tag `plannedFor`) */
+  plannedTime?: string;
   /** In „Heute“ unter „Heute Abend“ */
   evening?: boolean;
   /** „Irgendwann“ – ohne Datum, taucht nicht im Alltag auf */
@@ -138,6 +173,8 @@ export interface Card {
   reps: number;
   lapses: number;
   due: DateStr;
+  /** Zuletzt wiederholt (für „diese Woche gelernt“) */
+  reviewed?: DateStr;
   /** Aus dieser Notiz erstellt */
   noteId?: ID;
 }
@@ -173,9 +210,62 @@ export interface Goal {
   area: GoalArea;
   why: string;
   deadline: DateStr | null;
+  /** Fortschritt in Prozent, von Hand (gilt nur ohne Schlüsselergebnisse) */
   progress: number;
   /** Bild-URL oder Data-URL für das Vision Board */
   image?: string;
+  /** Messbare Schlüsselergebnisse – der Fortschritt rechnet sich daraus selbst */
+  results?: KeyResult[];
+}
+
+/** Woran sich ein Ziel misst – AntonOS liest den Stand aus den eigenen Daten */
+export type KeyResultKind = 'spartopf' | 'karten' | 'training' | 'note' | 'schnitt' | 'projekt' | 'gewohnheit' | 'manuell';
+
+export interface KeyResult {
+  id: ID;
+  kind: KeyResultKind;
+  /** Spartopf, Kurs (Lernkarten, Note), Projekt oder Gewohnheit; bei Lernkarten null = alle Karten */
+  refId?: ID | null;
+  /** Ziel: Trainings bzw. Tage pro Woche, Wunschnote, Zielwert (eigener Wert) */
+  target?: number;
+  /** Nur beim eigenen Wert: aktueller Stand und Einheit */
+  current?: number;
+  unit?: string;
+  /** Eigener Name (leer = automatisch) */
+  label?: string;
+}
+
+/** Woran sich ein Wochenziel selbst misst: Trainings, Tage einer Gewohnheit oder Lernminuten (eines Kurses) in der Woche */
+export interface FocusMeasure {
+  kind: 'training' | 'gewohnheit' | 'lernen';
+  /** Gewohnheit bzw. Kurs (beim Lernen null = alle Kurse) */
+  refId?: ID | null;
+  /** Trainings, Tage oder Minuten */
+  target: number;
+}
+
+/** Eines von höchstens drei Wochenzielen aus der Wochenplanung */
+export interface WeekFocus {
+  id: ID;
+  text: string;
+  icon?: string;
+  /** Von Hand abgehakt (bei `measure` zählt zusätzlich der gemessene Stand) */
+  done: boolean;
+  measure?: FocusMeasure;
+  /** Vorschlag kam aus diesem Ziel */
+  goalId?: ID;
+}
+
+/** Wochenplanung am Sonntag: Wochenziele, Budget und ob die Woche „steht“ */
+export interface WeekPlan {
+  id: ID;
+  /** Montag der geplanten Woche */
+  week: DateStr;
+  focus: WeekFocus[];
+  /** Bestätigtes Wochenbudget für den Alltag (ohne Miete, Abos und Sparen); leer = keins */
+  budget?: number | null;
+  /** Tag, an dem die Planung abgeschlossen wurde */
+  doneAt?: DateStr | null;
 }
 
 export type ProjectStatus = 'geplant' | 'aktiv' | 'pausiert' | 'abgeschlossen';
@@ -206,6 +296,43 @@ export interface Habit {
   steps?: number[];
 }
 
+/** Ein Schritt einer Routine, z. B. „Dehnen“ (5 Min.) */
+export interface RoutineStep {
+  id: ID;
+  title: string;
+  icon: string;
+  /** Dauer in Minuten (0 = ohne Uhr, einfach abhaken) */
+  minutes: number;
+  /** Beim Erledigen wird diese Gewohnheit abgehakt (bei Mengen: eine Portion) */
+  habitId?: ID | null;
+}
+
+/** Ein abgeschlossener Durchlauf (für Serie und Statistik) */
+export interface RoutineRun {
+  date: DateStr;
+  /** Gebrauchte Minuten */
+  minutes: number;
+  done: number;
+  skipped: number;
+}
+
+/** Geführte Routine: Schritte mit Dauer, Start per Knopf, nach dem Wecker oder beim Ankommen an einem Ort */
+export interface Routine {
+  id: ID;
+  name: string;
+  icon: string;
+  color: string;
+  steps: RoutineStep[];
+  /** Startet von selbst, wenn dieser Wecker ausgeschaltet wird */
+  alarmId?: ID | null;
+  /** Meldet sich beim Ankommen an diesem Ort (iPhone-App) */
+  placeId?: ID | null;
+  /** Tageszeit, zu der „Heute“ sie anbietet */
+  when?: 'morgen' | 'tag' | 'abend' | null;
+  /** Letzte Durchläufe, neueste zuletzt */
+  runs?: RoutineRun[];
+}
+
 export interface HabitLog {
   id: ID;
   habitId: ID;
@@ -227,6 +354,8 @@ export interface Transaction {
   date: DateStr;
   /** Gehört zu dieser Reise (Reisebudget) */
   tripId?: ID;
+  /** Buchung in einen bzw. aus einem Spartopf */
+  potId?: ID;
 }
 
 /** Wiederkehrende Zahlung (Miete, Abos, Gehalt), wird jeden Monat automatisch gebucht */
@@ -432,6 +561,8 @@ export interface Workout {
   notes: string;
   /** Dauer in Minuten (für den Bewegungsring) */
   minutes?: number;
+  /** Geplante Uhrzeit HH:MM (Zeitleiste und Wochenplanung) */
+  time?: string;
   /** Trainingstag aus dem Trainingsplan (z. B. Push) */
   planDayId?: ID;
   /** Aus Apple Health übernommen (Kennung des Workouts dort) */
@@ -659,6 +790,18 @@ export interface Settings {
   health?: HealthSettings;
   /** Die drei frei wählbaren Seiten vorne in der Tab-Leiste am iPhone (leer = Standard) */
   tabs?: string[];
+  /** Ganzes Studium: ECTS bis zum Abschluss und Wunsch-Schnitt */
+  degree?: DegreeSettings;
+  /** Länge der Satzpause beim Training in Sekunden */
+  restSeconds?: number;
+}
+
+/** Notenziel fürs ganze Studium */
+export interface DegreeSettings {
+  /** ECTS bis zum Abschluss, z. B. 180 im Bachelor */
+  ects: number;
+  /** Wunsch-Schnitt (leer = keiner) */
+  target: number | null;
 }
 
 export interface SemesterSettings {
@@ -791,11 +934,17 @@ export interface Data {
   cards: Card[];
   exams: Exam[];
   grades: Grade[];
+  /** Übungsblätter für die Klausurzulassung */
+  sheets: ExerciseSheet[];
   goals: Goal[];
+  /** Wochenplanung (Wochenziele und Budget je Woche) */
+  weekPlans: WeekPlan[];
   sessions: FocusSession[];
   projects: Project[];
   habits: Habit[];
   habitLogs: HabitLog[];
+  /** Geführte Routinen (Morgen, Abend, Lernen …) */
+  routines: Routine[];
   transactions: Transaction[];
   recurring: Recurring[];
   pots: SavingsPot[];

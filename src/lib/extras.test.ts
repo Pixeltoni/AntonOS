@@ -54,6 +54,16 @@ describe('Orte', () => {
   it('meldet nichts, wenn es nichts zu tun gibt', () => {
     expect(placeNotices(base(), new Date('2026-11-03T18:00:00'))).toEqual([]);
   });
+  it('fragt beim Ankommen nach der Routine für den Ort', () => {
+    const d = base();
+    d.routines = [
+      { id: 'lern', name: 'Lernroutine', icon: '📚', color: '#30B0C7', placeId: 'bib', steps: [{ id: 'a', title: 'Handy weglegen', icon: '📵', minutes: 0 }, { id: 'b', title: 'Lernen', icon: '🧠', minutes: 25 }] },
+      { id: 'leer', name: 'Leer', icon: '✨', color: '#30B0C7', placeId: 'bib', steps: [] },
+    ];
+    expect(placeNotices(d, new Date('2026-11-03T18:00:00'))).toEqual([
+      { id: 'bib-r-lern', lat: 1, lon: 2, radius: 150, title: '📚 Lernroutine starten?', body: 'Angekommen: Bibliothek · 2 Schritte, 25 Min. – tippen zum Loslegen', onExit: false, href: '#/routinen/start/lern' },
+    ]);
+  });
 });
 
 describe('Apple Health', () => {

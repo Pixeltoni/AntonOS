@@ -41,12 +41,74 @@ export async function nativeNotice(title: string, body: string, tag?: string, hr
   }
 }
 
+/** Feste Kennung der Mitteilung „Satzpause vorbei“ (wird bei +30 s ersetzt, `replacePlanned` lässt sie stehen) */
+export const REST_NOTICE_ID = 7_300_001;
+
+/** Meldet das Ende der Satzpause beim System an – kommt auch bei gesperrtem iPhone */
+export async function planRestNotice(at: number, title: string, body: string): Promise<void> {
+  if (!isNativeApp() || (await nativePermission(false)) !== 'granted') return;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTICE_ID }] });
+    if (at > Date.now() + 1000) {
+      await LocalNotifications.schedule({ notifications: [{ id: REST_NOTICE_ID, title, body, schedule: { at: new Date(at), allowWhileIdle: true }, extra: { href: '#/training' } }] });
+    }
+  } catch {
+    // dann eben ohne Mitteilung
+  }
+}
+
+export async function cancelRestNotice(): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTICE_ID }] });
+  } catch {
+    // nichts geplant
+  }
+}
+
+/** Mitteilungen der laufenden Routine – je Schritt eine, Kennungen ab hier */
+export const ROUTINE_NOTICE_BASE = 7_300_100;
+export const ROUTINE_NOTICE_COUNT = 30;
+
+/** Mitteilungen, die Satzpause und Routine selbst planen – bleiben beim Neuplanen der übrigen stehen */
+const isOwnNotice = (id: number) => id === REST_NOTICE_ID || (id >= ROUTINE_NOTICE_BASE && id < ROUTINE_NOTICE_BASE + ROUTINE_NOTICE_COUNT);
+
+const routineIds = (from = 0) => Array.from({ length: ROUTINE_NOTICE_COUNT - from }, (_, i) => ({ id: ROUTINE_NOTICE_BASE + from + i }));
+
+/** Meldet jeden Schrittwechsel der Routine beim System an – vibriert auch bei gesperrtem iPhone */
+export async function planRoutineNotices(list: { at: number; title: string; body: string }[]): Promise<void> {
+  if (!isNativeApp() || (await nativePermission(false)) !== 'granted') return;
+  try {
+    await LocalNotifications.cancel({ notifications: routineIds() });
+    const now = Date.now();
+    const items = list.filter((x) => x.at > now + 1000).slice(0, ROUTINE_NOTICE_COUNT);
+    if (items.length) {
+      await LocalNotifications.schedule({
+        notifications: items.map((x, i) => ({ id: ROUTINE_NOTICE_BASE + i, title: x.title, body: x.body, schedule: { at: new Date(x.at), allowWhileIdle: true }, extra: { href: '#/routinen' } })),
+      });
+    }
+  } catch {
+    // dann eben ohne Mitteilungen
+  }
+}
+
+/** Nur die nächste (bzw. alle) Mitteilungen der Routine zurückziehen – z. B. weil AntonOS gerade offen ist */
+export async function cancelRoutineNotices(onlyNext = false): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    await LocalNotifications.cancel({ notifications: onlyNext ? [{ id: ROUTINE_NOTICE_BASE }] : routineIds() });
+  } catch {
+    // nichts geplant
+  }
+}
+
 /** Ersetzt alle geplanten Mitteilungen durch `plan`. */
 export async function replacePlanned(plan: PlannedNotice[]): Promise<void> {
   if (plan.length === 0 && (await nativePermission(false)) !== 'granted') return;
   if ((await nativePermission(plan.length > 0)) !== 'granted') return;
-  const pending = await LocalNotifications.getPending();
-  if (pending.notifications.length) await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) });
+  // Satzpause und Routine planen ihre Mitteilungen selbst und bleiben stehen
+  const pending = (await LocalNotifications.getPending()).notifications.filter((n) => !isOwnNotice(n.id));
+  if (pending.length) await LocalNotifications.cancel({ notifications: pending.map((n) => ({ id: n.id })) });
   if (plan.length) {
     await LocalNotifications.schedule({
       notifications: plan.map((p) => ({ id: noticeId(`${p.tag}|${p.at}`), title: p.title, body: p.body, schedule: { at: new Date(p.at), allowWhileIdle: true }, extra: { href: p.href } })),
@@ -129,7 +191,8 @@ export interface FocusActivityState {
   icon: string;
   /** Farbe als #RRGGBB */
   color: string;
-  phase: 'fokus' | 'pause' | 'lange-pause';
+  /** satzpause = Pause zwischen zwei Sätzen beim Training, routine = Schritt einer geführten Routine */
+  phase: 'fokus' | 'pause' | 'lange-pause' | 'satzpause' | 'routine';
   /** Beginn und Ende der Phase (ms) */
   startAt: number;
   endAt: number;
@@ -138,6 +201,10 @@ export interface FocusActivityState {
   leftSeconds: number;
   round: number;
   rounds: number;
+  /** Satzpause: was als Nächstes kommt, z. B. „Als Nächstes: Bankdrücken · Satz 3 von 4“; Routine: die nächsten Schritte mit Uhrzeit, je Zeile „07:16 Plan ansehen“ */
+  detail?: string;
+  /** Satzpause: Ziel für den nächsten Satz, z. B. „Ziel: 62,5 kg × 8“; Routine: der aktuelle Schritt, z. B. „🚿 Duschen“ */
+  goal?: string;
 }
 
 /** Aus Siri, Kurzbefehlen oder der Aktionstaste – wartet, bis AntonOS es übernimmt */

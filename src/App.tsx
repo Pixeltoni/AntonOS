@@ -28,6 +28,8 @@ import { Tasks } from './pages/Tasks';
 import { Notes } from './pages/Notes';
 import { Shopping } from './pages/Shopping';
 import { Review, useWeeklyReviewReminder } from './pages/Review';
+import { WeekPlanner } from './pages/WeekPlan';
+import { Routines } from './pages/Routines';
 import { Flashcards } from './pages/Flashcards';
 import { Exams } from './pages/Exams';
 import { Grades } from './pages/Grades';
@@ -107,6 +109,8 @@ function Page({ route }: { route: string[] }) {
       return param ? <ProjectDetail id={param} /> : <Projects />;
     case 'gewohnheiten':
       return <Habits />;
+    case 'routinen':
+      return <Routines key={route.join('/')} start={param === 'start' ? route[2] ?? null : null} />;
     case 'wecker':
       return <Alarms />;
     case 'finanzen':
@@ -115,6 +119,8 @@ function Page({ route }: { route: string[] }) {
       return <Shopping />;
     case 'rueckblick':
       return <Review />;
+    case 'wochenplan':
+      return <WeekPlanner key={param ?? ''} param={param} />;
     case 'abend':
       return <Evening />;
     case 'schauen':

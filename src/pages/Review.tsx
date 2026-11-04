@@ -7,6 +7,7 @@ import { formatMoney } from '../lib/life';
 import { defaultRingGoals, ringDay } from '../lib/rings';
 import { change, headline, lastDays, moodInsights, moodOf, MOODS, weekReview, type WeekReview } from '../lib/review';
 import { notify } from '../lib/notify';
+import { focusState, mondayOf, planFor } from '../lib/weekplan';
 import { Rings } from '../components/rings';
 import { useToast } from '../components/toast';
 import { Empty, PageHeader, Panel } from '../components/ui';
@@ -104,6 +105,9 @@ export function useStoryCards(week: WeekReview, prev: WeekReview, title: string,
   const goals = data.settings.rings ?? defaultRingGoals();
   const course = (id: string | null) => data.courses.find((c) => c.id === id);
   const maxCourse = Math.max(1, ...week.courses.map((c) => c.minutes));
+  // Wochenplanung dieser Woche: wie viele Wochenziele geschafft sind
+  const plan = week.days[0] ? planFor(data.weekPlans, mondayOf(week.days[0])) : undefined;
+  const focusDone = plan ? plan.focus.filter((f) => focusState(f, data, plan.week).done).length : 0;
 
   return [
     {
@@ -119,6 +123,7 @@ export function useStoryCards(week: WeekReview, prev: WeekReview, title: string,
             <Stat label="Ringe geschlossen" value={`${week.ringsClosed} / ${week.days.length}`} />
             <Stat label="Ausgaben" value={formatMoney(week.spent)} />
           </div>
+          {plan && plan.focus.length > 0 && <p>🎯 Wochenziele: <strong>{focusDone} von {plan.focus.length} geschafft</strong>{focusDone === plan.focus.length ? ' – stark!' : ''}</p>}
         </>
       ),
     },
@@ -349,7 +354,7 @@ export function useWeeklyReviewReminder() {
       } catch {
         return;
       }
-      notify('Dein Wochenrückblick ist da 🌟', 'Schau dir an, was du diese Woche geschafft hast.', 'rueckblick').then((ok) => {
+      notify('Dein Wochenrückblick ist da 🌟', 'Schau zurück, was du geschafft hast – und plan danach in fünf Schritten die nächste Woche.', 'rueckblick').then((ok) => {
         if (!ok) show('🌟 Dein Wochenrückblick ist da', { label: 'Ansehen', run: () => (location.hash = '#/rueckblick') }, 10000);
       });
     };
@@ -425,7 +430,10 @@ export function Review() {
       <div className="review-layout">
         <div className="col">
           <Story week={week} prev={prevWeeks[0]} title={title} weekLabel={weekLabel} />
-          <button type="button" className="story-share" onClick={share}>📤 Als Bild teilen</button>
+          <div className="row wrap review-actions">
+            <button type="button" className="story-share" onClick={share}>📤 Als Bild teilen</button>
+            <a className="button story-share" href="#/wochenplan">🗓️ Woche planen</a>
+          </div>
         </div>
         <div className="stack">
           <Panel><MoodCheckIn /></Panel>

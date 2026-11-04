@@ -1,7 +1,7 @@
 /** Handy-Verhalten wie bei einer echten App: kein Zoomen, und offene Fenster halten die Seite dahinter fest. */
 
 /** Alles, was über der Seite liegt und selbst scrollen soll (Fenster, Suche, Handy-Menü) */
-export const OVERLAY_SELECTOR = '.modal-backdrop, .spotlight-backdrop, .sidebar.open';
+export const OVERLAY_SELECTOR = '.modal-backdrop, .spotlight-backdrop, .sidebar.open, .rt-runner';
 
 /** Zwei-Finger-Zoom und Doppeltipp-Zoom abschalten (iOS ignoriert dafür „user-scalable=no“). */
 export function disableZoom() {

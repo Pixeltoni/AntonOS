@@ -123,3 +123,81 @@ describe('Serie löschen', () => {
     expect(removeSeriesFrom(ws, 's', '2026-11-05').map((w) => w.id)).toEqual(['1', '4', '5']);
   });
 });
+
+import { dayTargetSummary, describeTarget, formatTarget, nextTarget, parseRepRange, setText, stalled, targetFor } from './training';
+
+describe('Nächstes Ziel', () => {
+  const bench = { name: 'Bankdrücken', sets: 3, reps: '6–10' };
+  const s = (weight: number, ...reps: number[]) => reps.map((r) => ({ weight, reps: r }));
+
+  it('liest den Wiederholungsbereich', () => {
+    expect(parseRepRange('8–12')).toEqual([8, 12]);
+    expect(parseRepRange('10')).toEqual([10, 10]);
+    expect(parseRepRange('12-8')).toEqual([8, 12]);
+    expect(parseRepRange('')).toBeNull();
+  });
+
+  it('steigert das Gewicht, wenn alle Sätze oben im Bereich waren', () => {
+    const t = nextTarget(bench, [s(60, 10, 10, 11)])!;
+    expect(t).toEqual({ weight: 62.5, reps: [6, 6, 6], kind: 'steigern', plus: 2.5 });
+    expect(formatTarget(t)).toBe('62,5 kg × 6 · 6 · 6');
+    expect(describeTarget(t)).toBe('↑ +2,5 kg');
+    expect(nextTarget(bench, [s(8, 10, 10, 10)])?.weight).toBe(9);
+  });
+
+  it('sonst gleiches Gewicht und in jedem Satz eine Wiederholung mehr', () => {
+    const t = nextTarget(bench, [s(60, 10, 9, 7)])!;
+    expect(t).toEqual({ weight: 60, reps: [10, 10, 8], kind: 'mehr', plus: 2 });
+    expect(describeTarget(t)).toBe('+2 Wdh.');
+  });
+
+  it('zählt nur Arbeitssätze mit dem höchsten Gewicht', () => {
+    const t = nextTarget(bench, [[{ weight: 40, reps: 10 }, ...s(60, 10, 10)]])!;
+    expect(t.kind).toBe('halten');
+    expect(t.reps).toEqual([10, 10, 10]);
+    expect(describeTarget(t)).toBe('alle Sätze schaffen');
+  });
+
+  it('Körpergewicht und Übungen auf Zeit', () => {
+    const pullups = nextTarget({ name: 'Klimmzüge', sets: 2, reps: '6–10' }, [s(0, 10, 10)])!;
+    expect(pullups).toEqual({ weight: 0, reps: [11, 11], kind: 'mehr', plus: 2 });
+    expect(formatTarget(pullups)).toBe('11 · 11 Wdh.');
+    const plank = nextTarget({ name: 'Plank (Sek.)', sets: 3, reps: '30–60' }, [s(0, 40, 40, 35)])!;
+    expect(plank.reps).toEqual([45, 45, 40]);
+    expect(formatTarget(plank, true)).toBe('45 · 45 · 40 Sek.');
+    expect(describeTarget(plank, true)).toBe('+15 Sek.');
+    expect(nextTarget(bench, [])).toBeNull();
+  });
+
+  it('schlägt nach drei Einheiten Stillstand eine leichtere Einheit vor', () => {
+    const flat = [s(60, 9, 8, 8), s(60, 9, 8, 8), s(60, 9, 8, 8), s(60, 9, 9, 8)];
+    expect(stalled(flat)).toBe(true);
+    const t = nextTarget(bench, flat)!;
+    expect(t).toEqual({ weight: 55, reps: [9, 8, 8], kind: 'leichter', plus: 5 });
+    expect(describeTarget(t)).toBe('↓ −5 kg');
+    // Fortschritt in einer der drei Einheiten: kein Stillstand
+    expect(stalled([s(60, 9, 8, 8), s(60, 9, 8, 7), s(60, 9, 8, 8), s(60, 9, 8, 8)])).toBe(false);
+    // Nach der leichteren Einheit nicht gleich wieder
+    expect(stalled([s(55, 9, 8, 8), ...flat.slice(0, 3)])).toBe(false);
+    expect(stalled(flat.slice(0, 3))).toBe(false);
+    expect(stalled([s(0, 10), s(0, 10), s(0, 10), s(0, 10)])).toBe(false);
+  });
+
+  it('liest das Ziel aus den eingetragenen Trainings', () => {
+    const day = { id: 'd', name: 'Push', exercises: [{ id: 'b', ...bench }, { id: 'f', name: 'Seitheben', sets: 3, reps: '12–15' }] };
+    const workouts = [
+      { id: 'w1', title: 'Push', type: 'Krafttraining', date: '2026-11-01', done: true, notes: '', exercises: [{ exerciseId: 'b', name: 'Bankdrücken', sets: s(60, 10, 10, 10) }, { exerciseId: 'f', name: 'Seitheben', sets: s(8, 13, 12, 12) }] },
+    ];
+    expect(targetFor(workouts, day.exercises[0], '2026-11-04')?.weight).toBe(62.5);
+    expect(targetFor(workouts, day.exercises[0], '2026-10-30')).toBeNull();
+    expect(targetFor(workouts, day.exercises[0], '2026-11-04', 'w1')).toBeNull();
+    expect(dayTargetSummary(day, workouts, '2026-11-04')).toEqual({ up: ['Bankdrücken'], lighter: [] });
+  });
+
+  it('schreibt einen Satz', () => {
+    expect(setText(62.5, 8)).toBe('62,5 kg × 8');
+    expect(setText(0, 12)).toBe('12 Wdh.');
+    expect(setText(0, 45, true)).toBe('45 Sek.');
+    expect(setText(20, 0)).toBe('20 kg');
+  });
+});

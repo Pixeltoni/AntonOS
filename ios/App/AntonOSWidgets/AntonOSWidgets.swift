@@ -802,6 +802,7 @@ struct AntonOSWidgetBundle: WidgetBundle {
         NextEventWidget()
         LaeuferWidget()
         HaustierWidget()
+        KartenWidget()
         FocusLiveActivity()
         if #available(iOS 18.0, *) {
             QuickAddControl()

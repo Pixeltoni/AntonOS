@@ -47,7 +47,7 @@ function load(): FocusTimer {
   return idleTimer();
 }
 
-function chime() {
+export function chime() {
   try {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;

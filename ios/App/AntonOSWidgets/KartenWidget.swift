@@ -145,6 +145,12 @@ private struct HomeCard: View {
                     }
                     .buttonStyle(.plain)
                 }
+            } else if left > 0 {
+                // Das Widget kennt nur die ersten Karten – die nächsten bringt AntonOS beim Öffnen mit
+                Spacer(minLength: 0)
+                Text("Weitere Karten warten").font(.headline)
+                Text("Tippen öffnet AntonOS mit den nächsten Karten.").font(.caption2).foregroundStyle(.secondary)
+                Spacer(minLength: 0)
             } else {
                 Spacer(minLength: 0)
                 Text("Alles gelernt 🎉").font(.headline)
@@ -183,6 +189,12 @@ private struct LockCard: View {
                 }
                 .buttonStyle(.plain)
             }
+        } else if left > 0 {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(left == 1 ? "Lernkarte · 1 fällig" : "Lernkarten · \(left) fällig").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                Text("Tippen für die nächsten").font(.caption.weight(.semibold)).lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Lernkarten").font(.caption2).foregroundStyle(.secondary)

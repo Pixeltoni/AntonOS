@@ -13,11 +13,33 @@ import { TaskList } from '../components/TaskList';
 import { RingsWidget } from '../components/rings';
 import { Icon, PAGE_ICONS } from '../components/icons';
 import { GoalsThisWeek } from '../components/goals';
+import { DayPlanView } from '../components/dayplan';
 import { weekContributions } from '../lib/goals';
 import { MealsWidget } from './Meals';
 import { MoodCheckIn, useStoryCards } from './Review';
 
 const STORY_KEY = 'antonos:story-gesehen';
+const VIEW_KEY = 'antonos:heute-ansicht';
+
+/** Übersicht oder Plan (Zeitleiste) – gemerkt auf diesem Gerät */
+function useTodayView(): ['uebersicht' | 'plan', (v: 'uebersicht' | 'plan') => void] {
+  const [view, setView] = useState<'uebersicht' | 'plan'>(() => {
+    try {
+      return localStorage.getItem(VIEW_KEY) === 'plan' ? 'plan' : 'uebersicht';
+    } catch {
+      return 'uebersicht';
+    }
+  });
+  const set = (v: 'uebersicht' | 'plan') => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // egal
+    }
+  };
+  return [view, set];
+}
 const readSeen = () => {
   try {
     return localStorage.getItem(STORY_KEY) ?? '';
@@ -141,6 +163,7 @@ export function Today() {
   const t = today();
   const entries = useCalendarEntries();
   const [story, setStory] = useState(false);
+  const [view, setView] = useTodayView();
   const dayClose = { ...defaultDayClose(), ...(data.settings.dayClose ?? {}) };
   const phase = dayPhase(now, dayClose.time);
   const name = data.settings.name.trim().split(' ')[0];
@@ -272,7 +295,14 @@ export function Today() {
         </div>
         <StoryBubble onOpen={() => setStory(true)} />
       </header>
-      {todaySections(phase).map((s) => {
+      <div className="segmented today-view" role="radiogroup" aria-label="Ansicht">
+        {(['uebersicht', 'plan'] as const).map((v) => (
+          <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? 'selected' : ''} onClick={() => setView(v)}>
+            {v === 'plan' ? 'Plan' : 'Übersicht'}
+          </button>
+        ))}
+      </div>
+      {view === 'plan' ? <DayPlanView /> : todaySections(phase).map((s) => {
         const node = render(s);
         return node ? <div key={s} className="today-block">{node}</div> : null;
       })}

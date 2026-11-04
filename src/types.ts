@@ -101,6 +101,8 @@ export interface Task {
   completedAt?: DateStr;
   /** Wie in Things: ab diesem Tag in „Heute“ (ohne Frist) */
   plannedFor?: DateStr | null;
+  /** In der Zeitleiste von „Heute“ eingeplant um HH:MM (am Tag `plannedFor`) */
+  plannedTime?: string;
   /** In „Heute“ unter „Heute Abend“ */
   evening?: boolean;
   /** „Irgendwann“ – ohne Datum, taucht nicht im Alltag auf */
@@ -489,6 +491,8 @@ export interface Workout {
   notes: string;
   /** Dauer in Minuten (für den Bewegungsring) */
   minutes?: number;
+  /** Geplante Uhrzeit HH:MM (Zeitleiste und Wochenplanung) */
+  time?: string;
   /** Trainingstag aus dem Trainingsplan (z. B. Push) */
   planDayId?: ID;
   /** Aus Apple Health übernommen (Kennung des Workouts dort) */

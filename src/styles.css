@@ -2426,3 +2426,34 @@ label.tone-clip { color: var(--text); display: flex; flex-direction: column; gap
 .quick-add input:focus, .editor .title-input:focus, input[type='checkbox']:focus, input[type='radio']:focus, input[type='range']:focus, input[type='color']:focus { box-shadow: none; }
 .editor .title-input:focus { background: none; }
 input[type='checkbox'], input[type='radio'], input[type='range'] { background: none; }
+
+/* ---------- Notenziel und Klausurzulassung ---------- */
+.goal-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; padding: 0.55rem 0.3rem 0; }
+.goal-label { font-weight: 600; font-size: 0.9rem; }
+.goal-select { width: auto; min-width: 6.5rem; padding: 0.3rem 0.6rem; font-size: 0.9rem; border-radius: 10px; }
+.goal-text { flex-basis: 100%; font-size: 0.9rem; color: var(--text); }
+.goal-text.big { font-size: 1.02rem; font-weight: 600; line-height: 1.35; margin: 0.1rem 0; }
+.goal-text.ok { color: #248a3d; }
+.goal-text.warn { color: #c76a00; }
+.goal-text.bad { color: #d70015; }
+:root[data-theme='dark'] .goal-text.ok { color: #30d158; }
+:root[data-theme='dark'] .goal-text.warn { color: #ff9f0a; }
+:root[data-theme='dark'] .goal-text.bad { color: #ff453a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .goal-text.ok { color: #30d158; }
+  :root:not([data-theme='light']) .goal-text.warn { color: #ff9f0a; }
+  :root:not([data-theme='light']) .goal-text.bad { color: #ff453a; }
+}
+.degree-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin-top: 0.3rem; }
+.degree-inputs label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: var(--muted); }
+.degree-inputs select, .degree-inputs input { width: 100%; }
+.sheets-panel .ios-list { margin-top: 0; }
+.adm { display: flex; flex-direction: column; gap: 0.45rem; }
+.adm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.adm-status { font-size: 0.78rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 999px; color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); white-space: nowrap; }
+.adm-bar { position: relative; height: 10px; border-radius: 999px; background: var(--ring-track); }
+.adm-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--c); }
+.adm-bar u { position: absolute; top: 0; bottom: 0; border-radius: 0 999px 999px 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 45%, transparent) 0 3px, transparent 3px 6px); }
+.adm-bar em { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text); }
+.sheet-points { font-weight: 700; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--c) 75%, var(--text)); }
+.sheet-points small { color: var(--muted); font-weight: 500; }

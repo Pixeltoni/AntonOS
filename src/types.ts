@@ -14,6 +14,39 @@ export interface Course {
   color: string;
   /** Feste Zeiten im Stundenplan (Vorlesung, Übung …) */
   slots?: CourseSlot[];
+  /** Notenziel für den Kurs, z. B. 2,0 (leer = keins) */
+  target?: number | null;
+  /** Klausurzulassung über Übungsblätter (leer = keine) */
+  admission?: Admission | null;
+}
+
+/** Klausurzulassung: so viele Punkte aus den Übungsblättern braucht man */
+export interface Admission {
+  /** Geplante Anzahl Übungsblätter im Semester */
+  sheets: number;
+  /** Punkte pro Blatt (Vorgabe für neue Blätter) */
+  maxPerSheet: number;
+  /** Nötig: Prozent der Gesamtpunkte bzw. feste Punktzahl */
+  required: number;
+  unit: 'prozent' | 'punkte';
+}
+
+/** Übungsblatt eines Kurses – die Abgabe steht zusätzlich als Aufgabe in der Liste */
+export interface ExerciseSheet {
+  id: ID;
+  courseId: ID;
+  /** Nummer des Blatts */
+  number: number;
+  /** Abgabetag (leer = ohne Frist) */
+  due: DateStr | null;
+  /** Uhrzeit der Abgabe HH:MM, optional */
+  dueTime?: string;
+  /** Erreichte Punkte, leer = noch nicht korrigiert */
+  points: number | null;
+  /** Mögliche Punkte */
+  max: number;
+  /** Aufgabe zur Abgabe (wird beim Anlegen erstellt) */
+  taskId?: ID | null;
 }
 
 /** Wöchentliche Zeit eines Kurses */
@@ -659,6 +692,16 @@ export interface Settings {
   health?: HealthSettings;
   /** Die drei frei wählbaren Seiten vorne in der Tab-Leiste am iPhone (leer = Standard) */
   tabs?: string[];
+  /** Ganzes Studium: ECTS bis zum Abschluss und Wunsch-Schnitt */
+  degree?: DegreeSettings;
+}
+
+/** Notenziel fürs ganze Studium */
+export interface DegreeSettings {
+  /** ECTS bis zum Abschluss, z. B. 180 im Bachelor */
+  ects: number;
+  /** Wunsch-Schnitt (leer = keiner) */
+  target: number | null;
 }
 
 export interface SemesterSettings {
@@ -791,6 +834,8 @@ export interface Data {
   cards: Card[];
   exams: Exam[];
   grades: Grade[];
+  /** Übungsblätter für die Klausurzulassung */
+  sheets: ExerciseSheet[];
   goals: Goal[];
   sessions: FocusSession[];
   projects: Project[];

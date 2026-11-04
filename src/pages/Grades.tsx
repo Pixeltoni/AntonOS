@@ -4,6 +4,7 @@ import type { Course, Grade, ID } from '../types';
 import { courseGrade, formatGrade, gradeLabel, PASS_LIMIT, summary } from '../lib/grades';
 import { Empty, PageHeader } from '../components/ui';
 import { Sheet } from '../components/sheet';
+import { CourseGoal, DegreeGoal } from '../components/studium';
 
 /** Prüft eine Note nach deutschem System. Gibt eine Fehlermeldung oder null zurück. */
 export function checkGrade(raw: string, weightRaw: string): string | null {
@@ -94,6 +95,7 @@ export function Grades() {
             <span className="muted small">bestanden von geplant</span>
           </span>
         </section>
+        <DegreeGoal />
       </div>
       {data.courses.length === 0 && <Empty>Leg zuerst <a href="#/kurse">Kurse</a> an, um Noten einzutragen.</Empty>}
       {data.courses.map((c) => {
@@ -121,9 +123,13 @@ export function Grades() {
                 <button type="button" className="row-button add-row" onClick={() => setSheet({ course: c })}>+ Note eintragen</button>
               </li>
             </ul>
-            {own.length > 0 && weightSum !== 100 && (
+            {own.length > 0 && weightSum > 100 && (
               <p className="muted small grade-hint">Gewichtungen ergeben {weightSum} % – die Kursnote wird anteilig berechnet.</p>
             )}
+            {own.length > 0 && weightSum < 100 && (
+              <p className="muted small grade-hint">Noch offen: {100 - weightSum} % der Kursnote. Bis dahin zählt die Kursnote anteilig.</p>
+            )}
+            <CourseGoal course={c} />
           </section>
         );
       })}

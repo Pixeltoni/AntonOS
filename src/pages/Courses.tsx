@@ -7,6 +7,7 @@ import { isDue } from '../lib/srs';
 import { TaskForm, TaskList } from '../components/TaskList';
 import { Empty, PageHeader, Panel, Progress } from '../components/ui';
 import { CourseSlots, SemesterSettingsForm, Timetable } from '../components/timetable';
+import { CourseGoal, SheetsPanel } from '../components/studium';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#0ea5e9', '#a855f7', '#ec4899', '#64748b'];
 
@@ -168,6 +169,7 @@ export function CourseDetail({ id }: { id: ID }) {
               </ul>
             )}
           </Panel>
+          <SheetsPanel course={course} />
           <Panel title="🗓️ Zeiten im Stundenplan"><CourseSlots course={course} /></Panel>
           <Panel title="⏱️ Lernzeit" actions={<a href="#/fokus">Fokus starten →</a>}>
             <p>
@@ -179,6 +181,7 @@ export function CourseDetail({ id }: { id: ID }) {
           </Panel>
           <Panel title="Noten" actions={<a href="#/noten">Verwalten →</a>}>
             <p>Kursnote: <strong>{formatGrade(grade)}</strong></p>
+            <CourseGoal course={course} />
             {grades.length > 0 && (
               <ul className="list">
                 {grades.map((g) => (

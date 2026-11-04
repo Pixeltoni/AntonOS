@@ -38,7 +38,7 @@ export function demoData(): Data {
 
   return {
     courses: [
-      { id: ana, name: 'Analysis I', code: 'MA-101', semester: 'WiSe 26/27', lecturer: 'Prof. Weber', room: 'H 1', ects: 9, color: '#6366f1', slots: [
+      { id: ana, name: 'Analysis I', code: 'MA-101', semester: 'WiSe 26/27', lecturer: 'Prof. Weber', room: 'H 1', ects: 9, color: '#6366f1', target: 2, admission: { sheets: 12, maxPerSheet: 20, required: 50, unit: 'prozent' }, slots: [
         { id: 'demo-sl1', day: 1, start: '08:15', end: '09:45', room: 'H 1', kind: 'Vorlesung', every: 1 },
         { id: 'demo-sl2', day: 3, start: '08:15', end: '09:45', room: 'H 1', kind: 'Vorlesung', every: 1 },
         { id: 'demo-sl3', day: 4, start: '12:15', end: '13:45', room: 'S 3', kind: 'Übung', every: 1 },
@@ -75,6 +75,11 @@ export function demoData(): Data {
     grades: [
       { id: 'demo-g1', courseId: prog, title: 'Klausur', value: 1.7, weight: 80 },
       { id: 'demo-g2', courseId: prog, title: 'Projekt', value: 1.3, weight: 20 },
+    ],
+    sheets: [
+      { id: 'demo-sh1', courseId: ana, number: 1, due: addDays(t, -12), points: 14, max: 20 },
+      { id: 'demo-sh2', courseId: ana, number: 2, due: addDays(t, -5), points: 12, max: 20 },
+      { id: 'demo-sh3', courseId: ana, number: 3, due: addDays(t, 2), points: null, max: 20, taskId: 'demo-t1' },
     ],
     goals: [
       { id: 'demo-z1', title: 'Analysis-Klausur mit 2,0 oder besser', area: 'Studium', why: 'Grundlage für alle weiteren Mathe-Module', deadline: addDays(t, 40), progress: 30 },

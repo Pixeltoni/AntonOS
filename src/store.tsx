@@ -20,6 +20,7 @@ export const emptyData = (): Data => ({
   cards: [],
   exams: [],
   grades: [],
+  sheets: [],
   goals: [],
   sessions: [],
   projects: [],
@@ -200,6 +201,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cards: d.cards.filter((x) => x.courseId !== id),
       exams: d.exams.filter((x) => x.courseId !== id),
       grades: d.grades.filter((x) => x.courseId !== id),
+      sheets: d.sheets.filter((x) => x.courseId !== id),
       sessions: d.sessions.map((x) => (x.courseId === id ? { ...x, courseId: null } : x)),
     }));
   }, []);

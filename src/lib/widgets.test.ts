@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { Alarm, Habit, HabitLog, ShoppingItem, Task, Workout } from '../types';
+import type { Alarm, Card, Habit, HabitLog, ShoppingItem, Task, Workout } from '../types';
 import { emptyData } from '../store';
 import { defaultAlarm } from './alarm';
 import type { CalendarEntry } from './calendar';
-import { parseWidgetActions, parseWidgetLink, resolveWidgetActions, widgetAgenda, widgetAlarm, widgetSnapshot, widgetTasks, widgetTraining, type WidgetAction } from './widgets';
+import { parseWidgetActions, parseWidgetLink, resolveWidgetActions, widgetAgenda, widgetAlarm, widgetCards, widgetSnapshot, widgetTasks, widgetTraining, type WidgetAction } from './widgets';
 
 const DAY = '2026-11-02'; // Montag
 const now = new Date(2026, 10, 2, 9, 30);
@@ -115,13 +115,31 @@ describe('widgetSnapshot', () => {
     data.exams.push({ id: 'f', title: 'Vorbei', courseId: null, date: DAY, time: '08:00', location: '' }, { id: 'g', title: 'Gleich', courseId: null, date: DAY, time: '11:00', location: '' });
     expect(widgetSnapshot(data, [], now).exam?.title).toBe('Gleich');
   });
+
+  it('Lernkarten: überfällige zuerst, neue zum Schluss, mit Kurs', () => {
+    const base = { courseId: null, interval: 3, ease: 2.5, reps: 2, lapses: 0 };
+    const cards: Card[] = [
+      { id: 'neu', ...base, reps: 0, front: 'Neu', back: 'x', due: DAY },
+      { id: 'alt', ...base, courseId: 'ana', front: 'Grenzwert von 1/n?', back: '0', due: '2026-11-01' },
+      { id: 'heute', ...base, front: 'Heute', back: 'y'.repeat(400), due: DAY },
+      { id: 'morgen', ...base, front: 'Morgen', back: 'z', due: '2026-11-05' },
+    ];
+    const r = widgetCards(cards, [{ id: 'ana', name: 'Analysis I', code: 'ANA', color: '#FF9500' }], DAY);
+    expect(r.due).toBe(3);
+    expect(r.cards.map((c) => c.id)).toEqual(['alt', 'heute', 'neu']);
+    expect(r.cards[0]).toMatchObject({ course: 'Analysis I', color: '#FF9500' });
+    expect(r.cards[1].back.length).toBe(260);
+    expect(r.cards[1].back.endsWith('…')).toBe(true);
+  });
 });
 
 describe('resolveWidgetActions', () => {
   const habits: Habit[] = [{ id: 'lesen', name: 'Lesen', icon: '📖' }, { id: 'wasser', name: 'Wasser', icon: '💧', target: 2 }];
   const habitLogs: HabitLog[] = [{ id: 'l1', habitId: 'lesen', date: DAY }, { id: 'l2', habitId: 'wasser', date: DAY, amount: 1 }];
   const shopping: ShoppingItem[] = [{ id: 'milch', name: 'Milch', amount: '', aisle: 'kuehl', done: false, added: DAY }];
-  const data = { tasks: [task('t'), task('u', { status: 'erledigt', completedAt: DAY })], shopping, habits, habitLogs };
+  const card = (id: string, extra: Partial<Card> = {}): Card => ({ id, courseId: null, front: `Frage ${id}`, back: `Antwort ${id}`, interval: 0, ease: 2.5, reps: 0, lapses: 0, due: DAY, ...extra });
+  const cards: Card[] = [card('k1'), card('k2', { interval: 6, reps: 2, due: '2026-11-01' })];
+  const data = { tasks: [task('t'), task('u', { status: 'erledigt', completedAt: DAY })], shopping, habits, habitLogs, cards };
   const act = (kind: WidgetAction['kind'], id: string, done: boolean, at = 1): WidgetAction => ({ kind, id, done, day: DAY, at });
 
   it('übernimmt nur Änderungen und pro Eintrag die letzte Aktion', () => {
@@ -136,6 +154,17 @@ describe('resolveWidgetActions', () => {
     expect(resolveWidgetActions(data, [act('habit', 'lesen', false)])).toEqual([{ op: 'remove', collection: 'habitLogs', id: 'l1' }]);
     expect(resolveWidgetActions({ ...data, habitLogs: [] }, [act('habit', 'lesen', true)])).toEqual([{ op: 'add', collection: 'habitLogs', item: { habitId: 'lesen', date: DAY } }]);
     expect(resolveWidgetActions(data, [act('habit', 'gelöscht', true)])).toEqual([]);
+  });
+
+  it('Lernkarten: jede Bewertung zählt der Reihe nach', () => {
+    // Gewusst: wie „Gut“ in der Lern-Sitzung
+    expect(resolveWidgetActions(data, [act('card', 'k2', true)])).toEqual([
+      { op: 'update', collection: 'cards', id: 'k2', patch: { interval: 15, ease: 2.5, reps: 3, lapses: 0, due: '2026-11-17' } },
+    ]);
+    // Erst „Nochmal“, später doch gewusst
+    const [op] = resolveWidgetActions(data, [act('card', 'k1', true, 2), act('card', 'k1', false, 1)]);
+    expect(op).toEqual({ op: 'update', collection: 'cards', id: 'k1', patch: { interval: 1, ease: 2.3, reps: 1, lapses: 1, due: '2026-11-03' } });
+    expect(resolveWidgetActions(data, [act('card', 'weg', true)])).toEqual([]);
   });
 
   it('ignoriert kaputte Einträge in der Warteschlange', () => {

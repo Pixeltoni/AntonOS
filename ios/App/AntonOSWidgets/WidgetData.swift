@@ -40,6 +40,17 @@ enum WidgetStore {
                     snap.habits[i].done = action.done
                     if snap.habits[i].target > 0 { snap.habits[i].amount = action.done ? snap.habits[i].target : 0 }
                 }
+            case "card":
+                // Gewusst: weg damit; „Nochmal“: kommt hinten noch einmal dran
+                if var cards = snap.cards, let i = cards.firstIndex(where: { $0.id == action.id }) {
+                    let card = cards.remove(at: i)
+                    if action.done {
+                        snap.cardsDue = max(0, (snap.cardsDue ?? 1) - 1)
+                    } else {
+                        cards.append(card)
+                    }
+                    snap.cards = cards
+                }
             default: break
             }
         }
@@ -105,6 +116,9 @@ struct Snapshot: Codable {
     var budget: WBudget?
     var shopping: [WShopping]
     var shoppingOpen: Int
+    /// Fällige Lernkarten (optional, damit ältere Stände lesbar bleiben)
+    var cards: [WCard]?
+    var cardsDue: Int?
 }
 
 struct WAlarmRing: Codable {
@@ -206,6 +220,14 @@ struct WShopping: Codable {
     var done: Bool
 }
 
+struct WCard: Codable {
+    var id: String
+    var front: String
+    var back: String
+    var course: String
+    var color: String
+}
+
 extension Snapshot {
     /// Termine, die noch nicht vorbei sind
     func upcoming(at now: Date) -> [WAgenda] { agenda.filter { $0.end > now } }
@@ -258,7 +280,11 @@ extension Snapshot {
                 WShopping(id: "3", name: "Bananen", amount: "", done: false),
                 WShopping(id: "4", name: "Eier", amount: "10", done: true),
             ],
-            shoppingOpen: 3
+            shoppingOpen: 3,
+            cards: [
+                WCard(id: "k1", front: "Wann konvergiert eine geometrische Reihe?", back: "Genau dann, wenn |q| < 1 ist.", course: "Analysis I", color: "#FF9500"),
+            ],
+            cardsDue: 12
         )
     }
 }

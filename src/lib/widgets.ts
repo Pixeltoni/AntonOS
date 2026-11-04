@@ -6,7 +6,7 @@
  * Abhaken im Widget landet als Aktion in einer Warteschlange, die die App beim nächsten
  * Öffnen mit `resolveWidgetActions` übernimmt.
  */
-import type { Alarm, Data, DateStr, ID, Task } from '../types';
+import type { Alarm, Card, Course, Data, DateStr, ID, Task } from '../types';
 import { addDays, daysBetween, parseDate, toDateStr } from './dates';
 import { listTasks } from './tasks';
 import { nextRings, repeatLabel, alarmTitle } from './alarm';
@@ -16,6 +16,7 @@ import { isHabitDone, habitAmount, monthKey, streak } from './life';
 import { budgetStatus } from './finance';
 import { nextTrainingDay } from './training';
 import { toneLabel } from './tones';
+import { review } from './srs';
 
 /** Erhöhen, wenn sich das Format so ändert, dass alte Widgets es nicht mehr lesen können */
 export const WIDGET_SNAPSHOT_VERSION = 1;
@@ -107,6 +108,16 @@ export interface WidgetShoppingItem {
   done: boolean;
 }
 
+/** Fällige Lernkarte fürs Widget zum Umdrehen */
+export interface WidgetCard {
+  id: ID;
+  front: string;
+  back: string;
+  /** Kurs (Kürzel oder Name), leer ohne Kurs */
+  course: string;
+  color: string;
+}
+
 export interface WidgetSnapshot {
   version: number;
   /** Erstellt (ms) */
@@ -126,6 +137,9 @@ export interface WidgetSnapshot {
   budget: WidgetBudget | null;
   shopping: WidgetShoppingItem[];
   shoppingOpen: number;
+  /** Heute fällige Lernkarten (die ersten), dazu wie viele insgesamt fällig sind */
+  cards: WidgetCard[];
+  cardsDue: number;
 }
 
 const KIND_COLORS: Record<CalendarEntry['kind'], string> = {
@@ -216,6 +230,31 @@ export function widgetTraining(data: Pick<Data, 'workouts' | 'trainingPlan'>, da
   return { title: next.name, detail: next.exercises.slice(0, 3).map((x) => x.name).join(' · '), fromPlan: true, doneToday: false, weekDone, weekGoal };
 }
 
+const clip = (text: string, max: number) => {
+  const t = text.trim();
+  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
+};
+
+/** Fällige Lernkarten in der Reihenfolge der Lern-Sitzung: am längsten überfällige zuerst, neue zum Schluss */
+export function widgetCards(cards: Card[], courses: Pick<Course, 'id' | 'name' | 'code' | 'color'>[], day: DateStr, max = 20): { cards: WidgetCard[]; due: number } {
+  const due = cards.filter((c) => c.due <= day && c.front.trim());
+  const isNew = (c: Card) => c.reps === 0 && c.lapses === 0;
+  const sorted = [...due].sort((a, b) => Number(isNew(a)) - Number(isNew(b)) || a.due.localeCompare(b.due));
+  return {
+    due: due.length,
+    cards: sorted.slice(0, max).map((c) => {
+      const course = courses.find((x) => x.id === c.courseId);
+      return {
+        id: c.id,
+        front: clip(c.front, 180),
+        back: clip(c.back, 260),
+        course: course ? (course.name.length > 16 && course.code ? course.code : course.name) : '',
+        color: course?.color || '#AF52DE',
+      };
+    }),
+  };
+}
+
 /** Kompletter Stand für alle Widgets */
 export function widgetSnapshot(data: Data, entries: CalendarEntry[], now: Date): WidgetSnapshot {
   const day = toDateStr(now);
@@ -234,6 +273,7 @@ export function widgetSnapshot(data: Data, entries: CalendarEntry[], now: Date):
 
   const shoppingOpen = data.shopping.filter((s) => !s.done);
   const shoppingDone = data.shopping.filter((s) => s.done);
+  const cards = widgetCards(data.cards, data.courses, day);
 
   return {
     version: WIDGET_SNAPSHOT_VERSION,
@@ -271,14 +311,19 @@ export function widgetSnapshot(data: Data, entries: CalendarEntry[], now: Date):
       : null,
     shopping: [...shoppingOpen, ...shoppingDone].slice(0, 12).map((s) => ({ id: s.id, name: s.name, amount: s.amount, done: s.done })),
     shoppingOpen: shoppingOpen.length,
+    cards: cards.cards,
+    cardsDue: cards.due,
   };
 }
 
 /* ---------- Abhaken im Widget ---------- */
 
-/** Eine Aktion aus dem Widget: gewünschter Zustand (nicht „umschalten“), damit doppeltes Übernehmen nichts kaputt macht */
+/**
+ * Eine Aktion aus dem Widget: gewünschter Zustand (nicht „umschalten“), damit doppeltes Übernehmen nichts kaputt macht.
+ * Bei Lernkarten heißt `done`: gewusst („Wusste ich“ = gut), sonst „Nochmal“ – sie zählen alle der Reihe nach.
+ */
 export interface WidgetAction {
-  kind: 'task' | 'habit' | 'shopping';
+  kind: 'task' | 'habit' | 'shopping' | 'card';
   id: ID;
   done: boolean;
   /** Tag, an dem im Widget getippt wurde (für Gewohnheiten) */
@@ -288,7 +333,7 @@ export interface WidgetAction {
 }
 
 export type StoreOp =
-  | { op: 'update'; collection: 'tasks' | 'shopping' | 'habitLogs'; id: ID; patch: Record<string, unknown> }
+  | { op: 'update'; collection: 'tasks' | 'shopping' | 'habitLogs' | 'cards'; id: ID; patch: Record<string, unknown> }
   | { op: 'add'; collection: 'habitLogs'; item: { habitId: ID; date: DateStr; amount?: number } }
   | { op: 'remove'; collection: 'habitLogs'; id: ID };
 
@@ -298,7 +343,7 @@ export function parseWidgetActions(raw: unknown): WidgetAction[] {
   return raw.filter(
     (a): a is WidgetAction =>
       !!a && typeof a === 'object' &&
-      ['task', 'habit', 'shopping'].includes((a as WidgetAction).kind) &&
+      ['task', 'habit', 'shopping', 'card'].includes((a as WidgetAction).kind) &&
       typeof (a as WidgetAction).id === 'string' &&
       typeof (a as WidgetAction).done === 'boolean' &&
       typeof (a as WidgetAction).day === 'string',
@@ -309,10 +354,19 @@ export function parseWidgetActions(raw: unknown): WidgetAction[] {
  * Was die App mit den Aktionen aus dem Widget tun muss. Pro Eintrag zählt nur die letzte Aktion;
  * was schon so ist, wie im Widget gewünscht, bleibt unberührt.
  */
-export function resolveWidgetActions(data: Pick<Data, 'tasks' | 'shopping' | 'habits' | 'habitLogs'>, actions: WidgetAction[]): StoreOp[] {
+export function resolveWidgetActions(data: Pick<Data, 'tasks' | 'shopping' | 'habits' | 'habitLogs' | 'cards'>, actions: WidgetAction[]): StoreOp[] {
+  const sorted = [...actions].sort((x, y) => x.at - y.at);
   const last = new Map<string, WidgetAction>();
-  for (const a of [...actions].sort((x, y) => x.at - y.at)) last.set(`${a.kind}:${a.id}:${a.kind === 'habit' ? a.day : ''}`, a);
+  for (const a of sorted) if (a.kind !== 'card') last.set(`${a.kind}:${a.id}:${a.kind === 'habit' ? a.day : ''}`, a);
   const ops: StoreOp[] = [];
+  // Lernkarten: jede Bewertung zählt, der Reihe nach (wie in der Lern-Sitzung)
+  const reviewed = new Map<ID, Card>();
+  for (const a of sorted) {
+    if (a.kind !== 'card') continue;
+    const card = reviewed.get(a.id) ?? data.cards.find((c) => c.id === a.id);
+    if (card) reviewed.set(a.id, review(card, a.done ? 'gut' : 'nochmal', a.day));
+  }
+  for (const [id, c] of reviewed) ops.push({ op: 'update', collection: 'cards', id, patch: { interval: c.interval, ease: c.ease, reps: c.reps, lapses: c.lapses, due: c.due } });
   for (const a of last.values()) {
     if (a.kind === 'task') {
       const task = data.tasks.find((t) => t.id === a.id);

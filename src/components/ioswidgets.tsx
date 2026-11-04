@@ -8,6 +8,24 @@ import { openAssistant } from './assistant';
 import { useFocus } from './focus';
 import { useRest } from './rest';
 
+const APPLIED_KEY = 'antonos:widget-uebernommen';
+
+function readApplied(): number {
+  try {
+    return Number(localStorage.getItem(APPLIED_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeApplied(at: number) {
+  try {
+    localStorage.setItem(APPLIED_KEY, String(at));
+  } catch {
+    // dann eben nur bis zum Neustart gemerkt
+  }
+}
+
 /**
  * Nur in der iOS-App: hält die Widgets auf dem Homescreen aktuell, übernimmt dort
  * abgehakte Einträge und öffnet Links aus Widgets und Kontrollzentrum.
@@ -19,8 +37,8 @@ export function useNativeWidgets() {
   const rest = useRest();
   const latest = useRef({ data, entries, focus, rest });
   latest.current = { data, entries, focus, rest };
-  /** Bis zu diesem Zeitpunkt (ms) sind Aktionen aus dem Widget übernommen */
-  const applied = useRef(0);
+  /** Bis zu diesem Zeitpunkt (ms) sind Aktionen aus dem Widget übernommen – gemerkt, damit z. B. Lernkarten nach einem Neustart nicht doppelt zählen */
+  const applied = useRef(readApplied());
 
   const push = () => {
     const { data, entries } = latest.current;
@@ -43,7 +61,8 @@ export function useNativeWidgets() {
     const takeActions = async () => {
       try {
         const { actions } = await AntonWidgets.takeActions();
-        const list = parseWidgetActions(JSON.parse(actions || '[]'));
+        // Schon übernommene Aktionen liegen bis zum nächsten Ablegen noch in der Warteschlange
+        const list = parseWidgetActions(JSON.parse(actions || '[]')).filter((a) => a.at > applied.current);
         const ops = resolveWidgetActions(latest.current.data, list);
         for (const op of ops) {
           if (op.op === 'update') update(op.collection, op.id, op.patch as never);
@@ -51,6 +70,7 @@ export function useNativeWidgets() {
           else remove(op.collection, op.id);
         }
         applied.current = Math.max(applied.current, ...list.map((a) => a.at));
+        writeApplied(applied.current);
         // Nichts geändert (oder neuer Tag): trotzdem frisch ablegen
         if (ops.length === 0) await pushRef.current();
       } catch {

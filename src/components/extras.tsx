@@ -6,10 +6,12 @@ import { extras, isNativeApp } from '../lib/native';
 import { today } from '../lib/dates';
 import { categorize, parseShopping } from '../lib/shopping';
 import { activityKey, focusActivityState } from '../lib/liveactivity';
+import { restActivityState } from '../lib/rest';
 import { defaultHealth, HEALTH_DAYS, mergeHealth } from '../lib/health';
 import { placeNotices } from '../lib/places';
 import { defaultLock, isLockedPage, RELOCK_MS } from '../lib/lock';
 import { useFocus } from './focus';
+import { useRest } from './rest';
 import { runInAssistant } from './assistant';
 import { useToast } from './toast';
 
@@ -60,9 +62,10 @@ export function useNativeExtras() {
     };
   }, [add, show]);
 
-  /* Fokus-Timer in der Dynamic Island und auf dem Sperrbildschirm */
+  /* Fokus-Timer bzw. Satzpause in der Dynamic Island und auf dem Sperrbildschirm (die Satzpause hat Vorrang) */
+  const rest = useRest();
   const course = data.courses.find((c) => c.id === focus.timer.config.courseId);
-  const state = focusActivityState(focus.timer, course, Date.now());
+  const state = rest.timer ? restActivityState(rest.timer, Date.now()) : focusActivityState(focus.timer, course, Date.now());
   const key = activityKey(state);
   const stateRef = useRef(state);
   stateRef.current = state;

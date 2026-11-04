@@ -694,6 +694,8 @@ export interface Settings {
   tabs?: string[];
   /** Ganzes Studium: ECTS bis zum Abschluss und Wunsch-Schnitt */
   degree?: DegreeSettings;
+  /** Länge der Satzpause beim Training in Sekunden */
+  restSeconds?: number;
 }
 
 /** Notenziel fürs ganze Studium */

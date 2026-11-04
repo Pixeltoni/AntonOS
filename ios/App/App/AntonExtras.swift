@@ -429,7 +429,9 @@ enum FocusActivityController {
             paused: raw["paused"] as? Bool ?? false,
             leftSeconds: Int(number(raw["leftSeconds"])),
             round: Int(number(raw["round"])),
-            rounds: Int(number(raw["rounds"]))
+            rounds: Int(number(raw["rounds"])),
+            detail: raw["detail"] as? String,
+            goal: raw["goal"] as? String
         )
         // Läuft die Phase ab, ohne dass AntonOS aktualisiert, gilt die Anzeige als veraltet
         let content = ActivityContent(state: state, staleDate: state.paused ? nil : state.endAt.addingTimeInterval(5))

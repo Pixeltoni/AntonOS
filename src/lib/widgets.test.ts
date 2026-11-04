@@ -152,6 +152,8 @@ describe('parseWidgetLink', () => {
     expect(parseWidgetLink('antonos://fokus-start')).toEqual({ type: 'focus', action: 'start' });
     expect(parseWidgetLink('antonos://fokus-pause')).toEqual({ type: 'focus', action: 'pause' });
     expect(parseWidgetLink('antonos://fokus-stop')).toEqual({ type: 'focus', action: 'stop' });
+    expect(parseWidgetLink('antonos://satzpause-plus')).toEqual({ type: 'rest', action: 'plus' });
+    expect(parseWidgetLink('antonos://satzpause-skip')).toEqual({ type: 'rest', action: 'skip' });
     expect(parseWidgetLink('antonos://spotify-callback?code=1')).toBeNull();
     expect(parseWidgetLink('https://example.com')).toBeNull();
   });

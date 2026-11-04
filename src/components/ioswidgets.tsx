@@ -6,6 +6,7 @@ import { parseWidgetActions, parseWidgetLink, resolveWidgetActions, widgetSnapsh
 import { useCalendarEntries } from './calendar';
 import { openAssistant } from './assistant';
 import { useFocus } from './focus';
+import { useRest } from './rest';
 
 /**
  * Nur in der iOS-App: hält die Widgets auf dem Homescreen aktuell, übernimmt dort
@@ -15,8 +16,9 @@ export function useNativeWidgets() {
   const { data, add, update, remove } = useStore();
   const entries = useCalendarEntries();
   const focus = useFocus();
-  const latest = useRef({ data, entries, focus });
-  latest.current = { data, entries, focus };
+  const rest = useRest();
+  const latest = useRef({ data, entries, focus, rest });
+  latest.current = { data, entries, focus, rest };
   /** Bis zu diesem Zeitpunkt (ms) sind Aktionen aus dem Widget übernommen */
   const applied = useRef(0);
 
@@ -61,7 +63,12 @@ export function useNativeWidgets() {
       if (!link) return;
       if (link.type === 'page') location.hash = link.hash;
       else if (link.type === 'assistant') setTimeout(openAssistant, 300);
-      else {
+      else if (link.type === 'rest') {
+        location.hash = '#/training';
+        const { rest } = latest.current;
+        if (link.action === 'plus') rest.extend(30);
+        else rest.skip();
+      } else {
         location.hash = '#/fokus';
         const { focus } = latest.current;
         if (link.action === 'stop') focus.stop(true);

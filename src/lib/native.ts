@@ -41,12 +41,38 @@ export async function nativeNotice(title: string, body: string, tag?: string, hr
   }
 }
 
+/** Feste Kennung der Mitteilung „Satzpause vorbei“ (wird bei +30 s ersetzt, `replacePlanned` lässt sie stehen) */
+export const REST_NOTICE_ID = 7_300_001;
+
+/** Meldet das Ende der Satzpause beim System an – kommt auch bei gesperrtem iPhone */
+export async function planRestNotice(at: number, title: string, body: string): Promise<void> {
+  if (!isNativeApp() || (await nativePermission(false)) !== 'granted') return;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTICE_ID }] });
+    if (at > Date.now() + 1000) {
+      await LocalNotifications.schedule({ notifications: [{ id: REST_NOTICE_ID, title, body, schedule: { at: new Date(at), allowWhileIdle: true }, extra: { href: '#/training' } }] });
+    }
+  } catch {
+    // dann eben ohne Mitteilung
+  }
+}
+
+export async function cancelRestNotice(): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTICE_ID }] });
+  } catch {
+    // nichts geplant
+  }
+}
+
 /** Ersetzt alle geplanten Mitteilungen durch `plan`. */
 export async function replacePlanned(plan: PlannedNotice[]): Promise<void> {
   if (plan.length === 0 && (await nativePermission(false)) !== 'granted') return;
   if ((await nativePermission(plan.length > 0)) !== 'granted') return;
-  const pending = await LocalNotifications.getPending();
-  if (pending.notifications.length) await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) });
+  // Die Satzpause plant ihre Mitteilung selbst und bleibt stehen
+  const pending = (await LocalNotifications.getPending()).notifications.filter((n) => n.id !== REST_NOTICE_ID);
+  if (pending.length) await LocalNotifications.cancel({ notifications: pending.map((n) => ({ id: n.id })) });
   if (plan.length) {
     await LocalNotifications.schedule({
       notifications: plan.map((p) => ({ id: noticeId(`${p.tag}|${p.at}`), title: p.title, body: p.body, schedule: { at: new Date(p.at), allowWhileIdle: true }, extra: { href: p.href } })),
@@ -129,7 +155,8 @@ export interface FocusActivityState {
   icon: string;
   /** Farbe als #RRGGBB */
   color: string;
-  phase: 'fokus' | 'pause' | 'lange-pause';
+  /** satzpause = Pause zwischen zwei Sätzen beim Training */
+  phase: 'fokus' | 'pause' | 'lange-pause' | 'satzpause';
   /** Beginn und Ende der Phase (ms) */
   startAt: number;
   endAt: number;
@@ -138,6 +165,10 @@ export interface FocusActivityState {
   leftSeconds: number;
   round: number;
   rounds: number;
+  /** Satzpause: was als Nächstes kommt, z. B. „Als Nächstes: Bankdrücken · Satz 3 von 4“ */
+  detail?: string;
+  /** Satzpause: Ziel für den nächsten Satz, z. B. „Ziel: 62,5 kg × 8“ */
+  goal?: string;
 }
 
 /** Aus Siri, Kurzbefehlen oder der Aktionstaste – wartet, bis AntonOS es übernimmt */

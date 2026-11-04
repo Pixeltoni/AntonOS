@@ -2,7 +2,7 @@ import Foundation
 #if canImport(ActivityKit)
 import ActivityKit
 
-/// Live-Aktivität des Fokus-Timers (Sperrbildschirm und Dynamic Island).
+/// Live-Aktivität des Fokus-Timers und der Satzpause beim Training (Sperrbildschirm und Dynamic Island).
 /// Gehört zur App und zur Widget-Erweiterung – Felder gleich halten mit `FocusActivityState` in src/lib/native.ts.
 @available(iOS 16.1, *)
 struct FocusActivityAttributes: ActivityAttributes {
@@ -13,7 +13,7 @@ struct FocusActivityAttributes: ActivityAttributes {
         var icon: String
         /// Farbe #RRGGBB
         var colorHex: String
-        /// fokus, pause, lange-pause
+        /// fokus, pause, lange-pause oder satzpause
         var phase: String
         var startAt: Date
         var endAt: Date
@@ -22,6 +22,10 @@ struct FocusActivityAttributes: ActivityAttributes {
         var leftSeconds: Int
         var round: Int
         var rounds: Int
+        /// Satzpause: „Als Nächstes: Bankdrücken · Satz 3 von 4“
+        var detail: String?
+        /// Satzpause: „Ziel: 62,5 kg × 8“
+        var goal: String?
     }
 
     var name: String = "Fokus"

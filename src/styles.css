@@ -2457,3 +2457,39 @@ input[type='checkbox'], input[type='radio'], input[type='range'] { background: n
 .adm-bar em { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text); }
 .sheet-points { font-weight: 700; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--c) 75%, var(--text)); }
 .sheet-points small { color: var(--muted); font-weight: 500; }
+
+/* ---------- Training: Ziel heute, Sätze abhaken und Satzpause ---------- */
+:root { --lift-indigo: #5856D6; }
+:root[data-theme='dark'] { --lift-indigo: #7D7AFF; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --lift-indigo: #7D7AFF; } }
+.lift-goal { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem 0.6rem; font-size: 0.85rem; padding: 0.4rem 0.6rem; border-radius: 10px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+.lift-goal b { font-weight: 700; }
+.lift-goal-tag { font-size: 0.76rem; font-weight: 700; border-radius: 999px; padding: 0.1rem 0.5rem; background: var(--surface); color: var(--accent); white-space: nowrap; }
+.lift-goal.steigern { background: color-mix(in srgb, var(--ok) 11%, var(--surface)); }
+.lift-goal.steigern .lift-goal-tag { color: var(--ok); }
+.lift-goal.leichter { background: color-mix(in srgb, var(--lift-indigo) 12%, var(--surface)); }
+.lift-goal.leichter .lift-goal-tag { color: var(--lift-indigo); }
+.lift-deload { margin: 0; }
+.lift-set.live { grid-template-columns: 1.4rem minmax(0, 1fr) auto minmax(0, 1fr) 2.3rem 1.5rem; }
+.lift-done { width: 2.3rem; height: 2.3rem; min-height: 0; padding: 0; border-radius: 999px; display: grid; place-items: center; font-weight: 800; font-size: 1rem; color: var(--muted); background: var(--surface-2) !important; border: 1.5px solid var(--border) !important; }
+.lift-done.on { background: var(--ok) !important; border-color: var(--ok) !important; color: #fff; }
+.lift-set.done input { background: color-mix(in srgb, var(--ok) 9%, var(--surface)); }
+.lift-set.done .lift-set-no { background: var(--ok); color: #fff; }
+.lift-remove { opacity: 0.55; }
+.lift-rest-pick { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+.lift-rest-pick .segmented button { padding: 0.3rem 0.65rem; font-size: 0.85rem; }
+.lift-badge.running { background: #FF9F0A; }
+.lift-day-goal { font-weight: 600; }
+.lift-day-goal.up { color: var(--ok); }
+.lift-day-goal.lighter { color: var(--lift-indigo); }
+
+.rest-bar { --r: #FF9F0A; position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 0.4rem; padding: 0.6rem 0.75rem; border-radius: 14px; background: color-mix(in srgb, var(--r) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--r) 40%, var(--surface)); box-shadow: 0 8px 20px -12px rgb(0 0 0 / 0.4); }
+.rest-bar.compact { position: static; grid-column: 1 / -1; box-shadow: none; }
+.rest-top { display: flex; align-items: center; gap: 0.5rem; }
+.rest-time { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--r); letter-spacing: -0.02em; line-height: 1; }
+.rest-label { flex: 1; min-width: 0; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rest-btn { font-size: 0.8rem; font-weight: 600; min-height: 0; padding: 0.3rem 0.65rem; border-radius: 999px; background: var(--surface) !important; border: 1px solid color-mix(in srgb, var(--r) 35%, var(--border)) !important; color: var(--text); white-space: nowrap; }
+.rest-track { height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--r) 20%, var(--surface)); overflow: hidden; }
+.rest-track i { display: block; height: 100%; background: var(--r); border-radius: inherit; transition: width 0.25s linear; }
+.rest-next { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.15rem 0.75rem; color: var(--muted); }
+.rest-next b, .rest-goal { color: var(--text); font-weight: 600; }

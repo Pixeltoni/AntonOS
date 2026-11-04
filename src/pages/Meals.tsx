@@ -150,7 +150,8 @@ function WeekShoppingSheet({ items, onClose }: { items: Ingredient[]; onClose: (
   );
 }
 
-function WeekPlan({ anchor }: { anchor: DateStr }) {
+/** Essensplan einer Woche (auch in der Wochenplanung) */
+export function MealWeek({ anchor, title = 'Wochenplan', compact }: { anchor: DateStr; title?: string; compact?: boolean }) {
   const { data, remove } = useStore();
   const t = today();
   const days = weekDays(anchor);
@@ -160,10 +161,11 @@ function WeekPlan({ anchor }: { anchor: DateStr }) {
   const items = plannedIngredients(data.meals, data.recipes, upcoming);
   return (
     <Panel
-      title="Wochenplan"
+      title={title}
       actions={<button type="button" onClick={() => setShopping(true)} disabled={items.length === 0} title="Alle Zutaten der Woche auf die Einkaufsliste">Zutaten → Einkaufsliste</button>}
     >
-      <div className="meal-week">
+      <div className={`meal-week ${compact ? 'compact' : ''}`}>
+        {compact && <div className="meal-week-head" aria-hidden><span />{MEAL_SLOTS.map((s) => <span key={s.id}>{s.label}</span>)}</div>}
         {days.map((d) => (
           <div key={d} className={`meal-day ${d === t ? 'today' : ''} ${d < t ? 'past' : ''}`}>
             <div className="meal-day-name"><strong>{dayName(d)}</strong><span className="muted small">{parseDate(d).getDate()}.</span></div>
@@ -288,7 +290,7 @@ export function Meals() {
           <RecipeForm initial={blank()} onCancel={() => setAdding(false)} onSave={(r) => { const id = add('recipes', r); setAdding(false); location.hash = `#/essen/${id}`; }} />
         </Panel>
       )}
-      {tab === 'plan' ? <WeekPlan anchor={anchor} /> : <RecipeGallery />}
+      {tab === 'plan' ? <MealWeek anchor={anchor} /> : <RecipeGallery />}
     </>
   );
 }

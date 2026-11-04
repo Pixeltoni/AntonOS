@@ -89,6 +89,7 @@ export function demoData(): Data {
       { id: 'demo-z2', title: '3× pro Woche Sport', area: 'Gesundheit', why: 'Mehr Energie beim Lernen', deadline: null, progress: 50, results: [{ id: 'demo-kr3', kind: 'training', target: 3 }] },
       { id: 'demo-z3', title: 'Auslandssemester in Lissabon', area: 'Persönlich', why: 'Einmal woanders leben', deadline: addDays(t, 280), progress: 0, results: [{ id: 'demo-kr4', kind: 'spartopf', refId: 'demo-pot1' }, { id: 'demo-kr5', kind: 'projekt', refId: 'demo-p1' }] },
     ],
+    weekPlans: [],
     sessions: [
       { id: 'demo-s1', date: addDays(t, -1), minutes: 50, courseId: ana, distractions: 2 },
     ],

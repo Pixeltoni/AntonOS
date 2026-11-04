@@ -13,6 +13,8 @@ import { TaskList } from '../components/TaskList';
 import { RingsWidget } from '../components/rings';
 import { Icon, PAGE_ICONS } from '../components/icons';
 import { GoalsThisWeek } from '../components/goals';
+import { hasWeekCard, WeekCard } from '../components/weekplan';
+import { mondayOf, planFor, planningWeek, weekNumber } from '../lib/weekplan';
 import { DayPlanView } from '../components/dayplan';
 import { weekContributions } from '../lib/goals';
 import { MealsWidget } from './Meals';
@@ -82,7 +84,20 @@ function StoryViewer({ onClose }: { onClose: () => void }) {
   const week = weekReview(data, range.day, range.until);
   const prevWeeks = [1, 2, 3, 4].map((i) => weekReview(data, addDays(range.day, -7 * i), addDays(range.day, -7 * i + 6)));
   const weekLabel = `KW ${isoWeek(parseDate(range.day))}`;
-  const cards = useStoryCards(week, prevWeeks[0], headline(week, prevWeeks), weekLabel);
+  const storyCards = useStoryCards(week, prevWeeks[0], headline(week, prevWeeks), weekLabel);
+  const nextWeek = planningWeek(t);
+  const cards = planFor(data.weekPlans, nextWeek)?.doneAt ? storyCards : [...storyCards, {
+    key: 'planen',
+    className: 'story-6',
+    body: (
+      <>
+        <span className="story-kicker">🗓️ {nextWeek === mondayOf(t) ? 'Diese Woche' : 'Nächste Woche'}</span>
+        <h2>Bereit für KW {weekNumber(nextWeek)}?</h2>
+        <p>Termine ansehen, drei Wochenziele wählen, Aufgaben verteilen, Training und Essen einplanen, Budget bestätigen – in fünf Schritten.</p>
+        <a className="story-cta" href="#/wochenplan" onClick={(e) => { e.stopPropagation(); onClose(); }}>Woche planen</a>
+      </>
+    ),
+  }];
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -98,7 +113,7 @@ function StoryViewer({ onClose }: { onClose: () => void }) {
   const prev = () => setIndex(Math.max(0, index - 1));
 
   useEffect(() => {
-    if (paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (paused || cards[index]?.key === 'planen' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const id = setTimeout(next, 7000);
     return () => clearTimeout(id);
   }); // eslint-disable-line react-hooks/exhaustive-deps
@@ -233,6 +248,12 @@ export function Today() {
             <RingsWidget variant="standard" />
           </Section>
         );
+      case 'woche':
+        return hasWeekCard(data.weekPlans, t) ? (
+          <Section title="Deine Woche" link={['#/wochenplan', planFor(data.weekPlans, mondayOf(t))?.doneAt ? 'Plan' : 'Planen']}>
+            <WeekCard />
+          </Section>
+        ) : null;
       case 'ziele':
         return weekContributions(data.goals, data, t).length ? (
           <Section title="Für deine Ziele diese Woche" link={['#/ziele', 'Ziele']}>

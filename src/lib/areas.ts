@@ -121,7 +121,7 @@ export function storyWeek(t: DateStr): { day: DateStr; until: DateStr; current: 
 }
 
 export type DayPhase = 'morgen' | 'tag' | 'abend';
-export type TodaySection = 'abschluss' | 'wecker' | 'termin' | 'aufgaben' | 'ringe' | 'ziele' | 'essen' | 'demnaechst';
+export type TodaySection = 'abschluss' | 'wecker' | 'termin' | 'aufgaben' | 'woche' | 'ringe' | 'ziele' | 'essen' | 'demnaechst';
 
 /**
  * Tageszeit für die Heute-Seite: morgens bis 11 Uhr, abends ab 18 Uhr
@@ -139,9 +139,9 @@ export function dayPhase(now: Date, dayCloseTime = '21:30'): DayPhase {
 
 /** Reihenfolge der Abschnitte auf „Heute“ – morgens der Plan, abends der Abschluss oben */
 export function todaySections(phase: DayPhase): TodaySection[] {
-  if (phase === 'morgen') return ['termin', 'aufgaben', 'ringe', 'ziele', 'essen', 'demnaechst'];
-  if (phase === 'abend') return ['abschluss', 'wecker', 'ringe', 'ziele', 'aufgaben', 'termin', 'demnaechst'];
-  return ['termin', 'aufgaben', 'ringe', 'ziele', 'essen', 'demnaechst'];
+  if (phase === 'morgen') return ['termin', 'aufgaben', 'woche', 'ringe', 'ziele', 'essen', 'demnaechst'];
+  if (phase === 'abend') return ['abschluss', 'wecker', 'woche', 'ringe', 'ziele', 'aufgaben', 'termin', 'demnaechst'];
+  return ['termin', 'aufgaben', 'woche', 'ringe', 'ziele', 'essen', 'demnaechst'];
 }
 
 export function greeting(now: Date): string {

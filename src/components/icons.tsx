@@ -1,6 +1,6 @@
 import {
   MoonStar,
-  AlarmClock, BookOpen, Cake, Calendar, CreditCard, Plane, Users, UtensilsCrossed, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
+  AlarmClock, BookOpen, Cake, Calendar, CalendarRange, CreditCard, Plane, Users, UtensilsCrossed, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
   LayoutGrid, ListChecks, MessageCircleHeart, Music, NotebookPen, Pencil, Receipt, Repeat, Rocket, Search, Settings, ShoppingCart,
   PawPrint, Plus, Smile, Sparkles, Sun, Target, Timer, Tv, Wallet, WandSparkles, Zap, type LucideIcon } from 'lucide-react';
 import type { NavItem, WidgetId } from '../types';
@@ -17,6 +17,7 @@ export const PAGE_ICONS: Record<string, LucideIcon> = {
   gewohnheiten: Repeat,
   wecker: AlarmClock,
   rueckblick: Smile,
+  wochenplan: CalendarRange,
   abend: MoonStar,
   ziele: Target,
   projekte: Rocket,

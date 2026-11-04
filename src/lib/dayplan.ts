@@ -178,7 +178,7 @@ export function findGaps(blocks: Pick<PlanBlock, 'start' | 'end'>[], from: numbe
   return gaps;
 }
 
-const taskMinutes = (t: Pick<Task, 'estimate'>) => (t.estimate && t.estimate > 0 ? t.estimate : DEFAULT_TASK_MINUTES);
+export const taskMinutes = (t: Pick<Task, 'estimate'>) => (t.estimate && t.estimate > 0 ? t.estimate : DEFAULT_TASK_MINUTES);
 
 /** Der ganze Tag als Zeitleiste. `entries` = Kalendereinträge (mit Lernplan), wie `useCalendarEntries` sie liefert. */
 export function buildDayPlan(src: PlanSources, entries: CalendarEntry[], day: DateStr): DayPlan {

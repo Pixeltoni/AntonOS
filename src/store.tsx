@@ -22,6 +22,7 @@ export const emptyData = (): Data => ({
   grades: [],
   sheets: [],
   goals: [],
+  weekPlans: [],
   sessions: [],
   projects: [],
   habits: [],

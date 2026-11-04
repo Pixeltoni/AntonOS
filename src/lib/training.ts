@@ -152,7 +152,7 @@ export function describeComparison(c: Comparison): string {
  * Welcher Tag ist dran? Der, der am längsten nicht (oder noch nie) trainiert wurde.
  * Separate Trainings (z. B. Körpertraining) zählen dabei nicht mit.
  */
-export function nextTrainingDay(allDays: TrainingDay[], workouts: Workout[]): TrainingDay | null {
+export function nextTrainingDay(allDays: TrainingDay[], workouts: Pick<Workout, 'done' | 'planDayId' | 'date'>[]): TrainingDay | null {
   const plan = rotationDays(allDays);
   if (plan.length === 0) return null;
   const last = (id: ID) => workouts.filter((w) => w.done && w.planDayId === id).reduce<DateStr>((m, w) => (w.date > m ? w.date : m), '');

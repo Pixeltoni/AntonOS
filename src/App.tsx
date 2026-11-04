@@ -28,6 +28,7 @@ import { Tasks } from './pages/Tasks';
 import { Notes } from './pages/Notes';
 import { Shopping } from './pages/Shopping';
 import { Review, useWeeklyReviewReminder } from './pages/Review';
+import { WeekPlanner } from './pages/WeekPlan';
 import { Flashcards } from './pages/Flashcards';
 import { Exams } from './pages/Exams';
 import { Grades } from './pages/Grades';
@@ -115,6 +116,8 @@ function Page({ route }: { route: string[] }) {
       return <Shopping />;
     case 'rueckblick':
       return <Review />;
+    case 'wochenplan':
+      return <WeekPlanner key={param ?? ''} param={param} />;
     case 'abend':
       return <Evening />;
     case 'schauen':

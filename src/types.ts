@@ -235,6 +235,39 @@ export interface KeyResult {
   label?: string;
 }
 
+/** Woran sich ein Wochenziel selbst misst: Trainings, Tage einer Gewohnheit oder Lernminuten (eines Kurses) in der Woche */
+export interface FocusMeasure {
+  kind: 'training' | 'gewohnheit' | 'lernen';
+  /** Gewohnheit bzw. Kurs (beim Lernen null = alle Kurse) */
+  refId?: ID | null;
+  /** Trainings, Tage oder Minuten */
+  target: number;
+}
+
+/** Eines von höchstens drei Wochenzielen aus der Wochenplanung */
+export interface WeekFocus {
+  id: ID;
+  text: string;
+  icon?: string;
+  /** Von Hand abgehakt (bei `measure` zählt zusätzlich der gemessene Stand) */
+  done: boolean;
+  measure?: FocusMeasure;
+  /** Vorschlag kam aus diesem Ziel */
+  goalId?: ID;
+}
+
+/** Wochenplanung am Sonntag: Wochenziele, Budget und ob die Woche „steht“ */
+export interface WeekPlan {
+  id: ID;
+  /** Montag der geplanten Woche */
+  week: DateStr;
+  focus: WeekFocus[];
+  /** Bestätigtes Wochenbudget für den Alltag (ohne Miete, Abos und Sparen); leer = keins */
+  budget?: number | null;
+  /** Tag, an dem die Planung abgeschlossen wurde */
+  doneAt?: DateStr | null;
+}
+
 export type ProjectStatus = 'geplant' | 'aktiv' | 'pausiert' | 'abgeschlossen';
 
 export interface Project {
@@ -867,6 +900,8 @@ export interface Data {
   /** Übungsblätter für die Klausurzulassung */
   sheets: ExerciseSheet[];
   goals: Goal[];
+  /** Wochenplanung (Wochenziele und Budget je Woche) */
+  weekPlans: WeekPlan[];
   sessions: FocusSession[];
   projects: Project[];
   habits: Habit[];

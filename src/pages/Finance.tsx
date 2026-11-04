@@ -334,7 +334,7 @@ function PotCard({ pot }: { pot: SavingsPot }) {
           const withdraw = mode === 'raus';
           const value = withdraw ? -Math.abs(v) : Math.abs(v);
           update('pots', pot.id, { saved: Math.max(0, Math.round((pot.saved + value) * 100) / 100) });
-          const base = { amount: Math.abs(v), category: 'Sparen', account: 'Sparkonto', date: today() };
+          const base = { amount: Math.abs(v), category: 'Sparen', account: 'Sparkonto', date: today(), potId: pot.id };
           // vom Konto = Ausgabe (zählt zum Budget), Einnahme = Geld kommt von außen (z. B. Geschenk), Entnehmen = zurück aufs Konto
           if (mode === 'konto') add('transactions', { ...base, type: 'Ausgabe', description: `Spartopf: ${pot.name}` });
           else if (mode === 'einnahme') add('transactions', { ...base, type: 'Einnahme', description: `${note.trim() || 'Einnahme'} → Spartopf ${pot.name}` });

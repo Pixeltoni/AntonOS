@@ -82,8 +82,12 @@ export function demoData(): Data {
       { id: 'demo-sh3', courseId: ana, number: 3, due: addDays(t, 2), points: null, max: 20, taskId: 'demo-t1' },
     ],
     goals: [
-      { id: 'demo-z1', title: 'Analysis-Klausur mit 2,0 oder besser', area: 'Studium', why: 'Grundlage für alle weiteren Mathe-Module', deadline: addDays(t, 40), progress: 30 },
-      { id: 'demo-z2', title: '3× pro Woche Sport', area: 'Gesundheit', why: 'Mehr Energie beim Lernen', deadline: null, progress: 50 },
+      {
+        id: 'demo-z1', title: 'Analysis-Klausur mit 2,0 oder besser', area: 'Studium', why: 'Grundlage für alle weiteren Mathe-Module', deadline: addDays(t, 40), progress: 30,
+        results: [{ id: 'demo-kr1', kind: 'note', refId: ana, target: 2 }, { id: 'demo-kr2', kind: 'karten', refId: ana }],
+      },
+      { id: 'demo-z2', title: '3× pro Woche Sport', area: 'Gesundheit', why: 'Mehr Energie beim Lernen', deadline: null, progress: 50, results: [{ id: 'demo-kr3', kind: 'training', target: 3 }] },
+      { id: 'demo-z3', title: 'Auslandssemester in Lissabon', area: 'Persönlich', why: 'Einmal woanders leben', deadline: addDays(t, 280), progress: 0, results: [{ id: 'demo-kr4', kind: 'spartopf', refId: 'demo-pot1' }, { id: 'demo-kr5', kind: 'projekt', refId: 'demo-p1' }] },
     ],
     sessions: [
       { id: 'demo-s1', date: addDays(t, -1), minutes: 50, courseId: ana, distractions: 2 },

@@ -366,7 +366,7 @@ export function resolveWidgetActions(data: Pick<Data, 'tasks' | 'shopping' | 'ha
     const card = reviewed.get(a.id) ?? data.cards.find((c) => c.id === a.id);
     if (card) reviewed.set(a.id, review(card, a.done ? 'gut' : 'nochmal', a.day));
   }
-  for (const [id, c] of reviewed) ops.push({ op: 'update', collection: 'cards', id, patch: { interval: c.interval, ease: c.ease, reps: c.reps, lapses: c.lapses, due: c.due } });
+  for (const [id, c] of reviewed) ops.push({ op: 'update', collection: 'cards', id, patch: { interval: c.interval, ease: c.ease, reps: c.reps, lapses: c.lapses, due: c.due, reviewed: c.reviewed } });
   for (const a of last.values()) {
     if (a.kind === 'task') {
       const task = data.tasks.find((t) => t.id === a.id);

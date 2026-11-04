@@ -5,6 +5,8 @@ import { formatDate, relativeLabel, today } from '../lib/dates';
 import { Cover, ImageInput } from '../components/widgets';
 import { Empty, PageHeader, Progress } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
+import { GoalResults } from '../components/goals';
+import { goalProgress } from '../lib/goals';
 
 const AREAS: { area: GoalArea; icon: string }[] = [
   { area: 'Studium', icon: '🎓' },
@@ -19,6 +21,7 @@ export function VisionBoard({ variant = 'standard' }: { variant?: WidgetVariant 
   const { data } = useStore();
   if (data.goals.length === 0) return <Empty>Noch keine Ziele. <a href="#/ziele">Anlegen →</a></Empty>;
   const goals = variant === 'kompakt' ? data.goals.slice(0, 4) : data.goals;
+  const t = today();
   return (
     <div className={`vision ${variant}`}>
       {goals.map((g) => (
@@ -27,7 +30,7 @@ export function VisionBoard({ variant = 'standard' }: { variant?: WidgetVariant 
           <span>
             {g.title}
             {variant === 'detail' && g.why && <small>{g.why}</small>}
-            {variant === 'detail' && <Progress value={g.progress} />}
+            {variant === 'detail' && <Progress value={goalProgress(g, data, t)} />}
           </span>
         </a>
       ))}
@@ -84,31 +87,41 @@ export function Goals() {
           return (
             <section key={a} className="board-col">
               <h2>{icon} {a}</h2>
-              {goals.map((g) => (
-                <article key={g.id} className={`goal ${g.progress >= 100 ? 'done' : ''}`}>
+              {goals.map((g) => {
+                const measured = (g.results ?? []).length > 0;
+                const progress = goalProgress(g, data, t);
+                return (
+                <article key={g.id} className={`goal ${progress >= 100 ? 'done' : ''}`}>
                   {g.image && <Cover src={g.image} seed={g.id} />}
                   <div className="row between">
                     <strong>{g.title}</strong>
-                    <button className="icon" onClick={() => remove('goals', g.id)} aria-label="Löschen" title="Löschen">×</button>
+                    <button className="icon" onClick={() => confirm(`Ziel „${g.title}“ löschen?`) && remove('goals', g.id)} aria-label="Löschen" title="Löschen">×</button>
                   </div>
                   {g.why && <p className="muted small">{g.why}</p>}
                   {g.deadline && <p className="small" title={formatDate(g.deadline)}>Bis {relativeLabel(g.deadline, t)}</p>}
-                  <Progress value={g.progress} />
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={g.progress}
-                    onChange={(e) => update('goals', g.id, { progress: Number(e.target.value) })}
-                    aria-label={`Fortschritt ${g.title}`}
-                  />
+                  <div className="goal-progress">
+                    <Progress value={progress} />
+                    <span className="small">{progress} %{measured ? ' · rechnet sich selbst' : ''}</span>
+                  </div>
+                  {!measured && (
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={g.progress}
+                      onChange={(e) => update('goals', g.id, { progress: Number(e.target.value) })}
+                      aria-label={`Fortschritt ${g.title}`}
+                    />
+                  )}
+                  <GoalResults goal={g} />
                   <details>
                     <summary className="muted small">Bild ändern</summary>
                     <ImageInput value={g.image ?? ''} onChange={(v) => update('goals', g.id, { image: v })} />
                   </details>
                 </article>
-              ))}
+                );
+              })}
             </section>
           );
         })}

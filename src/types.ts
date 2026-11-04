@@ -171,6 +171,8 @@ export interface Card {
   reps: number;
   lapses: number;
   due: DateStr;
+  /** Zuletzt wiederholt (für „diese Woche gelernt“) */
+  reviewed?: DateStr;
   /** Aus dieser Notiz erstellt */
   noteId?: ID;
 }
@@ -206,9 +208,29 @@ export interface Goal {
   area: GoalArea;
   why: string;
   deadline: DateStr | null;
+  /** Fortschritt in Prozent, von Hand (gilt nur ohne Schlüsselergebnisse) */
   progress: number;
   /** Bild-URL oder Data-URL für das Vision Board */
   image?: string;
+  /** Messbare Schlüsselergebnisse – der Fortschritt rechnet sich daraus selbst */
+  results?: KeyResult[];
+}
+
+/** Woran sich ein Ziel misst – AntonOS liest den Stand aus den eigenen Daten */
+export type KeyResultKind = 'spartopf' | 'karten' | 'training' | 'note' | 'schnitt' | 'projekt' | 'gewohnheit' | 'manuell';
+
+export interface KeyResult {
+  id: ID;
+  kind: KeyResultKind;
+  /** Spartopf, Kurs (Lernkarten, Note), Projekt oder Gewohnheit; bei Lernkarten null = alle Karten */
+  refId?: ID | null;
+  /** Ziel: Trainings bzw. Tage pro Woche, Wunschnote, Zielwert (eigener Wert) */
+  target?: number;
+  /** Nur beim eigenen Wert: aktueller Stand und Einheit */
+  current?: number;
+  unit?: string;
+  /** Eigener Name (leer = automatisch) */
+  label?: string;
 }
 
 export type ProjectStatus = 'geplant' | 'aktiv' | 'pausiert' | 'abgeschlossen';
@@ -260,6 +282,8 @@ export interface Transaction {
   date: DateStr;
   /** Gehört zu dieser Reise (Reisebudget) */
   tripId?: ID;
+  /** Buchung in einen bzw. aus einem Spartopf */
+  potId?: ID;
 }
 
 /** Wiederkehrende Zahlung (Miete, Abos, Gehalt), wird jeden Monat automatisch gebucht */

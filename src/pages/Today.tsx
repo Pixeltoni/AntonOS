@@ -12,6 +12,8 @@ import { useCalendarEntries } from '../components/calendar';
 import { TaskList } from '../components/TaskList';
 import { RingsWidget } from '../components/rings';
 import { Icon, PAGE_ICONS } from '../components/icons';
+import { GoalsThisWeek } from '../components/goals';
+import { weekContributions } from '../lib/goals';
 import { MealsWidget } from './Meals';
 import { MoodCheckIn, useStoryCards } from './Review';
 
@@ -208,6 +210,12 @@ export function Today() {
             <RingsWidget variant="standard" />
           </Section>
         );
+      case 'ziele':
+        return weekContributions(data.goals, data, t).length ? (
+          <Section title="Für deine Ziele diese Woche" link={['#/ziele', 'Ziele']}>
+            <GoalsThisWeek />
+          </Section>
+        ) : null;
       case 'essen':
         return mealsToday ? (
           <Section title="Essen" link={['#/essen', 'Plan']}>

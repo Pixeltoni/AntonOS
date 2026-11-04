@@ -35,7 +35,7 @@ export function review(card: Card, rating: Rating, on: DateStr): Card {
     reps += 1;
   }
 
-  return { ...card, interval, ease: Math.round(ease * 100) / 100, reps, lapses, due: addDays(on, interval) };
+  return { ...card, interval, ease: Math.round(ease * 100) / 100, reps, lapses, due: addDays(on, interval), reviewed: on };
 }
 
 export function isDue(card: Card, on: DateStr): boolean {

@@ -159,11 +159,11 @@ describe('resolveWidgetActions', () => {
   it('Lernkarten: jede Bewertung zählt der Reihe nach', () => {
     // Gewusst: wie „Gut“ in der Lern-Sitzung
     expect(resolveWidgetActions(data, [act('card', 'k2', true)])).toEqual([
-      { op: 'update', collection: 'cards', id: 'k2', patch: { interval: 15, ease: 2.5, reps: 3, lapses: 0, due: '2026-11-17' } },
+      { op: 'update', collection: 'cards', id: 'k2', patch: { interval: 15, ease: 2.5, reps: 3, lapses: 0, due: '2026-11-17', reviewed: DAY } },
     ]);
     // Erst „Nochmal“, später doch gewusst
     const [op] = resolveWidgetActions(data, [act('card', 'k1', true, 2), act('card', 'k1', false, 1)]);
-    expect(op).toEqual({ op: 'update', collection: 'cards', id: 'k1', patch: { interval: 1, ease: 2.3, reps: 1, lapses: 1, due: '2026-11-03' } });
+    expect(op).toEqual({ op: 'update', collection: 'cards', id: 'k1', patch: { interval: 1, ease: 2.3, reps: 1, lapses: 1, due: '2026-11-03', reviewed: DAY } });
     expect(resolveWidgetActions(data, [act('card', 'weg', true)])).toEqual([]);
   });
 

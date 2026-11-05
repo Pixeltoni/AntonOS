@@ -1014,7 +1014,8 @@ body:has(.tile.dragging) { cursor: grabbing; user-select: none; }
 .note-tools button { border: 0; background: transparent; border-radius: 8px; padding: 0.35rem 0.6rem; color: var(--note-accent); font-size: 0.9rem; }
 .note-tools button:hover { background: var(--border); }
 .note-tools button.on { background: #FFE9A8; color: #1C1C1E; }
-.note-tools .note-done { font-weight: 700; }
+.note-done { border: 0; background: transparent; border-radius: 8px; padding: 0.35rem 0.6rem; color: var(--note-accent); font-size: 0.9rem; font-weight: 700; white-space: nowrap; }
+.note-done:hover { background: var(--border); }
 .note-meta { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
 .note-meta select { font-size: 0.8rem; padding: 0.15rem 0.4rem; }
 .note-title { font-size: 1.7rem; font-weight: 800; border: 0 !important; background: transparent !important; padding: 0; box-shadow: none !important; }
@@ -1035,7 +1036,8 @@ body:has(.tile.dragging) { cursor: grabbing; user-select: none; }
 .note-links { display: flex; gap: 0.5rem; align-items: center; background: var(--bg); border-radius: 12px; padding: 0.6rem 0.8rem; font-size: 0.88rem; }
 .note-footer { display: flex; justify-content: flex-end; padding-top: 0.5rem; }
 .note-footer button { font-size: 0.85rem; }
-main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
+/* Nur am großen Bildschirm – am Handy braucht main oben die Notch-Lücke und unten Platz für die Tab-Leiste */
+@media (min-width: 801px) { main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; } }
 
 @media (max-width: 1100px) {
   .notes-app { grid-template-columns: 250px minmax(0, 1fr); }
@@ -1053,8 +1055,11 @@ main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
   .notes-app.has-note .notes-folders, .notes-app.has-note .notes-list { display: none; }
   .notes-app.has-note .notes-detail { display: block; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
   .note-back { display: inline-block; white-space: nowrap; }
-  .note-toolbar { flex-wrap: nowrap; }
-  .note-tools { flex-wrap: nowrap; gap: 0; }
+  /* Oben „‹ Notizen“ und „Fertig“, darunter die Werkzeuge über die ganze Breite – passt auch aufs schmale iPhone */
+  .note-toolbar { flex-wrap: wrap; row-gap: 0.2rem; }
+  .note-back { order: 1; }
+  .note-done { order: 2; margin-left: auto; padding-right: 0; }
+  .note-tools { order: 3; flex: 1 1 100%; flex-wrap: nowrap; justify-content: space-between; gap: 0; margin-left: 0; }
   .note-tool-label { display: none; }
   .note-editor { padding: 0.5rem 1rem 1.5rem; }
   .note-tools button { padding: 0.35rem 0.45rem; }
@@ -1265,7 +1270,7 @@ main:has(.notes-app) { padding-top: 24px; padding-bottom: 24px; }
   .smart-stack-dots button::after, .story-dots button::after { content: ''; position: absolute; inset: -12px -6px; }
   .smart-stack-dots, .story-dots { gap: 12px; }
   .page-header .row button, .page-header .row .button { min-height: 40px; min-width: 40px; }
-  .note-tools button { min-height: 40px; min-width: 36px; }
+  .note-tools button, .note-done { min-height: 40px; min-width: 36px; }
   .edit-bar button, .edit-bar select { min-height: 38px; }
   .edit-controls { display: flex; flex-wrap: wrap; gap: 6px; }
   .edit-controls select { flex: 1 1 130px; }

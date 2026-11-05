@@ -1,3 +1,4 @@
+import Foundation
 import ManagedSettings
 
 /// Knöpfe auf dem Sperrbildschirm der Ablenkungs-Sperre: „Zurück zum Fokus“ schließt die App.

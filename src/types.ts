@@ -742,6 +742,10 @@ export type ThemeMode = 'system' | 'hell' | 'dunkel';
 
 export interface Appearance {
   theme: ThemeMode;
+  /** Eigenes Hintergrundbild (Link oder hochgeladen als data:-URL), leer = keins */
+  image: string;
+  /** Schleier über dem Bild in Prozent (0–80), damit Schrift lesbar bleibt */
+  dim: number;
 }
 
 export interface NavItem {

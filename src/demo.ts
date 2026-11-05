@@ -24,7 +24,7 @@ export const defaultSemester = (): SemesterSettings => ({ start: '', end: '', re
 export const defaultFinance = (): FinanceSettings => ({ budget: 0, categoryBudgets: [], balanceCorrections: [] });
 
 export function defaultAppearance(): Appearance {
-  return { theme: 'system' };
+  return { theme: 'system', image: '', dim: 35 };
 }
 
 /** Beispieldaten für den ersten Start, damit man sofort sieht, wie alles zusammenspielt. */

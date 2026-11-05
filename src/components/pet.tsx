@@ -34,6 +34,22 @@ async function save(pet: PetState) {
   if (isNativeApp()) await AntonWidgets.setPet(pet).catch(() => undefined);
 }
 
+/** Knubbels Zustand nur lesen (ohne ein Ei auszubrüten) – für den Hinweis auf „Bereiche“ */
+export function usePetPeek(): PetState | null {
+  const [pet, setPet] = useState<PetState | null>(readLocal);
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    let alive = true;
+    AntonWidgets.getPet()
+      .then((raw) => alive && setPet(parsePet(raw) ?? readLocal()))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return pet;
+}
+
 /** Knubbels Zustand; lädt beim Zurückkehren in die App neu (vielleicht wurde im Widget gefüttert) */
 export function usePet() {
   const [pet, setPet] = useState<PetState | null>(null);

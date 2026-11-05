@@ -8,6 +8,11 @@ import { nextAlarm } from './alarm';
 import { daysLabel, upcomingBirthdays } from './people';
 import { tripPhase } from './trips';
 import { ranToday, routineStreak } from './routines';
+import { onDay, type CalendarEntry } from './calendar';
+import { goalProgress } from './goals';
+import { formatGrade, summary } from './grades';
+import { weekPrompt } from './weekplan';
+import type { PetMood } from './pet';
 
 /** Feste Farbe je Bereich (wie die Kategorien in Apple Health) */
 export const AREA_COLORS: Record<string, string> = {
@@ -54,8 +59,19 @@ export function normalizeTabs(stored: unknown, known: string[]): string[] {
 
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
+/** Was die Bereiche-Seite zusätzlich kennt (Kalender mit Vorlesungen, Knubbels Laune) */
+export interface HintExtras {
+  entries?: CalendarEntry[];
+  pet?: PetMood | null;
+}
+
+const PET_HINTS: Record<PetMood, string> = {
+  essen: 'frisst gerade', party: 'satt und froh', froh: 'gut gelaunt', normal: 'bummelt herum', hunger: 'hat Hunger',
+  traurig: 'sehr hungrig', krank: 'ist krank', tot: 'braucht ein neues Ei', schlaf: 'schläft',
+};
+
 /** Kurzer Stand je Seite für die Bereichs-Kacheln (fehlt = nichts Besonderes) */
-export function areaHints(data: Data, t: DateStr, now: Date): Record<string, string> {
+export function areaHints(data: Data, t: DateStr, now: Date, extras: HintExtras = {}): Record<string, string> {
   const hints: Record<string, string> = {};
   const open = listTasks(data.tasks).filter((x) => x.status !== 'erledigt');
   const due = open.filter((x) => x.due !== null && x.due <= t).length;
@@ -113,7 +129,191 @@ export function areaHints(data: Data, t: DateStr, now: Date): Record<string, str
   if (data.notes.length) hints.notizen = `${data.notes.length} ${data.notes.length === 1 ? 'Notiz' : 'Notizen'}`;
   const meal = data.meals?.find((m) => m.date === t);
   if (meal) hints.essen = 'heute geplant';
+
+  // Kalender und Kurse: nächster Eintrag heute (Vorlesungen kommen aus dem Stundenplan)
+  const time = hhmm(now);
+  const later = (extras.entries ?? []).filter((e) => e.time && e.time > time && onDay(e, t)).sort((a, b) => a.time.localeCompare(b.time));
+  const nextEvent = later.find((e) => e.kind === 'event' || e.kind === 'lecture');
+  if (nextEvent) hints.kalender = `${nextEvent.label} ${nextEvent.time}`;
+  const lecture = later.find((e) => e.kind === 'lecture');
+  if (lecture) hints.kurse = `${lecture.label} ${lecture.time}`;
+
+  const focus = data.sessions.filter((s) => s.date === t).reduce((sum, s) => sum + s.minutes, 0);
+  if (focus) hints.fokus = `${focus} Min heute`;
+
+  const goals = data.goals.filter((g) => !g.deadline || g.deadline >= t);
+  if (goals.length) {
+    const avg = Math.round(goals.reduce((sum, g) => sum + goalProgress(g, data, t), 0) / goals.length);
+    hints.ziele = `${goals.length} ${goals.length === 1 ? 'Ziel' : 'Ziele'}, ${avg} %`;
+  }
+
+  const avg = summary(data.courses, data.grades).average;
+  if (avg !== null) hints.noten = `Schnitt ${formatGrade(avg, 1)}`;
+
+  const watching = data.media.filter((m) => m.kind === 'Serie' || m.kind === 'Film');
+  const running = watching.filter((m) => m.status === 'läuft');
+  const planned = watching.filter((m) => m.status === 'geplant').length;
+  if (running.length) hints.schauen = running.length === 1 ? `${running[0].title} läuft` : `${running.length} laufen`;
+  else if (planned) hints.schauen = `${planned} auf der Liste`;
+
+  const book = data.media.find((m) => (m.kind === 'Buch' || m.kind === 'Hörbuch') && m.status === 'läuft');
+  if (book) hints.lesen = book.progress ? `${book.title}, ${book.progress}` : book.title;
+
+  if (data.albums.length) hints.alben = `${data.albums.length} ${data.albums.length === 1 ? 'Album' : 'Alben'}`;
+
+  if (weekPrompt(data.weekPlans, t).plan) hints.wochenplan = 'jetzt planen';
+
+  const close = data.settings.dayClose;
+  if (close?.enabled) hints.abend = close.last === t ? 'heute erledigt' : `ab ${close.time}`;
+
+  if (extras.pet) hints.knubbel = PET_HINTS[extras.pet];
   return hints;
+}
+
+/** Zahl als Abzeichen oben rechts auf der Kachel; `text` ersetzt dann den Hinweis */
+export interface AreaBadge {
+  count: number;
+  text: string;
+}
+
+/** Abzeichen wie bei iOS-Apps: nur, wo wirklich etwas zu tun ist */
+export function areaBadges(data: Data, t: DateStr): Record<string, AreaBadge> {
+  const badges: Record<string, AreaBadge> = {};
+  const due = listTasks(data.tasks).filter((x) => x.status !== 'erledigt' && x.due !== null && x.due <= t).length;
+  if (due) badges.aufgaben = { count: due, text: 'fällig' };
+  const cards = data.cards.filter((c) => isDue(c, t)).length;
+  if (cards) badges.lernen = { count: cards, text: cards === 1 ? 'Karte fällig' : 'Karten fällig' };
+  const shopping = data.shopping.filter((s) => !s.done).length;
+  if (shopping) badges.einkauf = { count: shopping, text: 'auf der Liste' };
+  const open = data.habits.filter((h) => !isHabitDone(data.habitLogs, h, t)).length;
+  if (open) badges.gewohnheiten = { count: open, text: 'noch offen heute' };
+  return badges;
+}
+
+/** Ab so vielen fälligen Karten wird „Lernkarten“ groß */
+export const URGENT_CARDS = 10;
+
+/** Seiten mit Dringendem – ihre Kacheln werden doppelt breit */
+export function areaUrgent(data: Data, t: DateStr, now: Date): string[] {
+  const urgent: string[] = [];
+  if (listTasks(data.tasks).some((x) => x.status !== 'erledigt' && x.due !== null && x.due <= t)) urgent.push('aufgaben');
+  if (data.cards.filter((c) => isDue(c, t)).length >= URGENT_CARDS) urgent.push('lernen');
+  if (data.exams.some((e) => e.date >= t && daysBetween(t, e.date) <= 7)) urgent.push('pruefungen');
+  const alarm = nextAlarm(data.alarms, now);
+  if (alarm && alarm.at.getTime() - now.getTime() <= 12 * 3600_000) urgent.push('wecker');
+  if (upcomingBirthdays(data.people, t, 1).length) urgent.push('menschen');
+  if (data.trips.some((x) => x.end >= t && x.start <= addDays(t, 2))) urgent.push('reisen');
+  return urgent;
+}
+
+/** Eine Kennzahl im Tagesüberblick oben auf „Bereiche“ (das Symbol der Seite sagt, wozu) */
+export interface AreaStat {
+  path: string;
+  value: string;
+  label: string;
+}
+
+/** Bis zu vier Kennzahlen für den Überblick; leere fallen weg */
+export function areaSummary(data: Data, t: DateStr, now: Date): AreaStat[] {
+  const stats: AreaStat[] = [];
+  const open = listTasks(data.tasks).filter((x) => x.status !== 'erledigt');
+  const due = open.filter((x) => x.due !== null && x.due <= t).length;
+  if (open.length) stats.push({ path: 'aufgaben', value: String(due || open.length), label: due ? 'fällig' : 'offen' });
+  const month = monthTotals(data.transactions, t.slice(0, 7));
+  if (month.expenses) {
+    stats.push({ path: 'finanzen', value: `${Math.round(month.expenses).toLocaleString('de-DE')} €`, label: 'ausgegeben' });
+  }
+  const alarm = nextAlarm(data.alarms, now);
+  if (alarm) {
+    const days = daysBetween(t, `${alarm.at.getFullYear()}-${String(alarm.at.getMonth() + 1).padStart(2, '0')}-${String(alarm.at.getDate()).padStart(2, '0')}`);
+    stats.push({ path: 'wecker', value: hhmm(alarm.at), label: days === 0 ? 'heute' : days === 1 ? 'morgen' : alarm.at.toLocaleDateString('de-DE', { weekday: 'long' }) });
+  }
+  const cards = data.cards.filter((c) => isDue(c, t)).length;
+  if (cards) stats.push({ path: 'lernen', value: String(cards), label: cards === 1 ? 'Karte' : 'Karten' });
+  if (data.habits.length) {
+    const done = data.habits.filter((h) => isHabitDone(data.habitLogs, h, t)).length;
+    stats.push({ path: 'gewohnheiten', value: `${done}/${data.habits.length}`, label: 'erledigt' });
+  }
+  return stats.slice(0, 4);
+}
+
+const hexToHsl = (hex: string): [number, number, number] => {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s * 100, l * 100];
+};
+
+/**
+ * Farbe einer Kachel: die Gruppenfarbe, je Platz in der Gruppe leicht im Farbton
+ * und in der Helligkeit verschoben – so wird eine lange Gruppe keine einfarbige Wand.
+ */
+export function tileColor(group: string, index: number): string {
+  const base = areaColor(group);
+  if (base === NEUTRAL_COLOR) return base;
+  const [h, s, l] = hexToHsl(base);
+  const dl = (((index * 2) % 3) - 1) * 6;
+  // Hellere Kacheln etwas wärmer, dunklere etwas kühler – so wird Orange nicht oliv
+  const dh = dl * 0.6 + ((index % 4) - 1.5) * 2;
+  const light = Math.max(30, Math.min(62, l + dl));
+  return `hsl(${Math.round((h + dh + 360) % 360)} ${Math.round(s)}% ${Math.round(light)}%)`;
+}
+
+/** Wie viele zuletzt geöffnete Seiten gemerkt werden */
+export const RECENT_MAX = 8;
+
+/** Seiten, die nie unter „Zuletzt benutzt“ stehen */
+const NOT_RECENT = new Set(['bereiche', 'heute', 'einstellungen', 'dashboard']);
+
+/** Zuletzt geöffnete Seite nach vorne, ohne Doppelte */
+export function pushRecent(list: string[], path: string): string[] {
+  if (!path || NOT_RECENT.has(path)) return list;
+  return [path, ...list.filter((p) => p !== path)].slice(0, RECENT_MAX);
+}
+
+/** Seite in der Sidebar verschieben: vor `before`, hinter `after` oder ans Ende von `group` – und in diese Gruppe */
+export function moveNavItem(items: NavItem[], path: string, target: { before?: string; after?: string; group: string }): NavItem[] {
+  const item = items.find((i) => i.path === path);
+  if (!item || target.before === path || target.after === path) return items;
+  const rest = items.filter((i) => i.path !== path);
+  const moved = { ...item, group: target.group };
+  let at = -1;
+  if (target.before) at = rest.findIndex((i) => i.path === target.before);
+  else if (target.after) {
+    const i = rest.findIndex((x) => x.path === target.after);
+    at = i < 0 ? -1 : i + 1;
+  }
+  if (at < 0) {
+    // Hinter den letzten Eintrag der Gruppe
+    const last = rest.map((i) => i.group).lastIndexOf(target.group);
+    at = last < 0 ? rest.length : last + 1;
+  }
+  return [...rest.slice(0, at), moved, ...rest.slice(at)];
+}
+
+/** Abkürzung im Menü beim Gedrückthalten einer Kachel */
+export type QuickAction = { label: string; prefill: string } | { label: string; href: string } | { label: string; run: 'focus' };
+
+/** Schnellaktionen je Seite (Routinen kommen aus den Daten dazu) */
+export function quickActions(path: string, data: Pick<Data, 'routines'>): QuickAction[] {
+  switch (path) {
+    case 'aufgaben': return [{ label: 'Neue Aufgabe', prefill: 'Aufgabe: ' }];
+    case 'kalender': return [{ label: 'Termin eintragen', prefill: 'Termin: ' }];
+    case 'notizen': return [{ label: 'Neue Notiz', prefill: 'Notiz: ' }];
+    case 'finanzen': return [{ label: 'Ausgabe eintragen', prefill: 'Ausgabe: ' }];
+    case 'einkauf': return [{ label: 'Artikel hinzufügen', prefill: 'Kaufe ' }];
+    case 'gewohnheiten': return [{ label: 'Gewohnheit abhaken', prefill: 'Ich habe ' }];
+    case 'fokus': return [{ label: 'Fokus starten', run: 'focus' }];
+    case 'dashboard': return [{ label: 'Übersicht bearbeiten', href: '#/dashboard/bearbeiten' }];
+    case 'routinen': return data.routines.filter((r) => r.steps.length).slice(0, 4).map((r) => ({ label: `${r.icon} ${r.name} starten`, href: `#/routinen/start/${r.id}` }));
+    default: return [];
+  }
 }
 
 /**

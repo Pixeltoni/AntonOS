@@ -210,8 +210,8 @@ function Editor({ note, onTag, onBack }: { note: Note; onTag: (t: string) => voi
           <button type="button" onClick={() => prefix('- [ ] ')} title="Checkliste (⇧⌘L)" aria-label="Checkliste">☑</button>
           <button type="button" className={note.pinned ? 'on' : ''} onClick={() => save({ pinned: !note.pinned })} title={note.pinned ? 'Loslösen' : 'Anheften'} aria-pressed={!!note.pinned}>📌</button>
           <button type="button" onClick={makeCards} title="Markierten Text (oder die ganze Notiz) in Lernkarten umwandeln" aria-label="In Lernkarten umwandeln">🧠<span className="note-tool-label"> Lernkarten</span></button>
-          <button type="button" className="note-done" onClick={() => setEditing((x) => !x)}>{editing ? 'Fertig' : 'Bearbeiten'}</button>
         </div>
+        <button type="button" className="note-done" onClick={() => setEditing((x) => !x)}>{editing ? 'Fertig' : 'Bearbeiten'}</button>
       </div>
       <div className="note-meta">
         <span>{stamp(note.updated)}</span>

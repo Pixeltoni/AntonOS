@@ -3023,6 +3023,17 @@ body:has(.focus-pill) .rt-pill { top: 64px; }
   body:has(.rt-pill) .toast { bottom: calc(var(--tabbar-space) + 70px); }
 }
 
+/* Am Handy: Klebende Leisten unter der kompakten Titelleiste (Notch + 46 px) halten, statt darunter zu verschwinden */
+@media (max-width: 800px) {
+  .rest-bar:not(.compact) { top: calc(54px + env(safe-area-inset-top)); }
+  .rem-sticky { top: calc(46px + env(safe-area-inset-top)); }
+}
+/* Sehr schmale iPhones: Tab-Beschriftungen etwas kleiner, damit „Kalender“ und „Aufgaben“ ganz passen */
+@media (max-width: 360px) {
+  .tabbar a, .tabbar button { font-size: 0.6rem; letter-spacing: -0.01em; }
+  /* Kalender: schmalere Pfeile, damit der Monatsname ganz passt */
+  button.cal-arrow { min-width: 28px; }
+}
 /* Eigenes Hintergrundbild (Einstellungen → Design) */
 .app-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 .app-bg-image, .app-bg-dim { position: absolute; inset: 0; }

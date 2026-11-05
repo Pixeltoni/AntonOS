@@ -101,6 +101,16 @@ export function rangeLabel(mode: CalendarMode, anchor: DateStr, isoWeek: (d: Dat
 }
 
 /** Prüft die Eingaben eines Termins. Gibt eine Fehlermeldung oder null zurück. */
+/** Kurzer Titel für die Handy-Kopfleiste: Monatsname, Jahr nur außerhalb des aktuellen Jahres („November“, „Jan. 2027“), Woche als „Nov. · KW 45“. */
+const MONTHS_LONG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const MONTHS_SHORT = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sept.', 'Okt.', 'Nov.', 'Dez.'];
+export function compactTitle(mode: CalendarMode, anchor: DateStr, isoWeek: (d: Date) => number, ref: DateStr): string {
+  const d = parseDate(anchor);
+  if (mode === 'woche') return `${MONTHS_SHORT[d.getMonth()]} · KW ${isoWeek(d)}`;
+  if (d.getFullYear() === parseDate(ref).getFullYear()) return MONTHS_LONG[d.getMonth()];
+  return `${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 export function validateEvent(e: { title: string; start: DateStr; end: DateStr | null; startTime: string; endTime: string; repeat?: Recurrence | null }): string | null {
   if (!e.title.trim()) return 'Bitte gib einen Namen ein.';
   if (!e.start) return 'Bitte wähle ein Datum.';

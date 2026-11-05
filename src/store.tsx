@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Appearance, Collection, Data, ID, Settings, Task } from './types';
 import { repeatTasks } from './lib/tasks';
+import { normalizeAppearanceData } from './lib/appearance';
 import { defaultAppearance, defaultFinance, defaultSemester, defaultSettings, demoData } from './demo';
 import { defaultRingGoals } from './lib/rings';
 import { SCHEMA_VERSION } from './lib/version';
@@ -50,10 +51,9 @@ export const emptyData = (): Data => ({
   schemaVersion: SCHEMA_VERSION,
 });
 
-/** Übernimmt nur Hell/Dunkel – frühere Hintergrund-, Farb- und Milchglas-Einstellungen fallen weg. */
+/** Übernimmt Hell/Dunkel und Hintergrundbild – frühere Farb-, Verlaufs- und Milchglas-Einstellungen fallen weg. */
 function normalizeAppearance(stored: Partial<Appearance> | undefined): Appearance {
-  const theme = stored?.theme;
-  return theme === 'hell' || theme === 'dunkel' || theme === 'system' ? { theme } : defaultAppearance();
+  return normalizeAppearanceData(stored, defaultAppearance());
 }
 
 /**

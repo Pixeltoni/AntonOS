@@ -15,6 +15,7 @@ class AntonBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AntonAlarmPlugin())
         bridge?.registerPluginInstance(AntonWidgetsPlugin())
         bridge?.registerPluginInstance(AntonExtrasPlugin())
+        bridge?.registerPluginInstance(AntonSperrePlugin())
     }
 }
 

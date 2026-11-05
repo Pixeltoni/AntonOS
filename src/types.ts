@@ -742,6 +742,10 @@ export type ThemeMode = 'system' | 'hell' | 'dunkel';
 
 export interface Appearance {
   theme: ThemeMode;
+  /** Eigenes Hintergrundbild (Link oder hochgeladen als data:-URL), leer = keins */
+  image: string;
+  /** Schleier über dem Bild in Prozent (0–80), damit Schrift lesbar bleibt */
+  dim: number;
 }
 
 export interface NavItem {
@@ -796,6 +800,8 @@ export interface Settings {
   degree?: DegreeSettings;
   /** Länge der Satzpause beim Training in Sekunden */
   restSeconds?: number;
+  /** iPhone: im Fokus ausgewählte Apps über die Bildschirmzeit sperren (Auswahl liegt bei iOS) */
+  focusLock?: boolean;
 }
 
 export interface AreaSettings {
@@ -851,6 +857,8 @@ export interface FocusSession {
   minutes: number;
   courseId: ID | null;
   distractions: number;
+  /** Versuche, eine im Fokus gesperrte App zu öffnen (Ablenkungs-Sperre am iPhone) */
+  blocked?: number;
   /** Fokus-Modus (ältere Einträge ohne Modus zählen als Lernen) */
   mode?: FocusMode;
   /** Aufgabe, an der gearbeitet wurde */

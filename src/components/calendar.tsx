@@ -11,7 +11,7 @@ import { askNotifications, notify } from '../lib/notify';
 import { useToast } from './toast';
 import {
   detachOccurrence, dueReminders, editWholeSeries, EVENT_COLORS, fromMin, isMultiDay, isTimedOn, KIND_LABELS, layoutTimed, moveEvent, occurrenceDraft, onDay,
-  rangeLabel, resizeEvent, shiftAnchor, sortEntries, spanLanes, timeRange, validateEvent, weekDays, type CalendarEntry, type CalendarMode, type EntryKind,
+  compactTitle, rangeLabel, resizeEvent, shiftAnchor, sortEntries, spanLanes, timeRange, validateEvent, weekDays, type CalendarEntry, type CalendarMode, type EntryKind,
 } from '../lib/calendar';
 import { parseEventQuickAdd } from '../lib/quickadd';
 import { ageOn, birthdayIn } from '../lib/people';
@@ -1137,13 +1137,7 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const title = compact
-    ? mode === 'monat'
-      ? parseDate(anchor).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
-      : mode === 'woche'
-        ? `${parseDate(anchor).toLocaleDateString('de-DE', { month: 'short' })} · KW ${isoWeek(parseDate(anchor))}`
-        : parseDate(anchor).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
-    : rangeLabel(mode, anchor, isoWeek);
+  const title = compact ? compactTitle(mode, anchor, isoWeek, today()) : rangeLabel(mode, anchor, isoWeek);
 
   const segmented = (
     <div className="segmented cal-modes" role="radiogroup" aria-label="Ansicht">

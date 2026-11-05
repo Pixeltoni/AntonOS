@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detachOccurrence, dueTaskReminders, editWholeSeries, layoutTimed, moveEvent, occurrenceDraft, onDay, rangeLabel, resizeEvent, shiftAnchor, sortEntries, spanLanes, validateEvent, weekDays, type CalendarEntry } from './calendar';
+import { compactTitle, detachOccurrence, dueTaskReminders, editWholeSeries, layoutTimed, moveEvent, occurrenceDraft, onDay, rangeLabel, resizeEvent, shiftAnchor, sortEntries, spanLanes, validateEvent, weekDays, type CalendarEntry } from './calendar';
 import { isoWeek } from './dates';
 
 const entry = (patch: Partial<CalendarEntry>): CalendarEntry => ({
@@ -123,5 +123,11 @@ describe('Erinnerungen an Aufgaben', () => {
   it('ignoriert erledigte Aufgaben und solche ohne Erinnerung', () => {
     const at = new Date(2026, 9, 28, 8, 5);
     expect(dueTaskReminders([{ ...task, status: 'erledigt' as const }, { ...task, remind: false }], at)).toEqual([]);
+  });
+  it('kürzt den Titel am Handy, damit er nicht abgeschnitten wird', () => {
+    expect(compactTitle('monat', '2026-11-05', isoWeek, '2026-11-05')).toBe('November');
+    expect(compactTitle('tag', '2026-09-01', isoWeek, '2026-11-05')).toBe('September');
+    expect(compactTitle('monat', '2027-01-10', isoWeek, '2026-11-05')).toBe('Jan. 2027');
+    expect(compactTitle('woche', '2026-11-05', isoWeek, '2026-11-05')).toBe('Nov. · KW 45');
   });
 });

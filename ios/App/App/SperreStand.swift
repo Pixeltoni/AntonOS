@@ -59,11 +59,12 @@ enum SperreStand {
         self.endAt = endAt
         self.label = label
         let s = selection
-        let shield = store.shield
-        shield.applications = s.applicationTokens.isEmpty ? nil : s.applicationTokens
-        shield.applicationCategories = s.categoryTokens.isEmpty ? nil : .specific(s.categoryTokens)
-        shield.webDomains = s.webDomainTokens.isEmpty ? nil : s.webDomainTokens
-        shield.webDomainCategories = s.categoryTokens.isEmpty ? nil : .specific(s.categoryTokens)
+        // `shield` ist eine Struktur im Speicher: direkt über dieselbe Store-Instanz setzen
+        let st = store
+        st.shield.applications = s.applicationTokens.isEmpty ? nil : s.applicationTokens
+        st.shield.applicationCategories = s.categoryTokens.isEmpty ? nil : .specific(s.categoryTokens)
+        st.shield.webDomains = s.webDomainTokens.isEmpty ? nil : s.webDomainTokens
+        st.shield.webDomainCategories = s.categoryTokens.isEmpty ? nil : .specific(s.categoryTokens)
     }
 
     /// Hebt die Sperre auf

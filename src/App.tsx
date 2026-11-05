@@ -17,7 +17,7 @@ import { pageColor } from './lib/areas';
 import { SidebarEditor } from './components/navedit';
 import { PlusButton, TabBar, useNavItems, useSheetSwipe } from './components/shell';
 import { Today } from './pages/Today';
-import { Areas } from './pages/Areas';
+import { Areas, rememberPage } from './pages/Areas';
 import { MiniPlayer, SpotifyProvider } from './components/spotify';
 import { AppearanceLayer } from './components/appearance';
 import { ConflictBanner, SyncBadge } from './components/sync';
@@ -171,6 +171,8 @@ function Shell() {
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel
   useEffect(() => setMenuOpen(false), [routeKey]);
+  // Für „Zuletzt benutzt“ auf der Bereiche-Seite
+  useEffect(() => rememberPage(current), [current]);
 
   // Solange das Menü offen ist, schließt Escape (Scrollsperre dahinter: lib/mobile.ts)
   useEffect(() => {

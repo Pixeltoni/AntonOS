@@ -790,10 +790,17 @@ export interface Settings {
   health?: HealthSettings;
   /** Die drei frei wählbaren Seiten vorne in der Tab-Leiste am iPhone (leer = Standard) */
   tabs?: string[];
+  /** Bereiche-Seite: Favoriten (Seiten) und eingeklappte Gruppen */
+  areas?: AreaSettings;
   /** Ganzes Studium: ECTS bis zum Abschluss und Wunsch-Schnitt */
   degree?: DegreeSettings;
   /** Länge der Satzpause beim Training in Sekunden */
   restSeconds?: number;
+}
+
+export interface AreaSettings {
+  favorites?: string[];
+  collapsed?: string[];
 }
 
 /** Notenziel fürs ganze Studium */

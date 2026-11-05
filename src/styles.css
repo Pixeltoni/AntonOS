@@ -2385,6 +2385,58 @@ label.tone-clip { color: var(--text); display: flex; flex-direction: column; gap
 .areas-hint { text-align: center; }
 .pin-bar { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border-radius: 14px; padding: 0.8rem 1rem; box-shadow: var(--glass-shadow); }
 @media (max-width: 400px) { .area-tiles { grid-template-columns: 1fr 1fr; } }
+/* Bereiche: breite Kacheln, Abzeichen, Suche, Überblick, Zuletzt, Einklappen, Schnellaktionen, Verschieben */
+.area-tiles { grid-auto-flow: row dense; }
+.area-tile { position: relative; }
+.area-tile.wide { grid-column: span 2; min-height: 104px; }
+.area-tile.wide strong { font-size: 1.08rem; }
+.area-tile.wide small { font-size: 0.85rem; }
+.area-badge { position: absolute; top: 10px; right: 10px; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: #fff; color: var(--tile); font-weight: 800; font-size: 0.8rem; display: grid; place-items: center; font-variant-numeric: tabular-nums; box-shadow: 0 2px 6px rgb(0 0 0 / 0.18); }
+.area-star { position: absolute; top: 12px; right: 12px; opacity: 0.95; }
+.area-search { display: flex; align-items: center; gap: 8px; background: var(--fill); border-radius: 12px; padding: 0 10px; height: 40px; color: var(--muted); }
+.area-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none !important; box-shadow: none !important; padding: 0; color: var(--text); font-size: 1rem; }
+.area-search input::-webkit-search-cancel-button { opacity: 0.6; }
+.areas-empty { text-align: center; padding: 1.5rem 0; }
+.area-summary { display: grid; gap: 8px; }
+.area-stat { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 0.6rem 0.65rem; border-radius: 14px; background: var(--surface); color: var(--text); text-decoration: none; box-shadow: 0 0 0 0.5px var(--border); }
+.area-stat:hover { text-decoration: none; }
+.area-stat-icon { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; background: var(--tile); margin-bottom: 4px; }
+.area-stat-icon .lucide-icon { color: #fff !important; }
+.area-stat b { font-size: 1.05rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.area-stat span { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.area-recent { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; -webkit-touch-callout: none; }
+.area-recent::-webkit-scrollbar { display: none; }
+.area-recent a { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 14px; background: var(--surface); color: var(--text); font-weight: 600; font-size: 0.88rem; text-decoration: none; box-shadow: 0 0 0 0.5px var(--border); user-select: none; -webkit-user-select: none; }
+.area-recent a span { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--tile); }
+.area-recent .lucide-icon, .area-mini .lucide-icon, .area-menu-head .lucide-icon { color: #fff !important; }
+button.area-fold { display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: none; padding: 0 0.3rem; text-align: left; min-height: 0; box-shadow: none; }
+.area-fold .area-chevron { margin-left: auto; transition: transform 0.25s var(--ease); }
+.area-fold.closed .area-chevron { transform: rotate(-90deg); }
+.area-count { font-weight: 600; letter-spacing: 0; text-transform: none; }
+.area-mini { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0.1rem; }
+.area-mini a { position: relative; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(150deg, var(--tile), color-mix(in srgb, var(--tile) 78%, #000)); -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.area-dot { position: absolute; top: -3px; right: -3px; width: 11px; height: 11px; border-radius: 50%; background: #FF3B30; box-shadow: 0 0 0 2px var(--bg); }
+.area-menu { padding: 0.6rem 1rem calc(1rem + env(safe-area-inset-bottom)) !important; gap: 10px !important; }
+.area-menu-head { display: flex; align-items: center; gap: 10px; padding: 0.3rem 0.1rem; }
+.area-menu-head span { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(150deg, var(--tile), color-mix(in srgb, var(--tile) 78%, #000)); }
+.area-menu-head strong { flex: 1; font-size: 1.05rem; }
+.area-menu-head .link-button { color: var(--accent); text-decoration: none; font-weight: 600; }
+.area-menu-list { display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; background: var(--fill); }
+.area-menu-list button { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; border-radius: 0; background: none; padding: 0.8rem 1rem; text-align: left; font-size: 0.98rem; box-shadow: none; color: var(--text); }
+.area-menu-list button + button { border-top: 0.5px solid var(--border); }
+.area-menu-list button.danger { color: #FF3B30; }
+.area-menu-cancel { font-weight: 600; }
+.areas-editing { user-select: none; -webkit-user-select: none; }
+.areas-editing .area-tile { animation: area-wiggle 0.28s ease-in-out infinite alternate; }
+.areas-editing .area-tile:nth-child(2n) { animation-delay: -0.14s; }
+.areas-editing.is-dragging .area-tile { animation: none; }
+.areas-editing .area-tile.dragging { transform: scale(1.06); opacity: 0.85; z-index: 2; box-shadow: 0 16px 30px -10px rgb(0 0 0 / 0.4); }
+.areas-editing .area-tiles { min-height: 70px; border-radius: 18px; outline: 1.5px dashed var(--border); outline-offset: 4px; }
+.area-grip { position: absolute; top: 4px; right: 4px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; background: none; color: #fff; touch-action: none; cursor: grab; padding: 0; box-shadow: none; }
+.area-grip:active { cursor: grabbing; }
+.area-drop-hint { grid-column: 1 / -1; text-align: center; align-self: center; margin: 0; }
+@keyframes area-wiggle { from { transform: rotate(-0.8deg); } to { transform: rotate(0.8deg); } }
+@media (prefers-reduced-motion: reduce) { .areas-editing .area-tile { animation: none; } }
 
 /* ---------- Knubbel (Tamagotchi) – Sekunden-Schriften wie im iOS-Widget ---------- */
 @font-face { font-family: 'AntonTierEssen'; src: url('../ios/App/AntonOSWidgets/AntonTierEssen.otf') format('opentype'); font-display: block; }

@@ -10,6 +10,7 @@ import { Empty, PageHeader, Panel } from '../components/ui';
 import { Cover, ImageInput } from '../components/widgets';
 import { AddButton, Sheet } from '../components/sheet';
 import { useToast } from '../components/toast';
+import { RecipeImport } from '../components/recipeimport';
 
 type Draft = Omit<Recipe, 'id'>;
 const blank = (): Draft => ({ title: '', minutes: 30, servings: 2, ingredients: '', steps: '', image: '', url: '', tags: '' });
@@ -222,7 +223,7 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
   );
 }
 
-function RecipeGallery() {
+function RecipeGallery({ onImport }: { onImport?: (r: Draft) => void }) {
   const { data } = useStore();
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
@@ -231,8 +232,9 @@ function RecipeGallery() {
     .sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite) || a.title.localeCompare(b.title));
   return (
     <>
+      {onImport && <RecipeImport onImport={onImport} />}
       {data.recipes.length > 0 && <input className="recipe-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rezepte oder Zutaten suchen …" aria-label="Rezepte durchsuchen" />}
-      {list.length === 0 ? <Empty>{data.recipes.length ? 'Kein Rezept gefunden.' : 'Noch keine Rezepte. Tipp: Rezept-Links aus dem Browser kannst du über „Teilen → AntonOS“ direkt speichern.'}</Empty> : (
+      {list.length === 0 ? <Empty>{data.recipes.length ? 'Kein Rezept gefunden.' : 'Noch keine Rezepte. Füg oben einfach den Link zu einem Rezept ein – AntonOS übernimmt Zutaten, Schritte, Zeit und Foto.'}</Empty> : (
         <div className="gallery">{list.map((r) => <RecipeCard key={r.id} recipe={r} />)}</div>
       )}
     </>
@@ -246,6 +248,12 @@ export function Meals() {
   const t = today();
   const [anchor, setAnchor] = useState(t);
   const [adding, setAdding] = useState(false);
+  // Vorlage fürs Formular: leer oder aus einem Link gelesen (key erzwingt ein frisches Formular)
+  const [draft, setDraft] = useState<{ recipe: Draft; key: number }>(() => ({ recipe: blank(), key: 0 }));
+  const open = (recipe: Draft = blank()) => {
+    setDraft((d) => ({ recipe, key: d.key + 1 }));
+    setAdding(true);
+  };
   const [tab, setTab] = useState<'plan' | 'rezepte'>(() => {
     try {
       return localStorage.getItem(TAB_KEY) === 'rezepte' ? 'rezepte' : 'plan';
@@ -277,7 +285,7 @@ export function Meals() {
                 <button onClick={() => setAnchor(addDays(anchor, 7))} aria-label="Nächste Woche">›</button>
               </>
             )}
-            {!adding && <AddButton label="Neues Rezept" onClick={() => setAdding(true)} />}
+            {!adding && <AddButton label="Neues Rezept" onClick={() => open()} />}
           </>
         }
       />
@@ -287,10 +295,11 @@ export function Meals() {
       </div>
       {adding && (
         <Panel title="Neues Rezept">
-          <RecipeForm initial={blank()} onCancel={() => setAdding(false)} onSave={(r) => { const id = add('recipes', r); setAdding(false); location.hash = `#/essen/${id}`; }} />
+          <RecipeImport onImport={(r) => open(r)} />
+          <RecipeForm key={draft.key} initial={draft.recipe} onCancel={() => setAdding(false)} onSave={(r) => { const id = add('recipes', r); setAdding(false); location.hash = `#/essen/${id}`; }} />
         </Panel>
       )}
-      {tab === 'plan' ? <MealWeek anchor={anchor} /> : <RecipeGallery />}
+      {tab === 'plan' ? <MealWeek anchor={anchor} /> : <RecipeGallery onImport={adding ? undefined : (r) => { open(r); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />}
     </>
   );
 }

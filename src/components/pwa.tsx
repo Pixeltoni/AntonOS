@@ -7,6 +7,7 @@ import { askNotifications, notifyProblemText, showNotice } from '../lib/notify';
 import { isNativeApp, nativePermission } from '../lib/native';
 import { canPromptInstall, isIOS, isStandalone, onInstallChange, parseShared, promptInstall, setBadge, type SharedContent } from '../lib/pwa';
 import { useToast } from './toast';
+import { loadRecipe } from './recipeimport';
 
 /** Zahl am App-Symbol: Aufgaben, die heute fällig oder überfällig sind */
 export function useAppBadge() {
@@ -60,12 +61,28 @@ export function ShareSheet() {
     clear();
   };
   const body = [shared.text, shared.url].filter(Boolean).join('\n\n');
+  /** Rezept-Link: Zutaten, Schritte, Zeit und Foto von der Seite lesen – sonst nur mit Link anlegen */
+  const saveRecipe = async () => {
+    const plain = { title: name, minutes: 0, servings: 2, ingredients: '', steps: shared.text, image: '', url: shared.url, tags: '' };
+    if (!shared.url) {
+      const id = add('recipes', plain);
+      return done('den Rezepten', `#/essen/${id}`);
+    }
+    const url = shared.url;
+    clear();
+    show('🍽️ Rezept wird gelesen …', undefined, 15_000);
+    const { result } = await loadRecipe(url);
+    const recipe = result ? { ...result.recipe, title: title.trim() && title.trim() !== shared.title ? title.trim() : result.recipe.title } : plain;
+    const id = add('recipes', recipe);
+    const n = recipe.ingredients ? recipe.ingredients.split('\n').length : 0;
+    show(result?.complete ? `🍽️ ${recipe.title} mit ${n} ${n === 1 ? 'Zutat' : 'Zutaten'} gespeichert` : 'In den Rezepten gespeichert – Zutaten bitte selbst eintragen', { label: 'Ansehen', run: () => (location.hash = `#/essen/${id}`) });
+  };
   const options: { icon: string; label: string; run: () => void }[] = [
     { icon: '📝', label: 'Als Notiz', run: () => { const id = add('notes', { title: name, courseId: null, content: body, updated: new Date().toISOString() }); done('Notizen', `#/notizen/${id}`); } },
     { icon: '✅', label: 'Als Aufgabe', run: () => { add('tasks', { title: name, courseId: null, kind: 'Aufgabe', status: 'offen', priority: 'mittel', due: null, note: body }); done('Aufgaben', '#/aufgaben'); } },
     { icon: '📺', label: 'Zur Watchlist', run: () => { add('media', { kind: 'Serie', title: name, creator: host, cover: '', status: 'geplant', rating: 0, progress: '' }); done('der Watchlist', '#/schauen'); } },
     { icon: '📖', label: 'Zur Leseliste', run: () => { add('media', { kind: 'Buch', title: name, creator: host, cover: '', status: 'geplant', rating: 0, progress: '' }); done('der Leseliste', '#/lesen'); } },
-    { icon: '🍽️', label: 'Als Rezept', run: () => { const id = add('recipes', { title: name, minutes: 0, servings: 2, ingredients: '', steps: shared.text, image: '', url: shared.url, tags: '' }); done('den Rezepten', `#/essen/${id}`); } },
+    { icon: '🍽️', label: 'Als Rezept', run: () => void saveRecipe() },
     ...(shared.url ? [{ icon: '🧰', label: 'Zu den Tools', run: () => { add('tools', { name, url: shared.url, category: 'Geteilt' }); done('den Tools', '#/tools'); } }] : []),
   ];
 

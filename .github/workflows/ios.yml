@@ -97,18 +97,37 @@ jobs:
 
       # Ohne Signatur fehlen im Archiv die Berechtigungen (App Group für die Widgets).
       # Vorläufig ohne Zertifikat signieren, damit der Export sie übernimmt und richtig signiert.
+      # Ablenkungs-Sperre: braucht die Berechtigung „Family Controls (Distribution)“ von Apple für die App und die
+      # Erweiterungen SperreAnsicht, SperreKnopf und SperreWaechter. Erst wenn die Variable BILDSCHIRMZEIT = an ist
+      # (Settings → Secrets and variables → Actions → Variables), kommen sie in den Build – sonst bleibt alles wie bisher.
       - name: Berechtigungen eintragen
+        env:
+          BILDSCHIRMZEIT: ${{ vars.BILDSCHIRMZEIT }}
         run: |
           app="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          ents="$RUNNER_TEMP/ents"
+          mkdir -p "$ents"
+          cp ios/App/App/App.entitlements "$ents/App.entitlements"
+          if [ "$BILDSCHIRMZEIT" = "an" ]; then
+            echo "Ablenkungs-Sperre: mit Family Controls"
+            /usr/libexec/PlistBuddy -c "Add :com.apple.developer.family-controls bool true" "$ents/App.entitlements"
+            /usr/libexec/PlistBuddy -c "Add :AntonSperre bool true" "$app/Info.plist"
+          else
+            echo "::notice::Ablenkungs-Sperre ohne Freigabe von Apple – Erweiterungen bleiben draußen (Variable BILDSCHIRMZEIT = an schaltet sie ein)."
+            rm -rf "$app"/PlugIns/Sperre*.appex
+          fi
           if [ -d "$app/Frameworks" ]; then
             find "$app/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) -exec codesign --force --sign - --timestamp=none {} \;
           fi
           for ext in "$app"/PlugIns/*.appex; do
             [ -d "$ext" ] || continue
-            codesign --force --sign - --timestamp=none --entitlements ios/App/AntonOSWidgets/AntonOSWidgets.entitlements "$ext"
+            name=$(basename "$ext" .appex)
+            file="ios/App/$name/$name.entitlements"
+            [ -f "$file" ] || file=ios/App/AntonOSWidgets/AntonOSWidgets.entitlements
+            codesign --force --sign - --timestamp=none --entitlements "$file" "$ext"
             codesign -d --entitlements - "$ext"
           done
-          codesign --force --sign - --timestamp=none --entitlements ios/App/App/App.entitlements "$app"
+          codesign --force --sign - --timestamp=none --entitlements "$ents/App.entitlements" "$app"
           codesign -d --entitlements - "$app"
 
       - name: Zu TestFlight hochladen

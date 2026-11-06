@@ -20,7 +20,6 @@ export function Lights() {
 
   const visible = orderLights(lights.devices, settings.order, settings.hidden);
   const all = orderLights(lights.devices, settings.order, settings.hidden, true);
-  const anyOn = visible.some((d) => lights.states[d.id]?.on);
 
   const move = (id: string, dir: -1 | 1) => {
     const ids = all.map((d) => d.id);
@@ -49,7 +48,7 @@ export function Lights() {
       {visible.length > 0 && (
         <div className="light-all row">
           <button type="button" className="primary grow" onClick={() => void lights.sendAll(visible, true)}><Lightbulb size={16} /> Alle an</button>
-          <button type="button" className="grow" onClick={() => void lights.sendAll(visible, false)} disabled={!anyOn}><LightbulbOff size={16} /> Alle aus</button>
+          <button type="button" className="grow" onClick={() => void lights.sendAll(visible, false)}><LightbulbOff size={16} /> Alle aus</button>
         </div>
       )}
       {lights.devices.length === 0 ? (

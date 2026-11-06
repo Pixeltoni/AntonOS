@@ -106,9 +106,9 @@ struct AllLightsOffIntent: AppIntent {
     init() {}
 
     func perform() async throws -> some IntentResult {
-        let on = LichtStore.devices().filter(\.on)
+        // Alle schicken, nicht nur die als „an“ gemerkten – jemand kann sie inzwischen in der Govee-App eingeschaltet haben
         var done = Set<String>()
-        for d in on {
+        for d in LichtStore.devices() {
             if (try? await GoveeAPI.power(id: d.id, sku: d.sku, on: false)) != nil { done.insert(d.id) }
         }
         LichtStore.setOn(done, on: false)
@@ -265,13 +265,11 @@ struct LichtView: View {
                     HStack {
                         Caption(text: "Licht", icon: "lightbulb.fill", color: lichtColor)
                         Spacer()
-                        if anyOn {
-                            Button(intent: AllLightsOffIntent()) {
-                                Text("Alle aus").font(.caption.weight(.bold)).padding(.horizontal, 10).padding(.vertical, 5)
-                                    .background(Color.primary.opacity(0.1), in: Capsule())
-                            }
-                            .buttonStyle(.plain)
+                        Button(intent: AllLightsOffIntent()) {
+                            Text("Alle aus").font(.caption.weight(.bold)).padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(Color.primary.opacity(anyOn ? 0.14 : 0.07), in: Capsule())
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {

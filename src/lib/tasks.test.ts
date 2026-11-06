@@ -148,6 +148,7 @@ describe('Später, Aufräumen und Tag planen', () => {
       task({ id: 'eher', due: '2026-10-29' }),
       task({ id: 'spaeter', due: '2026-12-01' }),
       task({ id: 'geplant', plannedFor: '2026-11-03' }),
+      task({ id: 'geplant-frist', plannedFor: '2026-11-01', due: '2026-10-31' }),
       task({ id: 'irgendwann', someday: true }),
       task({ id: 'fertig', status: 'erledigt' }),
     ];

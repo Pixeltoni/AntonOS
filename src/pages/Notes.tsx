@@ -143,11 +143,16 @@ function NoteView({ note, onEdit, onTag }: { note: Note; onEdit: () => void; onT
   const resolve = useResolver();
   const blocks = parseBlocks(note.content);
   const linked = data.tasks.filter((x) => x.noteId === note.id && x.noteLine);
-  const taskFor = (text: string) => linked.find((x) => x.noteLine === text.trim());
+  // Steht derselbe Text mehrmals da, ist nur der erste Punkt mit einer Aufgabe verbunden
+  const firstLine = new Map<string, number>();
+  for (const b of blocks) if (b.kind === 'check' && !firstLine.has(b.text.trim())) firstLine.set(b.text.trim(), b.line);
+  const linkable = (line: number, text: string) => firstLine.get(text.trim()) === line;
+  const taskFor = (line: number, text: string) =>
+    linkable(line, text) ? linked.find((x) => x.noteLine === text.trim()) : undefined;
   const toggle = (line: number, text: string, done: boolean) => {
     update('notes', note.id, { content: toggleCheck(note.content, line), updated: new Date().toISOString() });
     // Verbundene Aufgabe mit abhaken bzw. wieder öffnen
-    const task = taskFor(text);
+    const task = taskFor(line, text);
     if (task && (task.status === 'erledigt') === done) update('tasks', task.id, { status: done ? 'offen' : 'erledigt' });
   };
   const inline = (text: string) => <Inline text={text} onTag={onTag} resolve={resolve} />;
@@ -185,7 +190,7 @@ function NoteView({ note, onEdit, onTag }: { note: Note; onEdit: () => void; onT
             }}
           />
           <span className="grow">{inline(b.text)}</span>
-          <CheckTask note={note} block={b} task={taskFor(b.text)} />
+          {linkable(b.line, b.text) && <CheckTask note={note} block={b} task={taskFor(b.line, b.text)} />}
         </div>,
       );
     }

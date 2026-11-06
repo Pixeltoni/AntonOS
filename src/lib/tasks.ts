@@ -303,9 +303,9 @@ export function planCandidates(tasks: Task[], day: DateStr, limit = 15): Task[] 
   const soon = addDays(day, 7);
   const rank = (t: Task): number => {
     if (!open(t) || inToday(t, day)) return -1;
+    if (t.plannedFor && t.plannedFor > day) return -1;
     if (t.someday) return 3;
     if (t.due && t.due <= soon) return 0;
-    if (t.plannedFor && t.plannedFor > day) return -1;
     return t.due ? 2 : 1;
   };
   return sortTasks(tasks)

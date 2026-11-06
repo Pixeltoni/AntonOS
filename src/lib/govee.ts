@@ -219,13 +219,87 @@ export interface WidgetLight {
   /** #RRGGBB, leer = unbekannt */
   color: string;
   brightness: number;
+  /** Nur eigene Gruppen: die schaltbaren Lampen darin */
+  members?: { id: string; sku: string }[];
 }
 
-export function widgetLights(devices: LightDevice[], states: Record<string, LightState>, order: string[] = [], hidden: string[] = []): WidgetLight[] {
-  return orderLights(devices, order, hidden)
-    .filter((d) => d.power)
-    .map((d) => {
-      const s = states[d.id];
-      return { id: d.id, sku: d.sku, name: d.name, on: !!s?.on, color: s?.color ?? '', brightness: s?.brightness ?? 0 };
-    });
+/** Erst die eigenen Gruppen, dann die einzelnen Lampen */
+export function widgetLights(devices: LightDevice[], states: Record<string, LightState>, order: string[] = [], hidden: string[] = [], groups: GroupLike[] = []): WidgetLight[] {
+  const out: WidgetLight[] = [];
+  for (const g of groups) {
+    const members = groupMembers(g, devices).filter((d) => d.power);
+    if (!members.length) continue;
+    const s = groupState(g, devices, states);
+    out.push({ id: groupKey(g.id), sku: 'AntonOSGruppe', name: g.name, on: !!s.on, color: s.color ?? '', brightness: s.brightness ?? 0, members: members.map((d) => ({ id: d.id, sku: d.sku })) });
+  }
+  for (const d of orderLights(devices, order, hidden)) {
+    if (!d.power) continue;
+    const s = states[d.id];
+    out.push({ id: d.id, sku: d.sku, name: d.name, on: !!s?.on, color: s?.color ?? '', brightness: s?.brightness ?? 0 });
+  }
+  return out;
+}
+
+/* ---------- Eigene Gruppen ---------- */
+
+export interface GroupLike {
+  id: string;
+  name: string;
+  members: string[];
+}
+
+/** Kennung einer eigenen Gruppe in Listen und im Widget (Govee-Kennungen enthalten nie „gruppe:“) */
+export const groupKey = (id: string) => `gruppe:${id}`;
+
+/** Mitglieder einer Gruppe, die es (noch) gibt */
+export function groupMembers(group: GroupLike, devices: LightDevice[]): LightDevice[] {
+  const byId = new Map(devices.map((d) => [d.id, d]));
+  return group.members.map((id) => byId.get(id)).filter((d): d is LightDevice => !!d);
+}
+
+/** Eine Gruppe als „Lampe“: kann, was mindestens eine Lampe darin kann; Weißton nur im gemeinsamen Bereich */
+export function groupDevice(group: GroupLike, devices: LightDevice[]): LightDevice {
+  const members = groupMembers(group, devices);
+  const temps = members.map((d) => d.colorTemp).filter((r): r is Range => !!r);
+  const min = Math.max(...temps.map((r) => r.min));
+  const max = Math.min(...temps.map((r) => r.max));
+  return {
+    id: groupKey(group.id),
+    sku: 'AntonOSGruppe',
+    name: group.name,
+    group: true,
+    power: members.some((d) => d.power),
+    brightness: members.some((d) => d.brightness) ? { min: 1, max: 100 } : null,
+    color: members.some((d) => d.color),
+    colorTemp: temps.length && max > min ? { min, max } : null,
+    scenes: false,
+  };
+}
+
+/** Zustand einer Gruppe: an, wenn eine Lampe an ist; Helligkeit als Mittel der eingeschalteten; Farbe nur, wenn alle gleich */
+export function groupState(group: GroupLike, devices: LightDevice[], states: Record<string, LightState>): LightState {
+  const list = groupMembers(group, devices).map((d) => states[d.id]).filter((s): s is LightState => !!s);
+  const lit = list.filter((s) => s.on);
+  const bright = lit.map((s) => s.brightness).filter((b): b is number => b !== null);
+  const colors = new Set(lit.map((s) => s.color));
+  const temps = new Set(lit.map((s) => s.colorTemp));
+  return {
+    online: list.length ? list.some((s) => s.online !== false) : null,
+    on: list.some((s) => s.on === true) ? true : list.some((s) => s.on === false) ? false : null,
+    brightness: bright.length ? Math.round(bright.reduce((a, b) => a + b, 0) / bright.length) : null,
+    color: colors.size === 1 ? [...colors][0] : null,
+    colorTemp: temps.size === 1 ? [...temps][0] : null,
+  };
+}
+
+/** Lampen einer Gruppe, die den Befehl verstehen (Weißton auf den Bereich der jeweiligen Lampe begrenzt) */
+export function groupTargets(group: GroupLike, devices: LightDevice[], cmd: LightCommand): LightDevice[] {
+  return groupMembers(group, devices).filter((d) =>
+    cmd.kind === 'power' ? d.power : cmd.kind === 'brightness' ? !!d.brightness : cmd.kind === 'color' ? d.color : cmd.kind === 'colorTemp' ? !!d.colorTemp : false,
+  );
+}
+
+/** Neue Gruppe; leere Namen werden „Gruppe“ */
+export function makeGroup(name: string, members: string[], id: string): GroupLike {
+  return { id, name: name.trim() || 'Gruppe', members: [...new Set(members)] };
 }

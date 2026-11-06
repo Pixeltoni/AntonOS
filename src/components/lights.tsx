@@ -4,8 +4,8 @@ import { useStore } from '../store';
 import { SUPABASE_KEY, SUPABASE_URL } from '../lib/cloud';
 import { AntonWidgets, isNativeApp } from '../lib/native';
 import {
-  controlBody, deviceBody, GOVEE_BASE, goveeError, parseDevices, parseScenes, parseState, widgetLights,
-  type GoveePath, type LightCommand, type LightDevice, type LightScene, type LightState,
+  controlBody, deviceBody, GOVEE_BASE, goveeError, groupTargets, parseDevices, parseScenes, parseState, widgetLights,
+  type GoveePath, type GroupLike, type LightCommand, type LightDevice, type LightScene, type LightState,
 } from '../lib/govee';
 
 const CACHE_KEY = 'antonos:licht';
@@ -76,28 +76,28 @@ export async function govee(key: string, path: GoveePath, body?: unknown): Promi
 }
 
 /** Legt Schlüssel und Lampen fürs iPhone-Widget ab (nur in der App) */
-function pushWidget(key: string, cache: Cache, order?: string[], hidden?: string[]) {
+function pushWidget(key: string, cache: Cache, order?: string[], hidden?: string[], groups?: GroupLike[]) {
   if (!isNativeApp()) return;
-  const lights = key ? widgetLights(cache.devices, cache.states, order, hidden) : [];
+  const lights = key ? widgetLights(cache.devices, cache.states, order, hidden, groups) : [];
   void AntonWidgets.setLights({ key: key.trim(), lights: JSON.stringify(lights) }).catch(() => undefined);
 }
 
 /** Nur in der App: hält Schlüssel und Lampen fürs Widget aktuell, auch wenn die Licht-Seite nie geöffnet wurde */
 export function useLightsWidget() {
   const { data } = useStore();
-  const { key = '', order, hidden } = data.settings.lights ?? {};
-  const orderKey = JSON.stringify([order, hidden]);
+  const { key = '', order, hidden, groups } = data.settings.lights ?? {};
+  const orderKey = JSON.stringify([order, hidden, groups]);
   useEffect(() => {
     if (!isNativeApp()) return;
     const cache = readCache();
-    pushWidget(key, cache, order, hidden);
+    pushWidget(key, cache, order, hidden, groups);
     if (!key || cache.devices.length) return;
     // Noch keine Lampen bekannt: einmal die Liste holen
     void govee(key, 'user/devices')
       .then((body) => {
         const next = { ...cache, devices: parseDevices(body) };
         writeCache(next);
-        pushWidget(key, next, order, hidden);
+        pushWidget(key, next, order, hidden, groups);
       })
       .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,7 +120,7 @@ export function useLights() {
     setCache(next);
     writeCache(next);
     const { key: k, settings: s } = latest.current;
-    pushWidget(k, next, s?.order, s?.hidden);
+    pushWidget(k, next, s?.order, s?.hidden, s?.groups);
   }, []);
 
   const setState = useCallback((id: string, patch: Partial<LightState>) => {
@@ -187,6 +187,12 @@ export function useLights() {
     }
   }, [send]);
 
+  /** Befehl an alle Lampen einer eigenen Gruppe, die ihn verstehen (je vier gleichzeitig) */
+  const sendGroup = useCallback(async (group: GroupLike, cmd: LightCommand) => {
+    const targets = groupTargets(group, latest.current.cache.devices, cmd);
+    for (let i = 0; i < targets.length; i += 4) await Promise.all(targets.slice(i, i + 4).map((d) => send(d, cmd)));
+  }, [send]);
+
   const loadScenes = useCallback(async (device: LightDevice): Promise<LightScene[]> => {
     try {
       return parseScenes(await govee(latest.current.key, 'device/scenes', deviceBody(device, requestId())));
@@ -202,5 +208,5 @@ export function useLights() {
     else save({ devices: [], states: {} });
   }, [key, refresh, save]);
 
-  return { key, settings, devices: cache.devices, states: cache.states, loading, error, refresh, send, sendAll, loadScenes };
+  return { key, settings, devices: cache.devices, states: cache.states, loading, error, refresh, send, sendAll, sendGroup, loadScenes };
 }

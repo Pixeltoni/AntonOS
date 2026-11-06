@@ -813,6 +813,15 @@ export interface LightSettings {
   order?: string[];
   /** Ausgeblendete Lampen */
   hidden?: string[];
+  /** Eigene Gruppen (z. B. Räume), gemeinsam schalten, dimmen und färben */
+  groups?: LightGroup[];
+}
+
+export interface LightGroup {
+  id: string;
+  name: string;
+  /** Govee-Gerätekennungen */
+  members: string[];
 }
 
 export interface AreaSettings {

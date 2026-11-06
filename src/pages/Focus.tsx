@@ -6,8 +6,6 @@ import { formatMinutes } from '../lib/tasks';
 import { weekOf } from '../lib/rings';
 import { TimerRing, useFocus } from '../components/focus';
 import { CourseBadge, CourseSelect, Empty, PageHeader, Panel } from '../components/ui';
-import { FocusLockPanel } from '../components/focuslock';
-import { isNativeApp } from '../lib/native';
 
 const PRESETS = [25, 50, 90];
 const NONE_COLOR = '#AEAEB2';
@@ -180,7 +178,6 @@ export function Focus() {
   const week = data.sessions.filter((s) => s.date >= weekStart && s.date <= t);
   const weekMinutes = week.reduce((s, x) => s + x.minutes, 0);
   const weekDistractions = week.reduce((s, x) => s + x.distractions, 0);
-  const weekBlocked = week.reduce((s, x) => s + (x.blocked ?? 0), 0);
 
   return (
     <>
@@ -193,10 +190,8 @@ export function Focus() {
             <p>
               <strong>{hours(weekMinutes)} Std.</strong> im Fokus · <strong>{weekDistractions}</strong> Ablenkungen
               {weekMinutes > 0 && <span className="muted"> ({Math.round((weekDistractions / weekMinutes) * 600) / 10} pro Stunde)</span>}
-              {weekBlocked > 0 && <> · <strong>{weekBlocked}</strong> gesperrte Apps nicht geöffnet 🔒</>}
             </p>
           </Panel>
-          {isNativeApp() && <Panel><FocusLockPanel /></Panel>}
         </div>
       </div>
       <Panel title="Verlauf">
@@ -211,7 +206,6 @@ export function Focus() {
                   <CourseBadge id={s.courseId} />
                   <span>{s.minutes} min</span>
                   <span className="muted">{s.distractions} Ablenk.</span>
-                  {(s.blocked ?? 0) > 0 && <span className="muted" title="Versuche, eine gesperrte App zu öffnen">🔒 {s.blocked}</span>}
                   <button className="icon" onClick={() => remove('sessions', s.id)} aria-label="Löschen" title="Löschen">×</button>
                 </li>
               );

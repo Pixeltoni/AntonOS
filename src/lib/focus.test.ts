@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultFocusConfig, idleTimer, lockUntil, mmss, pause, remainingMs, skip, splitAttempts, stackedWeek, start, stop, tick } from './focus';
+import { defaultFocusConfig, idleTimer, mmss, pause, remainingMs, skip, stackedWeek, start, stop, tick } from './focus';
 
 const MIN = 60_000;
 const cfg = { ...defaultFocusConfig(), work: 25, short: 5, long: 15, rounds: 2, courseId: 'ana' };
@@ -63,34 +63,5 @@ describe('Fokus-Timer', () => {
     ], ['a', 'b']);
     expect(week[0]).toEqual({ date: 'a', parts: [{ courseId: 'x', minutes: 50 }, { courseId: 'y', minutes: 50 }], total: 100 });
     expect(week[1].total).toBe(0);
-  });
-});
-
-describe('Ablenkungs-Sperre', () => {
-  const running = () => start(idleTimer({ ...defaultFocusConfig(), work: 25 }), 1_000_000);
-
-  it('sperrt nur, solange eine Fokus-Runde läuft', () => {
-    const t = running();
-    expect(lockUntil(t, 1_000_000)).toBe(1_000_000 + 25 * 60_000);
-    expect(lockUntil(pause(t, 1_100_000), 1_100_000)).toBeNull();
-    expect(lockUntil(idleTimer(), 0)).toBeNull();
-    const inPause = tick(t, 1_000_000 + 25 * 60_000).timer;
-    expect(inPause.phase).toBe('pause');
-    expect(lockUntil(inPause, 1_000_000 + 25 * 60_000 + 1)).toBeNull();
-  });
-
-  it('ordnet Versuche der laufenden oder der letzten Runde zu', () => {
-    const t = running();
-    expect(splitAttempts([{ at: 999_000 }, { at: 1_200_000 }, { at: 1_300_000 }], t)).toEqual({ current: 2, earlier: 1 });
-    expect(splitAttempts([{ at: 5 }], idleTimer())).toEqual({ current: 0, earlier: 1 });
-  });
-
-  it('speichert die Versuche mit der Runde und setzt sie für die nächste zurück', () => {
-    const t = { ...running(), blocked: 3 };
-    const r = tick(t, 1_000_000 + 25 * 60_000);
-    expect(r.finished[0].session?.blocked).toBe(3);
-    const next = tick(r.timer, 1_000_000 + 30 * 60_000).timer;
-    expect(next).toMatchObject({ phase: 'fokus', round: 2, blocked: 0 });
-    expect(stop({ ...running(), blocked: 0 }, 1_000_000 + 10 * 60_000, true).session).not.toHaveProperty('blocked');
   });
 });

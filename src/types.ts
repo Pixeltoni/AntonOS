@@ -800,8 +800,6 @@ export interface Settings {
   degree?: DegreeSettings;
   /** Länge der Satzpause beim Training in Sekunden */
   restSeconds?: number;
-  /** iPhone: im Fokus ausgewählte Apps über die Bildschirmzeit sperren (Auswahl liegt bei iOS) */
-  focusLock?: boolean;
 }
 
 export interface AreaSettings {
@@ -857,8 +855,6 @@ export interface FocusSession {
   minutes: number;
   courseId: ID | null;
   distractions: number;
-  /** Versuche, eine im Fokus gesperrte App zu öffnen (Ablenkungs-Sperre am iPhone) */
-  blocked?: number;
   /** Fokus-Modus (ältere Einträge ohne Modus zählen als Lernen) */
   mode?: FocusMode;
   /** Aufgabe, an der gearbeitet wurde */

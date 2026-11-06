@@ -4,8 +4,8 @@ import type { DateStr, ExerciseLog, ID, PlanExercise, SetLog, TrainingDay, Worko
 import { formatDate, relativeLabel, today } from '../lib/dates';
 import {
   bestSet, buildPlan, buildSeparateDay, compareSets, dayTargetSummary, describeComparison, describeTarget, exerciseHistory, formatNumber,
-  formatSets, formatTarget, lastSessionOf, nextTrainingDay, parseNumber, previousEntry, removeSeriesFrom, setText, targetFor, timedExercise,
-  volume, type ExerciseEntry, type NextTarget,
+  formatSets, formatTarget, isRepsOnly, lastSessionOf, nextTrainingDay, parseNumber, previousEntry, removeSeriesFrom, setText, targetFor, timedExercise,
+  totalReps, volume, withoutWeight, type ExerciseEntry, type NextTarget,
 } from '../lib/training';
 import { DEFAULT_REST, doneSets, minutesSince, nextOpenSet, parseDraft, REST_CHOICES, setLabel, type DraftSet, type WorkoutDraft } from '../lib/rest';
 import { success, tap } from '../lib/haptics';
@@ -60,20 +60,27 @@ function writeDraft(d: WorkoutDraft | null) {
   }
 }
 
-const toSets = (sets: SetDraft[]): SetLog[] =>
-  sets.map((s) => ({ weight: parseNumber(s.w) ?? 0, reps: Math.round(parseNumber(s.r) ?? 0) })).filter((s) => s.reps > 0);
+const toSets = (sets: SetDraft[], repsOnly = false): SetLog[] =>
+  sets.map((s) => ({ weight: repsOnly ? 0 : parseNumber(s.w) ?? 0, reps: Math.round(parseNumber(s.r) ?? 0) })).filter((s) => s.reps > 0);
+
+/** Letztes Mal – bei Tagen nur mit Wiederholungen ohne Gewicht */
+function prevFor(workouts: Workout[], id: ID, name: string, date: DateStr, skip: ID | undefined, repsOnly: boolean): ExerciseEntry | null {
+  const prev = previousEntry(workouts, id, name, date, skip);
+  return prev && repsOnly ? { ...prev, sets: withoutWeight(prev.sets) } : prev;
+}
 
 function buildRows(day: TrainingDay | undefined, workout: Workout | undefined, workouts: Workout[], date: DateStr): RowDraft[] {
   const logged = workout?.exercises ?? [];
+  const repsOnly = isRepsOnly(day);
   const planned: { ex?: PlanExercise; id: ID; name: string; target: string; count: number }[] = (day?.exercises ?? []).map((e) => ({ ex: e, id: e.id, name: e.name, target: `${e.sets} × ${e.reps || '–'}`, count: e.sets }));
   // Beim Bearbeiten auch Übungen zeigen, die inzwischen aus dem Plan entfernt wurden
   for (const l of logged) if (!planned.some((p) => p.id === l.exerciseId)) planned.push({ id: l.exerciseId, name: l.name, target: '', count: l.sets.length });
   return planned.map((p) => {
-    const prev = previousEntry(workouts, p.id, p.name, date, workout?.id);
+    const prev = prevFor(workouts, p.id, p.name, date, workout?.id, repsOnly);
     const own = logged.find((l) => l.exerciseId === p.id);
-    const goal = !workout && p.ex ? targetFor(workouts, p.ex, date) : null;
+    const goal = !workout && p.ex ? targetFor(workouts, p.ex, date, undefined, repsOnly) : null;
     const sets: SetDraft[] = own
-      ? own.sets.map((s) => ({ w: formatNumber(s.weight), r: String(s.reps) }))
+      ? own.sets.map((s) => ({ w: repsOnly ? '' : formatNumber(s.weight), r: String(s.reps) }))
       : goal
         // Neu mit Ziel: Zielgewicht vorbelegen, Ziel-Wiederholungen nur als Vorschlag (grau)
         ? goal.reps.map(() => ({ w: goal.weight > 0 ? formatNumber(goal.weight) : '', r: '' }))
@@ -114,6 +121,8 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
     });
   });
   const name = day?.name ?? workout?.title ?? 'Training';
+  /** Körpertraining & Co.: nur Wiederholungen, kein Gewicht */
+  const repsOnly = isRepsOnly(day);
   const restSeconds = data.settings.restSeconds ?? DEFAULT_REST;
   const now = useNow(live && startedAt !== null, 30_000);
 
@@ -126,7 +135,7 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
   // Beim Nachtragen mit anderem Datum „Letztes Mal“ neu bestimmen, eingetragene Sätze bleiben
   const changeDate = (d: DateStr) => {
     setDate(d);
-    setRows((rs) => rs.map((r) => ({ ...r, prev: previousEntry(data.workouts, r.exerciseId, r.name, d, workout?.id) })));
+    setRows((rs) => rs.map((r) => ({ ...r, prev: prevFor(data.workouts, r.exerciseId, r.name, d, workout?.id, repsOnly) })));
   };
   const setRow = (i: number, fn: (r: RowDraft) => RowDraft) => setRows((rs) => rs.map((r, j) => (j === i ? fn(r) : r)));
   const setCell = (i: number, k: number, key: 'w' | 'r', v: string) =>
@@ -144,7 +153,7 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
       return;
     }
     const hint = hintFor(row, k);
-    const w = set.w.trim() || (hint && hint.weight > 0 ? formatNumber(hint.weight) : '');
+    const w = repsOnly ? '' : set.w.trim() || (hint && hint.weight > 0 ? formatNumber(hint.weight) : '');
     const r = set.r.trim() || (hint && hint.reps > 0 ? String(hint.reps) : '');
     if (!r) {
       show(`Trag erst die ${row.timed ? 'Sekunden' : 'Wiederholungen'} für Satz ${k + 1} ein.`);
@@ -164,12 +173,12 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
     const nr = next[pos.row];
     const ns = nr.sets[pos.set];
     const nh = hintFor(nr, pos.set);
-    const goalWeight = parseNumber(ns.w) ?? nh?.weight ?? 0;
+    const goalWeight = repsOnly ? 0 : parseNumber(ns.w) ?? nh?.weight ?? 0;
     const goalReps = Math.round(parseNumber(ns.r) ?? nh?.reps ?? 0);
     rest.start(restSeconds, { exercise: row.name, next: setLabel(nr.name, pos.set, nr.sets.length), goal: setText(goalWeight, goalReps, nr.timed) });
   };
 
-  const logs: ExerciseLog[] = rows.map((r) => ({ exerciseId: r.exerciseId, name: r.name, sets: toSets(r.sets) })).filter((l) => l.sets.length > 0);
+  const logs: ExerciseLog[] = rows.map((r) => ({ exerciseId: r.exerciseId, name: r.name, sets: toSets(r.sets, repsOnly) })).filter((l) => l.sets.length > 0);
   const suggested = startedAt !== null ? minutesSince(startedAt, now) : null;
 
   const save = () => {
@@ -198,9 +207,13 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
     <Sheet title={workout ? `${name} bearbeiten` : `${name} eintragen`} submitLabel="Sichern" submitDisabled={logs.length === 0} onClose={onClose} onSubmit={save}>
       {live && <RestBar />}
       <p className="muted small lift-hint">
-        {live
-          ? 'Tippe nach jedem Satz auf ✓: Leere Felder übernehmen den grauen Vorschlag, dann startet die Satzpause. Gewicht 0 = Körpergewicht.'
-          : 'Trag pro Satz Gewicht (kg) und Wiederholungen ein. Leere Sätze werden nicht gespeichert, Gewicht 0 = Körpergewicht.'}
+        {repsOnly
+          ? live
+            ? 'Nur Wiederholungen, kein Gewicht. Tippe nach jedem Satz auf ✓: Ein leeres Feld übernimmt den grauen Vorschlag, dann startet die Satzpause.'
+            : 'Nur Wiederholungen, kein Gewicht. Leere Sätze werden nicht gespeichert.'
+          : live
+            ? 'Tippe nach jedem Satz auf ✓: Leere Felder übernehmen den grauen Vorschlag, dann startet die Satzpause. Gewicht 0 = Körpergewicht.'
+            : 'Trag pro Satz Gewicht (kg) und Wiederholungen ein. Leere Sätze werden nicht gespeichert, Gewicht 0 = Körpergewicht.'}
       </p>
       {live && (
         <div className="lift-rest-pick">
@@ -216,7 +229,7 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
       )}
       {rows.length === 0 && <Empty>Dieser Tag hat noch keine Übungen. Füge sie unter „Plan bearbeiten“ hinzu.</Empty>}
       {rows.map((r, i) => {
-        const current = toSets(r.sets);
+        const current = toSets(r.sets, repsOnly);
         return (
           <section key={r.exerciseId} className="lift-ex">
             <div className="lift-ex-head">
@@ -227,7 +240,7 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
             </div>
             {r.prev ? (
               <div className="lift-last muted small">
-                <span>Letztes Mal ({relativeLabel(r.prev.date, t)}): <b>{formatSets(r.prev.sets)}</b></span>
+                <span>Letztes Mal ({relativeLabel(r.prev.date, t)}): <b>{formatSets(r.prev.sets, r.timed)}</b></span>
                 <button type="button" className="link" onClick={() => sameAsLast(i)}>Übernehmen</button>
               </div>
             ) : (
@@ -246,11 +259,12 @@ export function LogSheet({ day, workout, onClose }: { day?: TrainingDay; workout
               {r.sets.map((s, k) => {
                 const hint = hintFor(r, k);
                 return (
-                  <div key={k} className={`lift-set ${live ? 'live' : ''} ${s.done ? 'done' : ''}`}>
+                  <div key={k} className={`lift-set ${live ? 'live' : ''} ${repsOnly ? 'reps-only' : ''} ${s.done ? 'done' : ''}`}>
                     <span className="lift-set-no">{k + 1}</span>
-                    <input inputMode="decimal" aria-label={`${r.name} Satz ${k + 1} Gewicht`} value={s.w} placeholder={hint ? formatNumber(hint.weight) : 'kg'} onChange={(e) => setCell(i, k, 'w', e.target.value)} />
-                    <span className="muted">kg ×</span>
+                    {!repsOnly && <input inputMode="decimal" aria-label={`${r.name} Satz ${k + 1} Gewicht`} value={s.w} placeholder={hint ? formatNumber(hint.weight) : 'kg'} onChange={(e) => setCell(i, k, 'w', e.target.value)} />}
+                    {!repsOnly && <span className="muted">kg ×</span>}
                     <input inputMode="numeric" aria-label={`${r.name} Satz ${k + 1} ${r.timed ? 'Sekunden' : 'Wiederholungen'}`} value={s.r} placeholder={hint && hint.reps > 0 ? String(hint.reps) : r.timed ? 'Sek.' : 'Wdh.'} onChange={(e) => setCell(i, k, 'r', e.target.value)} />
+                    {repsOnly && <span className="muted">{r.timed ? 'Sek.' : 'Wdh.'}</span>}
                     {live && (
                       <button type="button" className={`lift-done ${s.done ? 'on' : ''}`} aria-pressed={!!s.done} aria-label={`Satz ${k + 1} ${s.done ? 'wieder öffnen' : 'geschafft'}`} onClick={() => toggleDone(i, k)}>✓</button>
                     )}
@@ -319,6 +333,7 @@ function PlanSheet({ onClose }: { onClose: () => void }) {
           <div className="lift-plan-day">
             <input className="lift-day-name" aria-label="Name des Tages" value={d.name} onChange={(e) => setDay(i, (x) => ({ ...x, name: e.target.value }))} />
             <button type="button" className={`lift-sep-toggle ${d.separate ? 'on' : ''}`} aria-pressed={!!d.separate} title="Separates Training zählt nicht zur Reihenfolge der anderen Tage" onClick={() => setDay(i, (x) => ({ ...x, separate: !x.separate || undefined }))}>{d.separate ? 'Separat' : 'In Reihenfolge'}</button>
+            <button type="button" className={`lift-sep-toggle ${isRepsOnly(d) ? 'on' : ''}`} aria-pressed={isRepsOnly(d)} title="Nur Wiederholungen zählen, ohne Gewicht (z. B. Liegestütze)" onClick={() => setDay(i, (x) => ({ ...x, repsOnly: !isRepsOnly(x) }))}>{isRepsOnly(d) ? 'Nur Wdh.' : 'Mit Gewicht'}</button>
             <button type="button" className="icon" aria-label={`${d.name} löschen`} onClick={() => { if (confirm(`„${d.name}“ aus dem Plan löschen? Eingetragene Trainings bleiben erhalten.`)) setPlan((p) => p.filter((_, j) => j !== i)); }}>🗑</button>
           </div>
           {d.exercises.map((e, k) => (
@@ -334,7 +349,7 @@ function PlanSheet({ onClose }: { onClose: () => void }) {
           <button type="button" className="link lift-add-set" onClick={() => setDay(i, (x) => ({ ...x, exercises: [...x.exercises, { id: newId(), name: '', sets: 3, reps: '8–12' }] }))}>+ Übung</button>
         </section>
       ))}
-      <p className="muted small">„Separat“ heißt: eigenes Training neben der Reihenfolge. Es wird nie als Nächstes vorgeschlagen und verschiebt die anderen Tage nicht.</p>
+      <p className="muted small">„Separat“ heißt: eigenes Training neben der Reihenfolge. Es wird nie als Nächstes vorgeschlagen und verschiebt die anderen Tage nicht. „Nur Wdh.“ zählt nur Wiederholungen, ganz ohne Gewicht.</p>
       <button type="button" onClick={() => setPlan((p) => [...p, { id: newId(), name: 'Beine', exercises: [] }])}>+ Trainingstag</button>
       {!plan.some((d) => d.separate) && <button type="button" onClick={() => setPlan((p) => [...p, buildSeparateDay(newId)])}>+ Separates Körpertraining</button>}
     </Sheet>
@@ -348,9 +363,17 @@ function ProgressSheet({ onClose }: { onClose: () => void }) {
   const all = data.trainingPlan.flatMap((d) => d.exercises.map((e) => ({ ...e, dayId: d.id })));
   const [sel, setSel] = useState<ID | undefined>(all[0]?.id);
   const ex = all.find((e) => e.id === sel);
-  const history = useMemo(() => (ex ? exerciseHistory(data.workouts, ex.id, ex.name) : []), [ex, data.workouts]);
+  /** Übung aus einem Tag nur mit Wiederholungen: Fortschritt = Wiederholungen insgesamt */
+  const repsOnly = isRepsOnly(data.trainingPlan.find((d) => d.id === ex?.dayId));
+  const timed = !!ex && timedExercise(ex);
+  const history = useMemo(() => {
+    const list = ex ? exerciseHistory(data.workouts, ex.id, ex.name) : [];
+    return repsOnly ? list.map((h) => ({ ...h, sets: withoutWeight(h.sets) })) : list;
+  }, [ex, data.workouts, repsOnly]);
   const chart = history.slice(0, 10).reverse();
-  const max = Math.max(1, ...chart.map((h) => bestSet(h.sets)?.weight ?? 0));
+  const barValue = (sets: SetLog[]) => (repsOnly ? totalReps(sets) : bestSet(sets)?.weight ?? 0);
+  const max = Math.max(1, ...chart.map((h) => barValue(h.sets)));
+  const unit = timed ? 'Sek.' : 'Wdh.';
   const first = history[history.length - 1];
   const t = today();
 
@@ -366,16 +389,16 @@ function ProgressSheet({ onClose }: { onClose: () => void }) {
       {!ex ? <Empty>Noch keine Übungen im Plan.</Empty> : history.length === 0 ? <Empty>Für {ex.name} ist noch nichts eingetragen.</Empty> : (
         <>
           <section className="health-tile" style={{ ['--h' as string]: '#FF3B30' }}>
-            <span className="health-label">🏋️ {ex.name} · bester Satz</span>
-            <span className="health-value">{formatSets([bestSet(history[0].sets)!])}</span>
+            <span className="health-label">{repsOnly ? `🤸 ${ex.name} · zuletzt insgesamt` : `🏋️ ${ex.name} · bester Satz`}</span>
+            <span className="health-value">{repsOnly ? `${totalReps(history[0].sets)} ${unit}` : formatSets([bestSet(history[0].sets)!])}</span>
             {first && first !== history[0] && <span className="muted small">Seit {formatDate(first.date)}: <TrendChip current={history[0].sets} previous={first.sets} /></span>}
-            <div className="fit-bars" aria-label="Bestes Gewicht pro Training">
+            <div className="fit-bars" aria-label={repsOnly ? 'Wiederholungen pro Training' : 'Bestes Gewicht pro Training'}>
               {chart.map((h) => {
-                const b = bestSet(h.sets)!;
+                const v = barValue(h.sets);
                 return (
-                  <div key={h.workoutId} title={`${formatDate(h.date)}: ${formatSets(h.sets)}`}>
-                    <span style={{ height: `${(b.weight / max) * 100}%` }} />
-                    <small>{formatNumber(b.weight)}</small>
+                  <div key={h.workoutId} title={`${formatDate(h.date)}: ${formatSets(h.sets, timed)}`}>
+                    <span style={{ height: `${(v / max) * 100}%` }} />
+                    <small>{formatNumber(v)}</small>
                   </div>
                 );
               })}
@@ -385,8 +408,8 @@ function ProgressSheet({ onClose }: { onClose: () => void }) {
             {history.map((h, i) => (
               <li key={h.workoutId}>
                 <div className="grow lift-hist">
-                  <span className="task-title">{formatSets(h.sets)}</span>
-                  <span className="muted small">{relativeLabel(h.date, t)} · {formatNumber(volume(h.sets))} kg bewegt</span>
+                  <span className="task-title">{formatSets(h.sets, timed)}</span>
+                  <span className="muted small">{relativeLabel(h.date, t)} · {repsOnly ? `${totalReps(h.sets)} ${unit} insgesamt` : `${formatNumber(volume(h.sets))} kg bewegt`}</span>
                 </div>
                 {history[i + 1] && <TrendChip current={h.sets} previous={history[i + 1].sets} />}
               </li>

@@ -17,6 +17,9 @@ import { budgetStatus } from './finance';
 import { nextTrainingDay } from './training';
 import { toneLabel } from './tones';
 import { review } from './srs';
+import { resolveRepsEntries, widgetBodyweight, type BodyweightOp, type WidgetBodyweight } from './bodyweight';
+
+export type { WidgetBodyExercise, WidgetBodyweight } from './bodyweight';
 
 /** Erhöhen, wenn sich das Format so ändert, dass alte Widgets es nicht mehr lesen können */
 export const WIDGET_SNAPSHOT_VERSION = 1;
@@ -144,6 +147,8 @@ export interface WidgetSnapshot {
   /** Heute fällige Lernkarten (die ersten), dazu wie viele insgesamt fällig sind */
   cards: WidgetCard[];
   cardsDue: number;
+  /** Körpertraining zum schnellen Eintragen (Wiederholungen ohne Gewicht), null ohne solchen Plan-Tag */
+  bodyweight: WidgetBodyweight | null;
 }
 
 const KIND_COLORS: Record<CalendarEntry['kind'], string> = {
@@ -319,6 +324,7 @@ export function widgetSnapshot(data: Data, entries: CalendarEntry[], now: Date):
     shoppingOpen: shoppingOpen.length,
     cards: cards.cards,
     cardsDue: cards.due,
+    bodyweight: widgetBodyweight(data, day),
   };
 }
 
@@ -327,9 +333,11 @@ export function widgetSnapshot(data: Data, entries: CalendarEntry[], now: Date):
 /**
  * Eine Aktion aus dem Widget: gewünschter Zustand (nicht „umschalten“), damit doppeltes Übernehmen nichts kaputt macht.
  * Bei Lernkarten heißt `done`: gewusst („Wusste ich“ = gut), sonst „Nochmal“ – sie zählen alle der Reihe nach.
+ * Bei `reps` (Körpertraining) ist `id` die Übung und `amount` die Wiederholungen dieses Tipps
+ * (negativ = wieder abziehen); auch sie zählen alle der Reihe nach.
  */
 export interface WidgetAction {
-  kind: 'task' | 'habit' | 'shopping' | 'card';
+  kind: 'task' | 'habit' | 'shopping' | 'card' | 'reps';
   id: ID;
   done: boolean;
   /** Tag, an dem im Widget getippt wurde (für Gewohnheiten) */
@@ -343,7 +351,8 @@ export interface WidgetAction {
 export type StoreOp =
   | { op: 'update'; collection: 'tasks' | 'shopping' | 'habitLogs' | 'cards'; id: ID; patch: Record<string, unknown> }
   | { op: 'add'; collection: 'habitLogs'; item: { habitId: ID; date: DateStr; amount?: number } }
-  | { op: 'remove'; collection: 'habitLogs'; id: ID };
+  | { op: 'remove'; collection: 'habitLogs'; id: ID }
+  | BodyweightOp;
 
 /** Liest die Warteschlange aus dem Speicher – kaputte Einträge fallen weg. */
 export function parseWidgetActions(raw: unknown): WidgetAction[] {
@@ -351,7 +360,7 @@ export function parseWidgetActions(raw: unknown): WidgetAction[] {
   return raw.filter(
     (a): a is WidgetAction =>
       !!a && typeof a === 'object' &&
-      ['task', 'habit', 'shopping', 'card'].includes((a as WidgetAction).kind) &&
+      ['task', 'habit', 'shopping', 'card', 'reps'].includes((a as WidgetAction).kind) &&
       typeof (a as WidgetAction).id === 'string' &&
       typeof (a as WidgetAction).done === 'boolean' &&
       typeof (a as WidgetAction).day === 'string',
@@ -362,10 +371,13 @@ export function parseWidgetActions(raw: unknown): WidgetAction[] {
  * Was die App mit den Aktionen aus dem Widget tun muss. Pro Eintrag zählt nur die letzte Aktion;
  * was schon so ist, wie im Widget gewünscht, bleibt unberührt.
  */
-export function resolveWidgetActions(data: Pick<Data, 'tasks' | 'shopping' | 'habits' | 'habitLogs' | 'cards'>, actions: WidgetAction[]): StoreOp[] {
+export function resolveWidgetActions(
+  data: Pick<Data, 'tasks' | 'shopping' | 'habits' | 'habitLogs' | 'cards'> & Partial<Pick<Data, 'workouts' | 'trainingPlan'>>,
+  actions: WidgetAction[],
+): StoreOp[] {
   const sorted = [...actions].sort((x, y) => x.at - y.at);
   const last = new Map<string, WidgetAction>();
-  for (const a of sorted) if (a.kind !== 'card') last.set(`${a.kind}:${a.id}:${a.kind === 'habit' ? a.day : ''}`, a);
+  for (const a of sorted) if (a.kind !== 'card' && a.kind !== 'reps') last.set(`${a.kind}:${a.id}:${a.kind === 'habit' ? a.day : ''}`, a);
   const ops: StoreOp[] = [];
   // Lernkarten: jede Bewertung zählt, der Reihe nach (wie in der Lern-Sitzung)
   const reviewed = new Map<ID, Card>();
@@ -375,6 +387,9 @@ export function resolveWidgetActions(data: Pick<Data, 'tasks' | 'shopping' | 'ha
     if (card) reviewed.set(a.id, review(card, a.done ? 'gut' : 'nochmal', a.day));
   }
   for (const [id, c] of reviewed) ops.push({ op: 'update', collection: 'cards', id, patch: { interval: c.interval, ease: c.ease, reps: c.reps, lapses: c.lapses, due: c.due, reviewed: c.reviewed } });
+  // Körpertraining: jeder Tipp ist ein Satz (bzw. zieht Wiederholungen wieder ab)
+  const reps = sorted.filter((a) => a.kind === 'reps' && typeof a.amount === 'number').map((a) => ({ exerciseId: a.id, day: a.day, reps: a.amount!, at: a.at }));
+  if (reps.length) ops.push(...resolveRepsEntries({ workouts: data.workouts ?? [], trainingPlan: data.trainingPlan ?? [] }, reps));
   for (const a of last.values()) {
     if (a.kind === 'task') {
       const task = data.tasks.find((t) => t.id === a.id);

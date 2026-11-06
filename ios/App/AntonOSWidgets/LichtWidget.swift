@@ -47,11 +47,13 @@ enum LichtStore {
     /// Merkt den neuen Zustand; Gruppen sind an, sobald eine ihrer Lampen an ist
     static func setOn(_ ids: Set<String>, on: Bool) {
         var list = devices().map { d -> LichtGeraet in var d = d; if ids.contains(d.id) { d.on = on }; return d }
-        let lit = Set(list.filter { !$0.isGroup && $0.on }.map(\.id))
+        let known = Dictionary(list.filter { !$0.isGroup }.map { ($0.id, $0.on) }, uniquingKeysWith: { a, _ in a })
         list = list.map { d in
             guard let members = d.members, !members.isEmpty else { return d }
             var d = d
-            d.on = ids.contains(d.id) ? on : members.contains { lit.contains($0.id) }
+            // Lampe gerade geschaltet → neuer Zustand; sonst der bekannte; in der App ausgeblendete Lampen → bisheriger Gruppenstand
+            let before = d.on
+            d.on = members.contains { m in ids.contains(m.id) ? on : (known[m.id] ?? before) }
             return d
         }
         save(list)

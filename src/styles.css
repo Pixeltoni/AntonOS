@@ -805,15 +805,6 @@ h3 { font-size: 0.95rem; margin: 0.5rem 0 0; }
 .round-btn.pause { background: #3A2600; color: #FF9F0A; }
 .focus-widget .round-btn { width: 64px; height: 64px; font-size: 0.85rem; }
 .focus-settings { width: 100%; }
-/* Verlauf: am Handy umbrechen statt das Datum zu quetschen */
-.focus-history li { flex-wrap: wrap; row-gap: 0.3rem; }
-.focus-history li > * { white-space: nowrap; }
-.focus-history li > .grow { min-width: 8.5rem; }
-/* Ablenkungs-Sperre (iPhone) */
-.focus-lock { display: flex; flex-direction: column; gap: 0.6rem; }
-.focus-lock p { margin: 0; }
-.focus-lock .row.between { align-items: center; }
-.focus-lock-on { color: var(--accent); font-weight: 600; }
 .focus-settings summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; margin-bottom: 0.6rem; }
 .focus-widget { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
 .focus-widget-time { font-size: 1.6rem; font-weight: 300; font-variant-numeric: tabular-nums; }
@@ -1986,6 +1977,10 @@ input.plain { border: 0 !important; background: transparent !important; padding:
 .focus-start { align-self: flex-start; display: inline-flex; align-items: center; gap: 7px; border: 0 !important; border-radius: 999px; padding: 0.45rem 1rem; background: #5856D6 !important; color: #fff; font-weight: 600; }
 .tag-input { width: 120px; flex: 1; min-width: 100px; }
 .focus-task { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; margin: 0; }
+/* Verlauf: am Handy umbrechen statt das Datum zu quetschen */
+.focus-history li { flex-wrap: wrap; row-gap: 0.3rem; }
+.focus-history li > * { white-space: nowrap; }
+.focus-history li > .grow { min-width: 8.5rem; }
 .link-btn { border: 0 !important; background: none !important; color: var(--accent); padding: 0 4px; font-size: inherit; }
 @media (max-width: 800px) {
   .bulk-bar { left: 12px; right: 12px; transform: none; max-width: none; flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }

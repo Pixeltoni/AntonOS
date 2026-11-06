@@ -71,7 +71,8 @@ enum LichtSchalter {
                 for await hit in group { if let hit { done.insert(hit) } }
             }
             guard !done.isEmpty else { throw LichtFehler.antwort }
-            LichtStore.setOn(done.union([id]), on: on)
+            // Gruppe nicht selbst setzen: ihr Zustand folgt aus den Lampen, die wirklich umgeschaltet wurden
+            LichtStore.setOn(done, on: on)
         } else {
             try await GoveeAPI.power(id: id, sku: sku, on: on)
             LichtStore.setOn([id], on: on)

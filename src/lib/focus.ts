@@ -41,8 +41,6 @@ export interface FocusTimer {
   /** Restzeit in ms, während pausiert */
   leftMs: number;
   distractions: number;
-  /** Versuche, eine gesperrte App zu öffnen (Ablenkungs-Sperre) – in dieser Runde */
-  blocked?: number;
 }
 
 export const defaultFocusConfig = (): FocusConfig => ({
@@ -50,7 +48,7 @@ export const defaultFocusConfig = (): FocusConfig => ({
 });
 
 export const idleTimer = (config: FocusConfig = defaultFocusConfig()): FocusTimer => ({
-  config, active: false, phase: 'fokus', round: 1, running: false, endAt: 0, leftMs: config.work * 60_000, distractions: 0, blocked: 0,
+  config, active: false, phase: 'fokus', round: 1, running: false, endAt: 0, leftMs: config.work * 60_000, distractions: 0,
 });
 
 export function phaseMinutes(config: FocusConfig, phase: FocusPhase): number {
@@ -78,15 +76,12 @@ export interface Finished {
   next: FocusPhase | 'fertig';
 }
 
-/** Versuche nur speichern, wenn es welche gab (ältere Einträge haben das Feld nicht) */
-const blockedOf = (t: FocusTimer) => (t.blocked ? { blocked: t.blocked } : {});
-
 /** Nächste Phase nach dem Ende der aktuellen (ohne Speichern). */
 function nextPhase(timer: FocusTimer, endedAt: number): { timer: FocusTimer; next: FocusPhase | 'fertig' } {
   const { config } = timer;
   const run = (phase: FocusPhase, round: number): FocusTimer => {
     const ms = phaseMinutes(config, phase) * 60_000;
-    return { ...timer, phase, round, running: config.autoStart, endAt: endedAt + ms, leftMs: ms, distractions: phase === 'fokus' ? 0 : timer.distractions, blocked: phase === 'fokus' ? 0 : timer.blocked };
+    return { ...timer, phase, round, running: config.autoStart, endAt: endedAt + ms, leftMs: ms, distractions: phase === 'fokus' ? 0 : timer.distractions };
   };
   if (timer.phase === 'fokus') {
     if (timer.round < config.rounds) return { timer: config.short > 0 ? run('pause', timer.round) : run('fokus', timer.round + 1), next: config.short > 0 ? 'pause' : 'fokus' };
@@ -109,7 +104,7 @@ export function tick(timer: FocusTimer, now: number): { timer: FocusTimer; finis
     const { timer: next, next: label } = nextPhase(t, t.endAt);
     finished.push({
       session: ended.phase === 'fokus'
-        ? { minutes: ended.config.work, courseId: ended.config.courseId, distractions: ended.distractions, ...blockedOf(ended), mode: ended.config.mode, taskId: ended.config.taskId ?? null }
+        ? { minutes: ended.config.work, courseId: ended.config.courseId, distractions: ended.distractions, mode: ended.config.mode, taskId: ended.config.taskId ?? null }
         : undefined,
       next: label,
     });
@@ -122,7 +117,7 @@ export function tick(timer: FocusTimer, now: number): { timer: FocusTimer; finis
 export function stop(timer: FocusTimer, now: number, save: boolean): { timer: FocusTimer; session?: Omit<FocusSession, 'id' | 'date'> } {
   const done = Math.round((timer.config.work * 60_000 - remainingMs(timer, now)) / 60_000);
   const session = save && timer.active && timer.phase === 'fokus' && done > 0
-    ? { minutes: done, courseId: timer.config.courseId, distractions: timer.distractions, ...blockedOf(timer), mode: timer.config.mode, taskId: timer.config.taskId ?? null }
+    ? { minutes: done, courseId: timer.config.courseId, distractions: timer.distractions, mode: timer.config.mode, taskId: timer.config.taskId ?? null }
     : undefined;
   return { timer: idleTimer(timer.config), session };
 }
@@ -147,25 +142,4 @@ export function stackedWeek(sessions: FocusSession[], days: string[]): { date: s
     const parts = [...map].map(([courseId, minutes]) => ({ courseId, minutes })).sort((a, b) => b.minutes - a.minutes);
     return { date, parts, total: parts.reduce((s, p) => s + p.minutes, 0) };
   });
-}
-
-/* ---------- Ablenkungs-Sperre (iPhone) ---------- */
-
-/** Wann die Sperre gelten soll: nur während eine Fokus-Runde läuft (Pausen und Pausiertes bleiben frei) */
-export function lockUntil(timer: FocusTimer, now: number): number | null {
-  return timer.active && timer.running && timer.phase === 'fokus' && timer.endAt > now ? timer.endAt : null;
-}
-
-/** Beginn der laufenden Fokus-Runde (ms) */
-export const phaseStart = (timer: FocusTimer): number => timer.endAt - timer.config.work * 60_000;
-
-/**
- * Ordnet abgeholte Versuche zu: was in die laufende Runde fällt, zählt dort;
- * ältere gehören zur zuletzt gespeicherten Runde (AntonOS war beim Rundenende vielleicht geschlossen).
- */
-export function splitAttempts(attempts: { at: number }[], timer: FocusTimer): { current: number; earlier: number } {
-  const running = timer.active && timer.phase === 'fokus';
-  const from = running ? (timer.running ? phaseStart(timer) : 0) : Infinity;
-  const current = running ? attempts.filter((a) => a.at >= from).length : 0;
-  return { current, earlier: attempts.length - current };
 }

@@ -5,7 +5,6 @@ import { openSpotlight, SHORTCUT, Spotlight } from './components/spotlight';
 import { ASSISTANT_SHORTCUT, Assistant, openAssistant, useTaskReminders } from './components/assistant';
 import { useEventReminders } from './components/calendar';
 import { OfflineBanner, ShareSheet, useAppBadge } from './components/pwa';
-import { useFocusLock } from './components/focuslock';
 import { Icon, Logo, NavIcon, PAGE_ICONS } from './components/icons';
 import { useRecurringBookings } from './pages/Finance';
 import { useStore } from './store';
@@ -168,7 +167,6 @@ function Shell() {
   useCalendarFeeds();
   useDayCloseReminder();
   useNativeExtras();
-  useFocusLock();
   useSheetSwipe();
 
   // Auf dem Handy schließt sich das Menü bei jedem Seitenwechsel

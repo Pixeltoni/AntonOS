@@ -23,8 +23,6 @@ interface FocusCtx {
   stop(save: boolean): void;
   skip(): void;
   distract(): void;
-  /** Versuche, eine gesperrte App zu öffnen, in der laufenden Runde mitzählen */
-  block(count: number): void;
   configure(patch: Partial<FocusConfig>): void;
 }
 
@@ -146,7 +144,6 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     },
     skip: () => setTimer((x) => skipTimer(x, Date.now())),
     distract: () => setTimer((x) => ({ ...x, distractions: x.distractions + 1 })),
-    block: (count) => setTimer((x) => (x.active ? { ...x, blocked: (x.blocked ?? 0) + count } : x)),
     configure: (patch) =>
       setTimer((x) => {
         const config = { ...x.config, ...patch };

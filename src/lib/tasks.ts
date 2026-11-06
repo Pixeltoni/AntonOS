@@ -1,6 +1,6 @@
 import type { DateStr, ID, Task, TaskRepeat } from '../types';
 import { addDays, addMonths, parseDate } from './dates';
-import { setWhen } from './things';
+import { inToday, setWhen } from './things';
 
 const open = (t: Task) => t.status !== 'erledigt';
 
@@ -87,7 +87,7 @@ export function spawnRepeat(task: Task, doneDay: DateStr): Omit<Task, 'id'> | nu
   let next = nextRepeatDate(rule, rule.afterDone ? doneDay : anchor);
   // Lange überfällig: nicht lauter alte Termine nachholen
   for (let i = 0; i < 1000 && next < doneDay; i++) next = nextRepeatDate(rule, next);
-  const { id, completedAt: _done, ...rest } = task;
+  const { id, completedAt: _done, postponed: _p, noteLine: _line, ...rest } = task;
   return {
     ...rest,
     status: 'offen',
@@ -255,4 +255,70 @@ export function freeMinutes(busy: [number, number][], from: number, to: number):
     cursor = e;
   }
   return to - from - used;
+}
+
+/* ---------- Später, Aufräumen, Tag planen ---------- */
+
+export type LaterDay = 'morgen' | 'wochenende' | 'naechste-woche';
+
+/** „Morgen“, „Am Wochenende“ (nächster Samstag, samstags der Sonntag) und „Nächste Woche“ (nächster Montag) */
+export function laterDate(choice: LaterDay, day: DateStr): DateStr {
+  const wd = weekday(day); // 1 = Mo … 7 = So
+  if (choice === 'morgen') return addDays(day, 1);
+  if (choice === 'wochenende') return wd === 6 ? addDays(day, 1) : addDays(day, wd === 7 ? 6 : 6 - wd);
+  return addDays(day, 8 - wd);
+}
+
+/**
+ * Auf einen späteren Tag schieben: eine schon fällige Frist wandert mit,
+ * sonst wird die Aufgabe für den Tag eingeplant. Zählt mit, wie oft verschoben wurde.
+ */
+export function postponePatch(task: Pick<Task, 'due' | 'postponed'>, date: DateStr, day: DateStr): Partial<Task> {
+  const count = { postponed: (task.postponed ?? 0) + 1 };
+  if (task.due && task.due <= day) return { ...count, due: date, plannedFor: null, evening: false, someday: false };
+  return { ...count, plannedFor: date, evening: false, someday: false };
+}
+
+/** So oft verschoben, dass „Aufräumen“ nachfragt */
+export const STALE_POSTPONED = 3;
+
+/** Liegengeblieben: oft verschoben oder seit mehr als zwei Wochen überfällig */
+export function isStale(t: Task, day: DateStr): boolean {
+  if (!open(t) || t.someday) return false;
+  return (t.postponed ?? 0) >= STALE_POSTPONED || (t.due !== null && t.due <= addDays(day, -14));
+}
+
+/** Beim Aufräumen: heute erledigen (Frist auf heute) oder ohne Datum nach „Irgendwann“ parken */
+export function tidyPatch(t: Pick<Task, 'due'>, choice: 'heute' | 'irgendwann', day: DateStr): Partial<Task> {
+  if (choice === 'heute') return { ...setWhen('heute', day), due: t.due && t.due < day ? day : t.due, postponed: 0 };
+  return { ...setWhen('irgendwann', day), due: null, dueTime: undefined, remind: false, postponed: 0 };
+}
+
+/**
+ * Für „Tag planen“: offene Aufgaben, die noch nicht heute dran sind.
+ * Zuerst Fristen in den nächsten 7 Tagen, dann Aufgaben ohne Datum, dann spätere Fristen, zuletzt „Irgendwann“.
+ * Schon für einen späteren Tag Eingeplantes bleibt weg.
+ */
+export function planCandidates(tasks: Task[], day: DateStr, limit = 15): Task[] {
+  const soon = addDays(day, 7);
+  const rank = (t: Task): number => {
+    if (!open(t) || inToday(t, day)) return -1;
+    if (t.someday) return 3;
+    if (t.due && t.due <= soon) return 0;
+    if (t.plannedFor && t.plannedFor > day) return -1;
+    return t.due ? 2 : 1;
+  };
+  return sortTasks(tasks)
+    .map((t) => ({ t, r: rank(t) }))
+    .filter((x) => x.r >= 0)
+    .sort((a, b) => a.r - b.r || (a.r === 0 ? a.t.due!.localeCompare(b.t.due!) : 0))
+    .slice(0, limit)
+    .map((x) => x.t);
+}
+
+/** Wie dringend eine Frist wirkt (Farbe der Frist-Pille) */
+export function dueTone(due: DateStr, day: DateStr): 'late' | 'today' | 'soon' | 'later' {
+  if (due < day) return 'late';
+  if (due === day) return 'today';
+  return due <= addDays(day, 2) ? 'soon' : 'later';
 }

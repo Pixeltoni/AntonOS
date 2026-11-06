@@ -51,3 +51,60 @@ describe('Notizen', () => {
     expect(wrapSelection('ab cd', 3, 5, '**')).toEqual({ content: 'ab **cd**', from: 5, to: 7 });
   });
 });
+
+describe('Notizen: neue Bausteine', () => {
+  it('erkennt Zitat, Hinweis und Trennlinie', async () => {
+    const { parseBlocks, noteSnippet } = await import('./notes');
+    expect(parseBlocks('> Zitat\n! Wichtig\n---\n- Punkt').map((b) => b.kind)).toEqual(['quote', 'callout', 'hr', 'li']);
+    expect(parseBlocks('> Zitat')[0]).toEqual({ kind: 'quote', text: 'Zitat', line: 0 });
+    expect(noteSnippet({ title: 'T', content: '> Zitat\n---\n! Hinweis' })).toBe('Zitat Hinweis');
+  });
+  it('umschließt die Auswahl', async () => {
+    const { wrapWith } = await import('./notes');
+    expect(wrapWith('siehe Formeln', 6, 13, '[[', ']]')).toEqual({ content: 'siehe [[Formeln]]', from: 8, to: 15 });
+    expect(wrapWith('ab', 1, 1, '#', '')).toEqual({ content: 'a#b', from: 2, to: 2 });
+  });
+  it('setzt Haken über den Text', async () => {
+    const { setCheckByText } = await import('./notes');
+    const c = 'a\n- [ ] Blatt 4\n- [x] VL 3';
+    expect(setCheckByText(c, 'Blatt 4', true)).toBe('a\n- [x] Blatt 4\n- [x] VL 3');
+    expect(setCheckByText(c, 'VL 3', false)).toBe('a\n- [ ] Blatt 4\n- [ ] VL 3');
+    expect(setCheckByText(c, 'fehlt', true)).toBe(c);
+  });
+  it('zieht Haken mit, wenn die Aufgabe erledigt wird', async () => {
+    const { syncTaskCheck } = await import('./notes');
+    const notes = [{ id: 'n', title: '', courseId: null, content: '- [ ] Blatt 4', updated: '' }];
+    const task = { noteId: 'n', noteLine: 'Blatt 4' };
+    expect(syncTaskCheck(notes, { status: 'offen' }, { ...task, status: 'erledigt' })[0].content).toBe('- [x] Blatt 4');
+    expect(syncTaskCheck(notes, { status: 'offen' }, { ...task, status: 'in Arbeit' })).toBe(notes);
+    expect(syncTaskCheck(notes, { status: 'offen' }, { status: 'erledigt' })).toBe(notes);
+  });
+  it('räumt „Zuletzt gelöscht“ nach 30 Tagen auf', async () => {
+    const { purgeDeleted, trashDaysLeft, liveNotes } = await import('./notes');
+    const now = new Date('2026-11-06T12:00:00');
+    const notes = [
+      { id: 'a' },
+      { id: 'b', deletedAt: '2026-11-05T12:00:00' },
+      { id: 'c', deletedAt: '2026-10-01T12:00:00' },
+    ];
+    expect(trashDaysLeft('2026-11-05T12:00:00', now)).toBe(29);
+    expect(purgeDeleted(notes, now).map((n) => n.id)).toEqual(['a', 'b']);
+    expect(liveNotes(notes).map((n) => n.id)).toEqual(['a']);
+  });
+  it('findet Rückverweise', async () => {
+    const { backlinks } = await import('./notes');
+    const notes = [
+      { id: '1', title: 'Formeln', courseId: null, content: 'x', updated: '' },
+      { id: '2', title: 'VL 6', courseId: null, content: 'siehe [[formeln]]', updated: '' },
+      { id: '3', title: 'Alt', courseId: null, content: '[[Formeln]]', updated: '', deletedAt: '2026-11-01' },
+    ];
+    expect(backlinks(notes[0], notes).map((n) => n.id)).toEqual(['2']);
+  });
+  it('baut Tagesnotiz und Vorlagen', async () => {
+    const { dailyTitle, dailyContent, NOTE_TEMPLATES } = await import('./notes');
+    expect(dailyTitle('2026-11-06')).toBe('Freitag, 6. November');
+    expect(dailyContent([{ time: '10:15', label: 'LinA' }])).toContain('- 10:15 LinA');
+    expect(dailyContent([])).toContain('keine Termine');
+    expect(NOTE_TEMPLATES.find((t) => t.id === 'vorlesung')!.title('2026-11-06')).toBe('Vorlesung 6. November');
+  });
+});

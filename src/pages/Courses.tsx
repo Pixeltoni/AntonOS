@@ -107,7 +107,7 @@ export function CourseDetail({ id }: { id: ID }) {
 
   const t = today();
   const tasks = data.tasks.filter((x) => x.courseId === id);
-  const notes = data.notes.filter((x) => x.courseId === id);
+  const notes = data.notes.filter((x) => x.courseId === id && !x.deletedAt);
   const cards = data.cards.filter((x) => x.courseId === id);
   const exams = data.exams.filter((x) => x.courseId === id).sort((a, b) => a.date.localeCompare(b.date));
   const grades = data.grades.filter((x) => x.courseId === id);

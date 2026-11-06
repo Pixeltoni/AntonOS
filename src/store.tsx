@@ -8,6 +8,7 @@ import { SCHEMA_VERSION } from './lib/version';
 import { today } from './lib/dates';
 import { migrateSidebar, SIDEBAR_LAYOUT } from './lib/layout';
 import { tap } from './lib/haptics';
+import { purgeDeleted, syncTaskCheck } from './lib/notes';
 
 const STORAGE_KEY = 'antonos:v1';
 /** Wartezeit nach der letzten Änderung, bevor gespeichert wird (ms) */
@@ -79,6 +80,8 @@ export function normalize(raw: unknown): Data {
     }
   }
   if (typeof obj.schemaVersion === 'number') result.schemaVersion = obj.schemaVersion;
+  // „Zuletzt gelöscht“: nach 30 Tagen endgültig weg
+  result.notes = purgeDeleted(result.notes, new Date());
   return result;
 }
 
@@ -172,8 +175,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if ((collection === 'tasks' && p.status === 'erledigt') || (collection === 'shopping' && p.done === true)) tap();
     setData((d) => {
       const list = (d[collection] as Item<C>[]).map((x) => (x.id === id ? withCompletion(collection, x, patch) : x));
+      if (collection !== 'tasks') return { ...d, [collection]: list };
       // Wiederholte Aufgaben: beim Abhaken entsteht die nächste, beim Widerrufen verschwindet sie wieder
-      return { ...d, [collection]: collection === 'tasks' ? repeatTasks(d.tasks, list as Task[], id, today(), newId) : list };
+      const tasks = repeatTasks(d.tasks, list as Task[], id, today(), newId);
+      // Aufgabe aus einem Checkpunkt: Haken in der Notiz zieht mit
+      const notes = syncTaskCheck(d.notes, d.tasks.find((x) => x.id === id), tasks.find((x) => x.id === id));
+      return { ...d, tasks, notes };
     });
   }, []);
 
@@ -186,6 +193,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (collection === 'trips') next.transactions = d.transactions.map((t) => (t.tripId === id ? { ...t, tripId: undefined } : t));
       if (collection === 'taskLists') next.tasks = d.tasks.map((t) => (t.listId === id ? { ...t, listId: null } : t));
       if (collection === 'projects') next.tasks = d.tasks.map((t) => (t.projectId === id ? { ...t, projectId: null } : t));
+      if (collection === 'notes') next.tasks = d.tasks.map((t) => (t.noteId === id ? { ...t, noteId: null, noteLine: undefined } : t));
       return next;
     });
   }, []);

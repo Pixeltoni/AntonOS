@@ -31,6 +31,7 @@ enum WidgetStore {
             snap.rings = snap.rings.map { var r = $0; r.share = 0; r.text = "–"; return r }
             snap.ringsClosed = false
             snap.tasks = snap.tasks.filter { !$0.done }
+            snap.bodyweight?.newDay(gap: gap)
         }
         for action in pendingActions() {
             switch action.kind {
@@ -48,6 +49,8 @@ enum WidgetStore {
                 if action.day == today, let i = snap.habits.firstIndex(where: { $0.id == action.id }) {
                     snap.habits[i].apply(action)
                 }
+            case "reps":
+                if action.day == today, let amount = action.amount { snap.bodyweight?.add(id: action.id, reps: amount) }
             case "card":
                 // Gewusst: weg damit; „Nochmal“: kommt hinten noch einmal dran
                 if var cards = snap.cards, let i = cards.firstIndex(where: { $0.id == action.id }) {
@@ -103,7 +106,7 @@ struct WidgetAction: Codable {
     var done: Bool
     var day: String
     var at: Double
-    /// Nur Mengen-Gewohnheiten: gewünschte Tagesmenge nach dem Tipp
+    /// Nur Mengen-Gewohnheiten: gewünschte Tagesmenge nach dem Tipp; bei `reps`: Wiederholungen dieses Tipps
     var amount: Double? = nil
 }
 
@@ -129,6 +132,8 @@ struct Snapshot: Codable {
     /// Fällige Lernkarten (optional, damit ältere Stände lesbar bleiben)
     var cards: [WCard]?
     var cardsDue: Int?
+    /// Körpertraining zum schnellen Eintragen (optional, damit ältere Stände lesbar bleiben)
+    var bodyweight: WBody?
 }
 
 struct WAlarmRing: Codable {
@@ -288,6 +293,42 @@ struct WCard: Codable {
     var color: String
 }
 
+/// Übung aus dem Körpertraining (gleiche Felder wie WidgetBodyExercise in src/lib/bodyweight.ts)
+struct WBodyExercise: Codable {
+    var id: String
+    var name: String
+    var today: Double
+    var step: Double
+    var timed: Bool
+    var week: [Double]
+
+    var unit: String { timed ? "Sek." : "Wdh." }
+    var stepInt: Int { max(1, Int(step.rounded())) }
+}
+
+struct WBody: Codable {
+    var dayId: String
+    var name: String
+    var exercises: [WBodyExercise]
+
+    /// Tipp im Widget, den die App noch nicht übernommen hat
+    mutating func add(id: String, reps: Double) {
+        guard let i = exercises.firstIndex(where: { $0.id == id }) else { return }
+        exercises[i].today = max(0, exercises[i].today + reps)
+        if !exercises[i].week.isEmpty { exercises[i].week[exercises[i].week.count - 1] = exercises[i].today }
+    }
+
+    /// Neuer Tag ohne App: heute bei null anfangen, Woche weiterschieben
+    mutating func newDay(gap: Int) {
+        exercises = exercises.map { e in
+            var e = e
+            e.today = 0
+            e.week = Array((e.week + Array(repeating: 0, count: gap)).suffix(7))
+            return e
+        }
+    }
+}
+
 extension Snapshot {
     /// Termine, die noch nicht vorbei sind
     func upcoming(at now: Date) -> [WAgenda] { agenda.filter { $0.end > now } }
@@ -345,7 +386,12 @@ extension Snapshot {
             cards: [
                 WCard(id: "k1", front: "Wann konvergiert eine geometrische Reihe?", back: "Genau dann, wenn |q| < 1 ist.", course: "Analysis I", color: "#FF9500"),
             ],
-            cardsDue: 12
+            cardsDue: 12,
+            bodyweight: WBody(dayId: "k", name: "Körpertraining", exercises: [
+                WBodyExercise(id: "ls", name: "Liegestütze", today: 45, step: 20, timed: false, week: [40, 0, 50, 45, 60, 30, 45]),
+                WBodyExercise(id: "kb", name: "Kniebeugen", today: 0, step: 15, timed: false, week: [30, 30, 0, 45, 30, 45, 0]),
+                WBodyExercise(id: "pl", name: "Plank (Sek.)", today: 60, step: 30, timed: true, week: [90, 0, 60, 60, 90, 0, 60]),
+            ])
         )
     }
 }

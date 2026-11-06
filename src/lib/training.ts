@@ -30,18 +30,28 @@ export const PUSH_PULL_TEMPLATE: { name: string; exercises: { name: string; sets
 export const SEPARATE_TEMPLATE: { name: string; exercises: { name: string; sets: number; reps: string }[] } = {
   name: 'Körpertraining',
   exercises: [
-    { name: 'Kniebeugen', sets: 3, reps: '8–12' },
-    { name: 'Rumänisches Kreuzheben', sets: 3, reps: '8–12' },
+    { name: 'Liegestütze', sets: 3, reps: '10–20' },
+    { name: 'Kniebeugen', sets: 3, reps: '15–20' },
     { name: 'Ausfallschritte', sets: 3, reps: '10–12' },
-    { name: 'Wadenheben', sets: 3, reps: '12–15' },
+    { name: 'Wadenheben', sets: 3, reps: '15–20' },
     { name: 'Beinheben', sets: 3, reps: '10–15' },
     { name: 'Plank (Sek.)', sets: 3, reps: '30–60' },
   ],
 };
 
 export function buildSeparateDay(makeId: () => ID): TrainingDay {
-  return { id: makeId(), name: SEPARATE_TEMPLATE.name, separate: true, exercises: SEPARATE_TEMPLATE.exercises.map((e) => ({ id: makeId(), ...e })) };
+  return { id: makeId(), name: SEPARATE_TEMPLATE.name, separate: true, repsOnly: true, exercises: SEPARATE_TEMPLATE.exercises.map((e) => ({ id: makeId(), ...e })) };
 }
+
+/**
+ * Zählt dieser Tag nur Wiederholungen (kein Gewicht)? Ausdrücklich eingestellt oder –
+ * für Pläne von vor dieser Einstellung – ein separates Training namens „Körpertraining“.
+ */
+export const isRepsOnly = (day?: Pick<TrainingDay, 'name' | 'separate' | 'repsOnly'> | null): boolean =>
+  !!day && (day.repsOnly ?? (!!day.separate && /k(ö|oe)rper/i.test(day.name)));
+
+/** Sätze ohne Gewicht (für Tage, die nur Wiederholungen zählen) */
+export const withoutWeight = (sets: SetLog[]): SetLog[] => sets.map((s) => ({ weight: 0, reps: s.reps }));
 
 /** Push, Pull und das separate Körpertraining */
 export function buildPlan(makeId: () => ID): TrainingDay[] {
@@ -80,12 +90,13 @@ export function bestSet(sets: SetLog[]): SetLog | null {
   return best;
 }
 
-/** „60 kg × 10 · 10 · 8“ bzw. „60×10 · 62,5×8“ bei wechselndem Gewicht */
-export function formatSets(sets: SetLog[]): string {
+/** „60 kg × 10 · 10 · 8“, „60×10 · 62,5×8“ bei wechselndem Gewicht, ohne Gewicht „15 · 12 · 10 Wdh.“ */
+export function formatSets(sets: SetLog[], timed = false): string {
   const v = validSets(sets);
   if (v.length === 0) return '–';
   const same = v.every((s) => s.weight === v[0].weight);
-  if (same) return `${v[0].weight > 0 ? `${formatNumber(v[0].weight)} kg` : 'KG'} × ${v.map((s) => s.reps).join(' · ')}`;
+  if (same && v[0].weight <= 0) return `${v.map((s) => s.reps).join(' · ')} ${timed ? 'Sek.' : 'Wdh.'}`;
+  if (same) return `${formatNumber(v[0].weight)} kg × ${v.map((s) => s.reps).join(' · ')}`;
   return v.map((s) => `${formatNumber(s.weight)}×${s.reps}`).join(' · ');
 }
 
@@ -290,10 +301,13 @@ export function nextTarget(planned: Pick<PlanExercise, 'name' | 'sets' | 'reps'>
   return { weight: best.weight, reps, kind: plus > 0 ? 'mehr' : 'halten', plus };
 }
 
-/** Ziel einer Übung für ein Training am Tag `date` (ohne das Training selbst, z. B. beim Bearbeiten) */
-export function targetFor(workouts: Workout[], exercise: Pick<PlanExercise, 'id' | 'name' | 'sets' | 'reps'>, date: DateStr, skipWorkoutId?: ID): NextTarget | null {
+/**
+ * Ziel einer Übung für ein Training am Tag `date` (ohne das Training selbst, z. B. beim Bearbeiten).
+ * `repsOnly`: Gewicht aus älteren Einträgen zählt nicht, es geht nur um mehr Wiederholungen.
+ */
+export function targetFor(workouts: Workout[], exercise: Pick<PlanExercise, 'id' | 'name' | 'sets' | 'reps'>, date: DateStr, skipWorkoutId?: ID, repsOnly = false): NextTarget | null {
   const history = exerciseHistory(workouts, exercise.id, exercise.name).filter((e) => e.workoutId !== skipWorkoutId && e.date <= date);
-  return nextTarget(exercise, history.slice(0, 4).map((e) => e.sets));
+  return nextTarget(exercise, history.slice(0, 4).map((e) => (repsOnly ? withoutWeight(e.sets) : e.sets)));
 }
 
 /** Ein Satz als Text: „62,5 kg × 8“, „12 Wdh.“ (Körpergewicht) oder „45 Sek.“ */
@@ -321,8 +335,9 @@ export function describeTarget(t: NextTarget, timed = false): string {
 export function dayTargetSummary(day: TrainingDay, workouts: Workout[], date: DateStr): { up: string[]; lighter: string[] } {
   const up: string[] = [];
   const lighter: string[] = [];
+  const repsOnly = isRepsOnly(day);
   for (const e of day.exercises) {
-    const t = targetFor(workouts, e, date);
+    const t = targetFor(workouts, e, date, undefined, repsOnly);
     if (t?.kind === 'steigern') up.push(e.name);
     else if (t?.kind === 'leichter') lighter.push(e.name);
   }

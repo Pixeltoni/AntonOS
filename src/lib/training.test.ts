@@ -36,7 +36,7 @@ describe('Trainingsplan', () => {
     const sets = [{ weight: 60, reps: 10 }, { weight: 60, reps: 8 }, { weight: 0, reps: 0 }];
     expect(formatSets(sets)).toBe('60 kg × 10 · 8');
     expect(formatSets([{ weight: 60, reps: 10 }, { weight: 62.5, reps: 6 }])).toBe('60×10 · 62,5×6');
-    expect(formatSets([{ weight: 0, reps: 12 }])).toBe('KG × 12');
+    expect(formatSets([{ weight: 0, reps: 12 }])).toBe('12 Wdh.');
     expect(bestSet(sets)).toEqual({ weight: 60, reps: 10 });
     expect(volume(sets)).toBe(1080);
   });

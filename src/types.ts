@@ -601,6 +601,8 @@ export interface TrainingDay {
   exercises: PlanExercise[];
   /** Eigenes Training außerhalb der Reihenfolge (z. B. Körpertraining): zählt nie als „Als Nächstes“ */
   separate?: boolean;
+  /** Nur Wiederholungen zählen, kein Gewicht (z. B. Körpertraining). Leer = bei „Körpertraining“ an */
+  repsOnly?: boolean;
 }
 
 export interface Album {

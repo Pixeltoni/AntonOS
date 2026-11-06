@@ -388,49 +388,145 @@ struct TodayWidget: Widget {
 
 /* ---------- 4 Gewohnheiten ---------- */
 
-struct HabitButton: View {
+/// Farbe der Gewohnheiten wie in der App (Mini-Ringe auf der Gewohnheiten-Seite)
+enum HabitStyle {
+    static let accent = Color(hex: "#00B8D4")
+    static let track = Color(hex: "#00B8D4").opacity(0.18)
+    /// Wochentage der letzten 7 Tage, heute zuletzt („M D M D F S S“)
+    static func weekLetters(_ now: Date) -> [String] {
+        let letters = ["S", "M", "D", "M", "D", "F", "S"]
+        let cal = Calendar.current
+        return (0..<7).map { i in
+            let day = cal.date(byAdding: .day, value: i - 6, to: now) ?? now
+            return letters[(cal.component(.weekday, from: day) - 1) % 7]
+        }
+    }
+}
+
+extension Snapshot {
+    var habitsDone: Int { habits.filter(\.done).count }
+    /// Längste laufende Serie
+    var bestHabit: WHabit? { habits.filter { $0.streak >= 2 }.max { $0.streak < $1.streak } }
+
+    /// Passt nicht alles hinein, kommen offene Gewohnheiten zuerst (sonst Reihenfolge wie in der App)
+    func habitSlots(_ count: Int) -> [WHabit] {
+        if habits.count <= count { return habits }
+        return Array((habits.filter { !$0.done } + habits.filter(\.done)).prefix(count))
+    }
+}
+
+/// Runder Knopf: Ring zeigt den Tagesstand, erledigt ist er gefüllt mit Haken
+struct HabitCheck: View {
     let habit: WHabit
+    var size: CGFloat = 30
 
     var body: some View {
-        Button(intent: ToggleItemIntent(kind: "habit", id: habit.id, done: !habit.done)) {
-            VStack(spacing: 4) {
-                ZStack {
-                    if habit.done {
-                        Circle().fill(Color.green)
-                        Image(systemName: "checkmark").font(.system(size: 18, weight: .bold)).foregroundStyle(Color.white)
-                    } else {
-                        Circle().stroke(Color.secondary.opacity(0.3), lineWidth: 3)
-                        if habit.target > 0 {
-                            Circle()
-                                .trim(from: 0, to: CGFloat(min(habit.amount / habit.target, 1)))
-                                .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                                .rotationEffect(.degrees(-90))
-                        }
-                        Text(habit.icon.isEmpty ? "•" : habit.icon).font(.system(size: 20))
-                    }
+        let line = max(2.5, size / 11)
+        ZStack {
+            if habit.done {
+                Circle().fill(HabitStyle.accent)
+                Image(systemName: "checkmark").font(.system(size: size * 0.42, weight: .heavy)).foregroundStyle(Color.white)
+            } else {
+                Circle().stroke(HabitStyle.track, lineWidth: line)
+                if habit.share > 0 {
+                    Circle()
+                        .trim(from: 0, to: CGFloat(habit.share))
+                        .stroke(HabitStyle.accent, style: StrokeStyle(lineWidth: line, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
                 }
-                .frame(width: 44, height: 44)
-                Text(habit.name).font(.caption2).lineLimit(1)
+                Text(habit.icon.isEmpty ? "•" : habit.icon).font(.system(size: size * 0.46))
             }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// Punkte der letzten 7 Tage, heute zuletzt und umrandet
+struct WeekDots: View {
+    let week: [Bool]
+    var dot: CGFloat = 6
+
+    var body: some View {
+        HStack(spacing: dot * 0.55) {
+            ForEach(Array(week.suffix(7).enumerated()), id: \.offset) { index, on in
+                Circle()
+                    .fill(on ? HabitStyle.accent : Color.secondary.opacity(0.2))
+                    .frame(width: dot, height: dot)
+                    .overlay {
+                        if index == min(week.count, 7) - 1 {
+                            Circle().stroke(HabitStyle.accent.opacity(0.8), lineWidth: 1).frame(width: dot + 3, height: dot + 3)
+                        }
+                    }
+                    .frame(width: dot + 3, height: dot + 3)
+            }
+        }
+    }
+}
+
+/// Zeile mit Knopf, Name, Stand und Woche – der ganze Streifen ist zum Tippen
+struct HabitLine: View {
+    let habit: WHabit
+    var check: CGFloat = 28
+    var showWeek = true
+
+    var detail: String {
+        var parts: [String] = []
+        if habit.isAmount { parts.append(habit.amountText) } else if habit.done { parts.append("Erledigt") } else { parts.append("Offen") }
+        if habit.streak > 0 { parts.append("🔥 \(habit.streak)") }
+        return parts.joined(separator: " · ")
+    }
+
+    var body: some View {
+        Button(intent: habit.tapIntent) {
+            HStack(spacing: 8) {
+                HabitCheck(habit: habit, size: check)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(habit.done && !habit.icon.isEmpty ? "\(habit.icon) \(habit.name)" : habit.name)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(habit.done ? Color.secondary : Color.primary)
+                        .lineLimit(1)
+                    Text(detail)
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                if showWeek, let week = habit.week, !week.isEmpty {
+                    WeekDots(week: week)
+                }
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 }
 
-struct HabitRow: View {
-    let habit: WHabit
+/// Großer Ring „3/5“ für den Tagesstand
+struct HabitSummaryRing: View {
+    let done: Int
+    let total: Int
+    var size: CGFloat = 76
 
     var body: some View {
-        Button(intent: ToggleItemIntent(kind: "habit", id: habit.id, done: !habit.done)) {
-            HStack(spacing: 7) {
-                Image(systemName: habit.done ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 17))
-                    .foregroundStyle(habit.done ? Color.green : Color.secondary)
-                Text("\(habit.icon) \(habit.name)").font(.caption).lineLimit(1)
-                Spacer(minLength: 0)
+        let line = size / 8.5
+        let share = total > 0 ? Double(done) / Double(total) : 0
+        ZStack {
+            Circle().stroke(HabitStyle.track, lineWidth: line)
+            Circle()
+                .trim(from: 0, to: CGFloat(share))
+                .stroke(HabitStyle.accent, style: StrokeStyle(lineWidth: line, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            if total > 0 && done == total {
+                Image(systemName: "checkmark").font(.system(size: size * 0.32, weight: .heavy)).foregroundStyle(HabitStyle.accent)
+            } else {
+                Text("\(done)/\(total)")
+                    .font(.system(size: size * 0.26, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                    .padding(line)
             }
         }
-        .buttonStyle(.plain)
+        .frame(width: size, height: size)
     }
 }
 
@@ -438,51 +534,199 @@ struct HabitsView: View {
     @Environment(\.widgetFamily) private var family
     let entry: SnapshotEntry
 
+    var snap: Snapshot { entry.snapshot }
+
+    var statusText: String {
+        let open = snap.habits.count - snap.habitsDone
+        if open == 0 { return "Alles erledigt 🎉" }
+        return open == 1 ? "Noch 1 offen" : "Noch \(open) offen"
+    }
+
     var body: some View {
-        let habits = entry.snapshot.habits
-        let done = habits.filter(\.done).count
-        let best = habits.max { $0.streak < $1.streak }
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Caption(text: "Gewohnheiten", icon: "checkmark.seal.fill", color: .green)
-                Spacer()
-                Text("\(done) von \(habits.count)").font(.caption2).foregroundStyle(.secondary)
-            }
-            if entry.empty {
-                EmptyHint()
-            } else if habits.isEmpty {
-                Text("Noch keine Gewohnheiten").font(.caption).foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-            } else if family == .systemSmall {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(habits.prefix(4), id: \.id) { HabitRow(habit: $0) }
+        switch family {
+        case .accessoryCircular: circular
+        case .accessoryRectangular: rectangular
+        case .accessoryInline:
+            Text(snap.habits.isEmpty ? "Keine Gewohnheiten" : "✓ \(snap.habitsDone)/\(snap.habits.count) Gewohnheiten")
+        default:
+            VStack(alignment: .leading, spacing: 8) {
+                header
+                if entry.empty {
+                    EmptyHint()
+                } else if snap.habits.isEmpty {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Noch keine Gewohnheiten").font(.caption.weight(.semibold))
+                        Text("In AntonOS anlegen – dann hakst du sie hier ab.").font(.caption2).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                } else if family == .systemSmall {
+                    small
+                } else if family == .systemLarge {
+                    large
+                } else {
+                    medium
                 }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    var header: some View {
+        HStack {
+            Caption(text: "Gewohnheiten", icon: "checkmark.seal.fill", color: HabitStyle.accent)
+            Spacer(minLength: 4)
+            if !entry.empty && !snap.habits.isEmpty && family != .systemMedium {
+                Text("\(snap.habitsDone)/\(snap.habits.count)")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(snap.habitsDone == snap.habits.count ? HabitStyle.accent : Color.secondary)
+            }
+        }
+    }
+
+    /// Bis zu 6 Knöpfe im Raster, darunter die beste Serie
+    var small: some View {
+        let more = snap.habits.count > 6
+        let shown = snap.habitSlots(more ? 5 : 6)
+        let rows = stride(from: 0, to: max(shown.count + (more ? 1 : 0), 1), by: 3).map { $0 }
+        return VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(spacing: 8) {
+                ForEach(rows, id: \.self) { start in
+                    HStack(spacing: 0) {
+                        ForEach(start..<start + 3, id: \.self) { i in
+                            Group {
+                                if i < shown.count {
+                                    Button(intent: shown[i].tapIntent) { HabitCheck(habit: shown[i], size: 38) }.buttonStyle(.plain)
+                                } else if more && i == shown.count {
+                                    Text("+\(snap.habits.count - shown.count)")
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 38, height: 38)
+                                        .background(Circle().fill(Color.secondary.opacity(0.12)))
+                                } else {
+                                    Color.clear.frame(width: 38, height: 38)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+            Group {
+                if let best = snap.bestHabit, snap.habitsDone < snap.habits.count {
+                    Text("🔥 \(best.streak) Tage \(best.name)")
+                } else {
+                    Text(statusText)
+                }
+            }
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+        }
+    }
+
+    /// Ring mit Tagesstand links, vier Gewohnheiten mit Woche rechts
+    var medium: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(spacing: 6) {
+                HabitSummaryRing(done: snap.habitsDone, total: snap.habits.count, size: 72)
+                Text(statusText)
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(width: 84)
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(snap.habitSlots(4), id: \.id) { HabitLine(habit: $0, check: 24) }
                 Spacer(minLength: 0)
-            } else {
-                Spacer(minLength: 0)
-                HStack(alignment: .top) {
-                    ForEach(habits.prefix(4), id: \.id) { habit in
-                        HabitButton(habit: habit).frame(maxWidth: .infinity)
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    /// Ring, Fortschritt und bis zu 6 Gewohnheiten mit Wochenübersicht
+    var large: some View {
+        let shown = snap.habitSlots(6)
+        let rest = snap.habits.count - shown.count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                HabitSummaryRing(done: snap.habitsDone, total: snap.habits.count, size: 58)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(statusText).font(.system(.subheadline, design: .rounded, weight: .bold))
+                    if let best = snap.bestHabit {
+                        Text("🔥 Beste Serie: \(best.icon) \(best.name), \(best.streak) Tage").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    } else {
+                        Text("Tippe auf eine Gewohnheit zum Abhaken").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }
                 Spacer(minLength: 0)
-                if let best, best.streak >= 2 {
-                    Text("🔥 \(best.name): \(best.streak) Tage in Folge").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+            }
+            HStack {
+                Text("HEUTE").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
+                Spacer()
+                HStack(spacing: 6 * 0.55) {
+                    ForEach(Array(HabitStyle.weekLetters(entry.date).enumerated()), id: \.offset) { index, letter in
+                        Text(letter)
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(index == 6 ? HabitStyle.accent : Color.secondary)
+                            .frame(width: 9)
+                    }
                 }
             }
+            .padding(.bottom, -6)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(shown, id: \.id) { HabitLine(habit: $0, check: 30) }
+            }
+            Spacer(minLength: 0)
+            if rest > 0 {
+                Text("+ \(rest) weitere in der App").font(.caption2).foregroundStyle(.secondary)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    var circular: some View {
+        let total = max(snap.habits.count, 1)
+        return Gauge(value: Double(snap.habitsDone), in: 0...Double(total)) {
+            Image(systemName: "checkmark.seal.fill")
+        } currentValueLabel: {
+            Text("\(snap.habitsDone)/\(snap.habits.count)").font(.system(size: 13, weight: .bold, design: .rounded))
+        }
+        .gaugeStyle(.accessoryCircularCapacity)
+        .widgetAccentable()
+    }
+
+    var rectangular: some View {
+        let open = snap.habits.filter { !$0.done }
+        return VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.seal.fill")
+                Text("Gewohnheiten \(snap.habitsDone)/\(snap.habits.count)")
+            }
+            .font(.headline)
+            .widgetAccentable()
+            if open.isEmpty {
+                Text(snap.habits.isEmpty ? "Noch keine angelegt" : "Alles erledigt 🎉").font(.caption)
+            } else {
+                Text(open.prefix(3).map { $0.icon.isEmpty ? $0.name : "\($0.icon) \($0.name)" }.joined(separator: " · "))
+                    .font(.caption)
+                    .lineLimit(2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
 struct HabitsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSHabits", provider: SnapshotProvider()) { entry in
-            HabitsView(entry: entry).widgetBackground(tint: .green).widgetURL(AppLink.page("gewohnheiten"))
+            HabitsView(entry: entry).widgetBackground(tint: HabitStyle.accent).widgetURL(AppLink.page("gewohnheiten"))
         }
         .configurationDisplayName("Gewohnheiten")
-        .description("Gewohnheiten von heute mit einem Tipp abhaken.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .description("Tagesstand, Serien und die letzten 7 Tage – mit einem Tipp abhaken, Mengen Portion für Portion.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
 

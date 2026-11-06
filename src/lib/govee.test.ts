@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { controlBody, deviceBody, goveeError, hexToRgbInt, orderLights, parseDevices, parseScenes, parseState, rgbIntToHex, validKey, widgetLights, type LightDevice } from './govee';
+import { controlBody, deviceBody, goveeError, groupDevice, groupMembers, groupState, groupTargets, makeGroup, hexToRgbInt, orderLights, parseDevices, parseScenes, parseState, rgbIntToHex, validKey, widgetLights, type LightDevice } from './govee';
 
 const devicesBody = {
   code: 200,
@@ -137,5 +137,39 @@ describe('Reihenfolge und Widget', () => {
     expect(out.map((l) => l.id)).toEqual(['a', 'b', 'c', 'd']);
     expect(out[0]).toEqual({ id: 'a', sku: 'H1', name: 'a', on: true, color: '#ff0000', brightness: 50 });
     expect(out[1].on).toBe(false);
+  });
+});
+
+describe('Eigene Gruppen', () => {
+  const dev = (id: string, extra: Partial<LightDevice> = {}): LightDevice => ({ id, sku: 'H1', name: id, group: false, power: true, brightness: { min: 1, max: 100 }, color: true, colorTemp: { min: 2700, max: 6500 }, scenes: true, ...extra });
+  const devices = [dev('a'), dev('b', { colorTemp: { min: 2000, max: 5000 } }), dev('c', { color: false, brightness: null, colorTemp: null })];
+  const group = makeGroup(' Wohnzimmer ', ['a', 'b', 'c', 'weg', 'a'], 'g1');
+
+  it('legt an und verwirft Doppelte', () => {
+    expect(group).toEqual({ id: 'g1', name: 'Wohnzimmer', members: ['a', 'b', 'c', 'weg'] });
+    expect(groupMembers(group, devices).map((d) => d.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('kann, was eine Lampe darin kann; Weißton im gemeinsamen Bereich', () => {
+    expect(groupDevice(group, devices)).toMatchObject({ id: 'gruppe:g1', name: 'Wohnzimmer', power: true, color: true, brightness: { min: 1, max: 100 }, colorTemp: { min: 2700, max: 5000 }, scenes: false });
+  });
+
+  it('Zustand: an, wenn eine an ist; Mittelwert; Farbe nur bei Gleichstand', () => {
+    const off = { online: true, on: false, brightness: 10, color: null, colorTemp: null };
+    const s = groupState(group, devices, { a: { ...off, on: true, brightness: 80, color: '#ff0000' }, b: { ...off, on: true, brightness: 40, color: '#ff0000' }, c: off });
+    expect(s).toMatchObject({ on: true, brightness: 60, color: '#ff0000' });
+    expect(groupState(group, devices, { a: off, b: off }).on).toBe(false);
+    expect(groupState(group, devices, {}).on).toBeNull();
+  });
+
+  it('Befehle gehen nur an Lampen, die sie verstehen', () => {
+    expect(groupTargets(group, devices, { kind: 'color', hex: '#fff' }).map((d) => d.id)).toEqual(['a', 'b']);
+    expect(groupTargets(group, devices, { kind: 'power', on: true }).map((d) => d.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('Widget: Gruppen zuerst, mit Mitgliedern', () => {
+    const out = widgetLights(devices, {}, [], ['c'], [group, makeGroup('Leer', ['weg'], 'g2')]);
+    expect(out.map((l) => l.id)).toEqual(['gruppe:g1', 'a', 'b']);
+    expect(out[0].members).toEqual([{ id: 'a', sku: 'H1' }, { id: 'b', sku: 'H1' }, { id: 'c', sku: 'H1' }]);
   });
 });

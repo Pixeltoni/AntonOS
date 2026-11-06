@@ -16,6 +16,15 @@ struct LichtGeraet: Codable, Hashable {
     /// #RRGGBB, leer = unbekannt
     var color: String
     var brightness: Double
+    /// Nur eigene Gruppen aus AntonOS: die Lampen darin
+    var members: [LichtMitglied]? = nil
+
+    var isGroup: Bool { !(members ?? []).isEmpty }
+}
+
+struct LichtMitglied: Codable, Hashable {
+    let id: String
+    let sku: String
 }
 
 enum LichtStore {
@@ -35,8 +44,40 @@ enum LichtStore {
         WidgetStore.defaults?.set(text, forKey: devicesKey)
     }
 
+    /// Merkt den neuen Zustand; Gruppen sind an, sobald eine ihrer Lampen an ist
     static func setOn(_ ids: Set<String>, on: Bool) {
-        save(devices().map { var d = $0; if ids.contains(d.id) { d.on = on }; return d })
+        var list = devices().map { d -> LichtGeraet in var d = d; if ids.contains(d.id) { d.on = on }; return d }
+        let lit = Set(list.filter { !$0.isGroup && $0.on }.map(\.id))
+        list = list.map { d in
+            guard let members = d.members, !members.isEmpty else { return d }
+            var d = d
+            d.on = ids.contains(d.id) ? on : members.contains { lit.contains($0.id) }
+            return d
+        }
+        save(list)
+    }
+}
+
+/// Schaltet eine Lampe oder alle Lampen einer eigenen Gruppe und merkt sich das Ergebnis
+enum LichtSchalter {
+    static func set(id: String, sku: String, on: Bool) async throws {
+        let lamp = LichtStore.devices().first { $0.id == id }
+        if let members = lamp?.members, !members.isEmpty {
+            var done = Set<String>()
+            await withTaskGroup(of: String?.self) { group in
+                for m in members {
+                    group.addTask { (try? await GoveeAPI.power(id: m.id, sku: m.sku, on: on)) != nil ? m.id : nil }
+                }
+                for await hit in group { if let hit { done.insert(hit) } }
+            }
+            guard !done.isEmpty else { throw LichtFehler.antwort }
+            LichtStore.setOn(done.union([id]), on: on)
+        } else {
+            try await GoveeAPI.power(id: id, sku: sku, on: on)
+            LichtStore.setOn([id], on: on)
+        }
+        WidgetCenter.shared.reloadTimelines(ofKind: LichtWidget.kind)
+        if #available(iOS 18.0, *) { ControlCenter.shared.reloadControls(ofKind: LichtControl.kind) }
     }
 }
 
@@ -90,10 +131,7 @@ struct ToggleLightIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        try await GoveeAPI.power(id: lampID, sku: sku, on: on)
-        LichtStore.setOn([lampID], on: on)
-        WidgetCenter.shared.reloadTimelines(ofKind: LichtWidget.kind)
-        if #available(iOS 18.0, *) { ControlCenter.shared.reloadControls(ofKind: LichtControl.kind) }
+        try await LichtSchalter.set(id: lampID, sku: sku, on: on)
         return .result()
     }
 }
@@ -107,8 +145,12 @@ struct AllLightsOffIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         // Alle schicken, nicht nur die als „an“ gemerkten – jemand kann sie inzwischen in der Govee-App eingeschaltet haben
+        // Auch Lampen, die nur in einer Gruppe stecken (in der App ausgeblendet)
+        let list = LichtStore.devices()
+        var lamps: [LichtMitglied] = list.filter { !$0.isGroup }.map { LichtMitglied(id: $0.id, sku: $0.sku) }
+        for m in list.flatMap({ $0.members ?? [] }) where !lamps.contains(m) { lamps.append(m) }
         var done = Set<String>()
-        for d in LichtStore.devices() {
+        for d in lamps {
             if (try? await GoveeAPI.power(id: d.id, sku: d.sku, on: false)) != nil { done.insert(d.id) }
         }
         LichtStore.setOn(done, on: false)
@@ -209,7 +251,7 @@ private struct LampTile: View {
     var body: some View {
         Button(intent: ToggleLightIntent(id: lamp.id, sku: lamp.sku, on: !lamp.on)) {
             VStack(alignment: .leading, spacing: big ? 6 : 3) {
-                Image(systemName: lamp.on ? "lightbulb.fill" : "lightbulb")
+                Image(systemName: lamp.isGroup ? (lamp.on ? "lightbulb.2.fill" : "lightbulb.2") : (lamp.on ? "lightbulb.fill" : "lightbulb"))
                     .font(big ? .title2 : .subheadline)
                     .foregroundStyle(lamp.on ? Color.black.opacity(0.75) : Color.secondary)
                 Spacer(minLength: 0)
@@ -342,9 +384,7 @@ struct SetLightIntent: SetValueIntent {
 
     func perform() async throws -> some IntentResult {
         guard let lamp else { return .result() }
-        try await GoveeAPI.power(id: lamp.id, sku: lamp.sku, on: value)
-        LichtStore.setOn([lamp.id], on: value)
-        WidgetCenter.shared.reloadTimelines(ofKind: LichtWidget.kind)
+        try await LichtSchalter.set(id: lamp.id, sku: lamp.sku, on: value)
         return .result()
     }
 }

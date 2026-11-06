@@ -3067,3 +3067,6 @@ html.has-bg body { background: transparent; }
 .light-steps { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; }
 .spin { animation: light-spin 0.9s linear infinite; }
 @keyframes light-spin { to { transform: rotate(360deg); } }
+.light-section { font-size: 0.95rem; font-weight: 600; color: var(--muted); margin: 0.2rem 0 0.6rem; }
+.light-group-edit { display: flex; flex-direction: column; gap: 0.6rem; }
+.light-group-edit label { cursor: pointer; }

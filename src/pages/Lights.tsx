@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Eye, EyeOff, Lightbulb, LightbulbOff, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, EyeOff, Lightbulb, LightbulbOff, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Empty, PageHeader, Panel } from '../components/ui';
 import { useLights } from '../components/lights';
-import { useStore } from '../store';
-import { LIGHT_COLORS, orderLights, validKey, type LightDevice, type LightScene, type LightState } from '../lib/govee';
+import { newId, useStore } from '../store';
+import { groupDevice, groupMembers, groupState, LIGHT_COLORS, makeGroup, orderLights, validKey, type LightCommand, type LightDevice, type LightScene, type LightState } from '../lib/govee';
 import { moveItem } from '../lib/layout';
 import { isNativeApp } from '../lib/native';
-import type { LightSettings } from '../types';
+import type { LightGroup, LightSettings } from '../types';
 
 /** Govee-Lampen schalten – dieselben wie in der Govee-App, auch als Widget */
 export function Lights() {
@@ -20,6 +20,8 @@ export function Lights() {
 
   const visible = orderLights(lights.devices, settings.order, settings.hidden);
   const all = orderLights(lights.devices, settings.order, settings.hidden, true);
+  const groups = settings.groups ?? [];
+  const noScenes = async () => [] as LightScene[];
 
   const move = (id: string, dir: -1 | 1) => {
     const ids = all.map((d) => d.id);
@@ -54,10 +56,34 @@ export function Lights() {
       {lights.devices.length === 0 ? (
         <Panel><Empty>{lights.loading ? 'Lampen werden geladen …' : 'Keine Lampen gefunden. Sind sie in der Govee-App eingerichtet?'}</Empty></Panel>
       ) : (
-        <div className="light-grid">
-          {visible.map((d) => <LightCard key={d.id} device={d} state={lights.states[d.id]} send={lights.send} loadScenes={lights.loadScenes} />)}
-        </div>
+        <>
+          {groups.length > 0 && (
+            <>
+              <h2 className="light-section">Gruppen</h2>
+              <div className="light-grid">
+                {groups.map((g) => {
+                  const n = groupMembers(g, lights.devices).length;
+                  return (
+                    <LightCard
+                      key={g.id}
+                      device={groupDevice(g, lights.devices)}
+                      state={groupState(g, lights.devices, lights.states)}
+                      send={(_, cmd) => lights.sendGroup(g, cmd)}
+                      loadScenes={noScenes}
+                      note={n === 1 ? '1 Lampe' : `${n} Lampen`}
+                    />
+                  );
+                })}
+              </div>
+              <h2 className="light-section">Einzelne Lampen</h2>
+            </>
+          )}
+          <div className="light-grid">
+            {visible.map((d) => <LightCard key={d.id} device={d} state={lights.states[d.id]} send={lights.send} loadScenes={lights.loadScenes} />)}
+          </div>
+        </>
       )}
+      {lights.devices.length > 0 && <GroupsPanel groups={groups} devices={all} onChange={(next) => set({ groups: next })} />}
       <Panel title="Einstellungen" actions={<button type="button" onClick={() => setEditing((e) => !e)}>{editing ? 'Fertig' : 'Bearbeiten'}</button>}>
         {editing ? (
           <>
@@ -118,11 +144,13 @@ function useDebounced(send: (v: number) => void, ms = 350) {
   };
 }
 
-function LightCard({ device, state, send, loadScenes }: {
+function LightCard({ device, state, send, loadScenes, note }: {
   device: LightDevice;
   state?: LightState;
-  send: (d: LightDevice, cmd: Parameters<ReturnType<typeof useLights>['send']>[1]) => Promise<void>;
+  send: (d: LightDevice, cmd: LightCommand) => Promise<void>;
   loadScenes: (d: LightDevice) => Promise<LightScene[]>;
+  /** Eigene Gruppe: z. B. „3 Lampen“ */
+  note?: string;
 }) {
   const on = !!state?.on;
   const [open, setOpen] = useState(false);
@@ -148,7 +176,7 @@ function LightCard({ device, state, send, loadScenes }: {
         <span className="light-bulb" aria-hidden><Lightbulb size={20} /></span>
         <div className="grow light-name">
           <strong>{device.name}</strong>
-          <span className="small muted">{offline ? 'offline' : device.group ? 'Gruppe' : on ? (state?.brightness != null && device.brightness ? `an · ${state.brightness} %` : 'an') : state?.on === false ? 'aus' : '–'}</span>
+          <span className="small muted">{note ? `${note} · ` : ''}{offline ? 'offline' : device.group && !note ? 'Gruppe' : on ? (state?.brightness != null && device.brightness ? `an · ${state.brightness} %` : 'an') : state?.on === false ? 'aus' : '–'}</span>
         </div>
         {device.power && (
           <input type="checkbox" className="switch" checked={on} onChange={(e) => void send(device, { kind: 'power', on: e.target.checked })} aria-label={`${device.name} ${on ? 'ausschalten' : 'einschalten'}`} />
@@ -167,7 +195,7 @@ function LightCard({ device, state, send, loadScenes }: {
       )}
       {more && (
         <button type="button" className="light-more" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          {open ? 'Weniger' : 'Farbe & Szenen'} {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {open ? 'Weniger' : device.scenes ? 'Farbe & Szenen' : 'Farbe'} {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
       )}
       {open && (
@@ -198,5 +226,65 @@ function LightCard({ device, state, send, loadScenes }: {
         </div>
       )}
     </div>
+  );
+}
+
+/** Eigene Gruppen anlegen, ändern und löschen */
+function GroupsPanel({ groups, devices, onChange }: { groups: LightGroup[]; devices: LightDevice[]; onChange: (groups: LightGroup[]) => void }) {
+  const [edit, setEdit] = useState<LightGroup | null>(null);
+  const save = (g: LightGroup) => {
+    onChange(groups.some((x) => x.id === g.id) ? groups.map((x) => (x.id === g.id ? g : x)) : [...groups, g]);
+    setEdit(null);
+  };
+  const names = (g: LightGroup) => groupMembers(g, devices).map((d) => d.name).join(', ') || 'keine Lampen';
+  return (
+    <Panel title="Gruppen" actions={!edit && <button type="button" onClick={() => setEdit({ id: newId(), name: '', members: [] })}><Plus size={16} /> Neue Gruppe</button>}>
+      {edit ? (
+        <GroupEditor group={edit} devices={devices} onSave={save} onCancel={() => setEdit(null)} isNew={!groups.some((g) => g.id === edit.id)} />
+      ) : groups.length === 0 ? (
+        <p className="small muted">Fasse Lampen zu Gruppen zusammen, z. B. „Wohnzimmer“ – dann schaltest, dimmst und färbst du sie gemeinsam, auch im Widget.</p>
+      ) : (
+        <ul className="list">
+          {groups.map((g, i) => (
+            <li key={g.id}>
+              <div className="grow light-name">
+                <strong>{g.name}</strong>
+                <span className="small muted">{names(g)}</span>
+              </div>
+              <button type="button" className="icon" onClick={() => onChange(moveItem(groups, i, -1))} disabled={i === 0} aria-label="Nach oben"><ChevronUp size={18} /></button>
+              <button type="button" className="icon" onClick={() => setEdit(g)} aria-label={`${g.name} bearbeiten`}><Pencil size={16} /></button>
+              <button type="button" className="icon" onClick={() => { if (confirm(`Gruppe „${g.name}“ löschen? Die Lampen bleiben.`)) onChange(groups.filter((x) => x.id !== g.id)); }} aria-label={`${g.name} löschen`}><Trash2 size={16} /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+function GroupEditor({ group, devices, onSave, onCancel, isNew }: { group: LightGroup; devices: LightDevice[]; onSave: (g: LightGroup) => void; onCancel: () => void; isNew: boolean }) {
+  const [name, setName] = useState(group.name);
+  const [members, setMembers] = useState<string[]>(group.members);
+  const toggle = (id: string) => setMembers((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id]));
+  // Govee-eigene Gruppen nicht verschachteln
+  const lamps = devices.filter((d) => d.power && !d.group);
+  return (
+    <form className="light-group-edit" onSubmit={(e) => { e.preventDefault(); if (members.length) onSave({ ...makeGroup(name, members, group.id) }); }}>
+      <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name, z. B. Wohnzimmer" aria-label="Name der Gruppe" autoFocus={isNew} />
+      <ul className="list">
+        {lamps.map((d) => (
+          <li key={d.id}>
+            <label className="row grow">
+              <input type="checkbox" checked={members.includes(d.id)} onChange={() => toggle(d.id)} />
+              <span className="grow">{d.name}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+      <div className="row end">
+        <button type="button" onClick={onCancel}>Abbrechen</button>
+        <button type="submit" className="primary" disabled={!members.length}>{isNew ? 'Gruppe anlegen' : 'Speichern'}</button>
+      </div>
+    </form>
   );
 }

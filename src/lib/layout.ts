@@ -123,7 +123,7 @@ export const DEFAULT_SIDEBAR: NavItem[] = (
   [
     ['heute', 'Heute', 'Start'], ['dashboard', 'Übersicht', 'Start'], ['kalender', 'Kalender', 'Start'], ['aufgaben', 'Aufgaben', 'Start'], ['notizen', 'Notizen', 'Start'],
     ['gewohnheiten', 'Gewohnheiten', 'Leben'], ['routinen', 'Routinen', 'Leben'], ['wecker', 'Wecker', 'Leben'], ['rueckblick', 'Rückblick', 'Leben'], ['wochenplan', 'Woche planen', 'Leben'], ['abend', 'Tag abschließen', 'Leben'], ['ziele', 'Ziele', 'Leben'], ['projekte', 'Projekte', 'Leben'],
-    ['training', 'Training', 'Leben'], ['essen', 'Essen', 'Leben'], ['menschen', 'Menschen', 'Leben'],
+    ['training', 'Training', 'Leben'], ['essen', 'Essen', 'Leben'], ['menschen', 'Menschen', 'Leben'], ['licht', 'Licht', 'Leben'],
     ['finanzen', 'Finanzen', 'Geld'], ['einkauf', 'Einkaufsliste', 'Geld'], ['abos', 'Abos & Verträge', 'Geld'],
     ['kurse', 'Kurse', 'Studium'], ['lernen', 'Lernkarten', 'Studium'], ['pruefungen', 'Prüfungen', 'Studium'], ['noten', 'Noten', 'Studium'],
     ['fokus', 'Fokus', 'Studium'],

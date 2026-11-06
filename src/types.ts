@@ -802,6 +802,17 @@ export interface Settings {
   degree?: DegreeSettings;
   /** Länge der Satzpause beim Training in Sekunden */
   restSeconds?: number;
+  /** Govee-Lampen (Seite „Licht“, iPhone-Widget) */
+  lights?: LightSettings;
+}
+
+export interface LightSettings {
+  /** Govee-API-Schlüssel aus der Govee-Home-App */
+  key: string;
+  /** Eigene Reihenfolge (Govee-Gerätekennungen) */
+  order?: string[];
+  /** Ausgeblendete Lampen */
+  hidden?: string[];
 }
 
 export interface AreaSettings {

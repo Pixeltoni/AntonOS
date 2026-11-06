@@ -14,6 +14,7 @@
 		A1A1A1A12F00000500000011 /* HaustierWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000012 /* HaustierWidget.swift */; };
 		A1A1A1A12F00000600000001 /* KartenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000600000002 /* KartenWidget.swift */; };
 		A1A1A1A12F00004B00000001 /* KoerperWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004B00000002 /* KoerperWidget.swift */; };
+		A1A1A1A12F00004C00000001 /* LichtWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004C00000002 /* LichtWidget.swift */; };
 		A1A1A1A12F00000500000020 /* AntonTierNormal.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000030 /* AntonTierNormal.otf */; };
 		A1A1A1A12F00000500000021 /* AntonTierFroh.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000031 /* AntonTierFroh.otf */; };
 		A1A1A1A12F00000500000022 /* AntonTierParty.otf in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000500000032 /* AntonTierParty.otf */; };
@@ -84,6 +85,7 @@
 		A1A1A1A12F00000500000012 /* HaustierWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaustierWidget.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000600000002 /* KartenWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KartenWidget.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00004B00000002 /* KoerperWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoerperWidget.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00004C00000002 /* LichtWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LichtWidget.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000500000030 /* AntonTierNormal.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierNormal.otf; sourceTree = "<group>"; };
 		A1A1A1A12F00000500000031 /* AntonTierFroh.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierFroh.otf; sourceTree = "<group>"; };
 		A1A1A1A12F00000500000032 /* AntonTierParty.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = AntonTierParty.otf; sourceTree = "<group>"; };
@@ -207,6 +209,7 @@
 				A1A1A1A12F00000500000012 /* HaustierWidget.swift */,
 				A1A1A1A12F00000600000002 /* KartenWidget.swift */,
 				A1A1A1A12F00004B00000002 /* KoerperWidget.swift */,
+				A1A1A1A12F00004C00000002 /* LichtWidget.swift */,
 				A1A1A1A12F00000500000030 /* AntonTierNormal.otf */,
 				A1A1A1A12F00000500000031 /* AntonTierFroh.otf */,
 				A1A1A1A12F00000500000032 /* AntonTierParty.otf */,
@@ -376,6 +379,7 @@
 				A1A1A1A12F00000500000011 /* HaustierWidget.swift in Sources */,
 				A1A1A1A12F00000600000001 /* KartenWidget.swift in Sources */,
 				A1A1A1A12F00004B00000001 /* KoerperWidget.swift in Sources */,
+				A1A1A1A12F00004C00000001 /* LichtWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

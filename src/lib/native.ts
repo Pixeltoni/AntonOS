@@ -175,6 +175,8 @@ interface AntonWidgetsPlugin {
   /** Knubbel aus dem gemeinsamen Speicher (ms); leer, wenn noch keiner geschlüpft ist */
   getPet(): Promise<{ born?: number; fed?: number; meals?: number }>;
   setPet(opts: { born: number; fed: number; meals: number }): Promise<void>;
+  /** Govee-Schlüssel und Lampen (JSON-Liste `WidgetLight`) fürs Licht-Widget und den Schalter im Kontrollzentrum; leerer Schlüssel löscht beides */
+  setLights(opts: { key: string; lights: string }): Promise<void>;
 }
 
 export const AntonWidgets = registerPlugin<AntonWidgetsPlugin>('AntonWidgets');

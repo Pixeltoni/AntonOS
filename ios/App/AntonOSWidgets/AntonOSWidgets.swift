@@ -1062,10 +1062,12 @@ struct AntonOSWidgetBundle: WidgetBundle {
         HaustierWidget()
         KartenWidget()
         KoerperWidget()
+        LichtWidget()
         FocusLiveActivity()
         if #available(iOS 18.0, *) {
             QuickAddControl()
             FocusControl()
+            LichtControl()
         }
     }
 }

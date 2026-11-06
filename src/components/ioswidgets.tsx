@@ -8,6 +8,7 @@ import { openAssistant } from './assistant';
 import { useFocus } from './focus';
 import { useRest } from './rest';
 import { useRoutine } from './routine';
+import { useLightsWidget } from './lights';
 
 const APPLIED_KEY = 'antonos:widget-uebernommen';
 
@@ -37,6 +38,7 @@ export function useNativeWidgets() {
   const focus = useFocus();
   const rest = useRest();
   const routine = useRoutine();
+  useLightsWidget();
   const latest = useRef({ data, entries, focus, rest, routine });
   latest.current = { data, entries, focus, rest, routine };
   /** Bis zu diesem Zeitpunkt (ms) sind Aktionen aus dem Widget übernommen – gemerkt, damit z. B. Lernkarten nach einem Neustart nicht doppelt zählen */

@@ -50,6 +50,7 @@ import { Subscriptions } from './pages/Subscriptions';
 import { People, PersonDetail } from './pages/People';
 import { TripDetail, Trips } from './pages/Trips';
 import { Pet } from './pages/Pet';
+import { Lights } from './pages/Lights';
 import { useLifeReminders } from './components/reminders';
 import { useNativeNotifications } from './components/native';
 import { useNativeWidgets } from './components/ioswidgets';
@@ -143,6 +144,8 @@ function Page({ route }: { route: string[] }) {
       return param ? <TripDetail key={param} id={param} /> : <Trips />;
     case 'knubbel':
       return <Pet />;
+    case 'licht':
+      return <Lights />;
     default:
       return <Dashboard editing={param === 'bearbeiten'} />;
   }

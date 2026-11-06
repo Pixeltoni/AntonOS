@@ -13,6 +13,7 @@ public class AntonWidgetsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "takeActions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getPet", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setPet", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setLights", returnType: CAPPluginReturnPromise),
     ]
 
     /// Gleiche Namen wie `WidgetStore` in der Widget-Erweiterung
@@ -23,6 +24,9 @@ public class AntonWidgetsPlugin: CAPPlugin, CAPBridgedPlugin {
     static let petFedKey = "tier.gefuettert"
     static let petBornKey = "tier.geboren"
     static let petMealsKey = "tier.mahlzeiten"
+    /// Govee-Lampen – gleiche Schlüssel wie `LichtStore` im Widget
+    static let lightsKeyKey = "licht.schluessel"
+    static let lightsKey = "licht.geraete"
 
     private var shared: UserDefaults? { UserDefaults(suiteName: Self.group) }
 
@@ -62,6 +66,22 @@ public class AntonWidgetsPlugin: CAPPlugin, CAPBridgedPlugin {
         shared.set(fed / 1000, forKey: Self.petFedKey)
         shared.set(call.getInt("meals") ?? 0, forKey: Self.petMealsKey)
         WidgetCenter.shared.reloadTimelines(ofKind: "AntonOSHaustier")
+        call.resolve()
+    }
+
+    /// Govee-Schlüssel und Lampen (JSON) fürs Licht-Widget; leerer Schlüssel löscht beides
+    @objc func setLights(_ call: CAPPluginCall) {
+        guard let shared else { return call.resolve() }
+        let key = call.getString("key") ?? ""
+        if key.isEmpty {
+            shared.removeObject(forKey: Self.lightsKeyKey)
+            shared.removeObject(forKey: Self.lightsKey)
+        } else {
+            shared.set(key, forKey: Self.lightsKeyKey)
+            shared.set(call.getString("lights") ?? "[]", forKey: Self.lightsKey)
+        }
+        WidgetCenter.shared.reloadTimelines(ofKind: "AntonOSLicht")
+        if #available(iOS 18.0, *) { ControlCenter.shared.reloadControls(ofKind: "io.github.pixeltoni.antonos.licht") }
         call.resolve()
     }
 }

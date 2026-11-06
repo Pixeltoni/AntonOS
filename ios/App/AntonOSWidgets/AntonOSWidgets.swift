@@ -544,10 +544,24 @@ struct HabitsView: View {
 
     var body: some View {
         switch family {
-        case .accessoryCircular: circular
-        case .accessoryRectangular: rectangular
+        case .accessoryCircular:
+            if entry.empty {
+                ZStack { AccessoryWidgetBackground(); Image(systemName: "checkmark.seal.fill").font(.title3) }
+            } else {
+                circular
+            }
+        case .accessoryRectangular:
+            if entry.empty {
+                VStack(alignment: .leading, spacing: 1) {
+                    Label("Gewohnheiten", systemImage: "checkmark.seal.fill").font(.headline).widgetAccentable()
+                    Text("AntonOS einmal öffnen").font(.caption)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                rectangular
+            }
         case .accessoryInline:
-            Text(snap.habits.isEmpty ? "Keine Gewohnheiten" : "✓ \(snap.habitsDone)/\(snap.habits.count) Gewohnheiten")
+            Text(entry.empty ? "AntonOS öffnen" : snap.habits.isEmpty ? "Keine Gewohnheiten" : "✓ \(snap.habitsDone)/\(snap.habits.count) Gewohnheiten")
         default:
             VStack(alignment: .leading, spacing: 8) {
                 header

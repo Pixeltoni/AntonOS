@@ -12,7 +12,7 @@ import { listTasks } from './tasks';
 import { nextRings, repeatLabel, alarmTitle } from './alarm';
 import { onDay, sortEntries, startAt, type CalendarEntry } from './calendar';
 import { defaultRingGoals, ringDay, weekOf } from './rings';
-import { isHabitDone, habitAmount, monthKey, streak } from './life';
+import { isHabitDone, habitAmount, habitSteps, monthKey, streak } from './life';
 import { budgetStatus } from './finance';
 import { nextTrainingDay } from './training';
 import { toneLabel } from './tones';
@@ -73,6 +73,10 @@ export interface WidgetHabit {
   target: number;
   unit: string;
   streak: number;
+  /** Menge pro Tipp im Widget (erste Schrittweite), 0 ohne Tagesziel */
+  step: number;
+  /** Erledigt an den letzten 7 Tagen, ältester zuerst, heute zuletzt */
+  week: boolean[];
 }
 
 export interface WidgetTraining {
@@ -294,6 +298,8 @@ export function widgetSnapshot(data: Data, entries: CalendarEntry[], now: Date):
       target: h.target ?? 0,
       unit: h.unit ?? '',
       streak: streak(data.habitLogs, h, day),
+      step: h.target ? habitSteps(h)[0] : 0,
+      week: Array.from({ length: 7 }, (_, i) => isHabitDone(data.habitLogs, h, addDays(day, i - 6))),
     })),
     training: widgetTraining(data, day),
     exam: exam
@@ -328,6 +334,8 @@ export interface WidgetAction {
   done: boolean;
   /** Tag, an dem im Widget getippt wurde (für Gewohnheiten) */
   day: DateStr;
+  /** Nur Mengen-Gewohnheiten: gewünschte Tagesmenge nach dem Tipp (z. B. 1,5 l) */
+  amount?: number;
   /** Zeitpunkt (ms) */
   at: number;
 }
@@ -379,7 +387,17 @@ export function resolveWidgetActions(data: Pick<Data, 'tasks' | 'shopping' | 'ha
       if (!habit) continue;
       const log = data.habitLogs.find((l) => l.habitId === a.id && l.date === a.day);
       const done = isHabitDone(data.habitLogs, habit, a.day);
-      if (a.done && !done) {
+      if (habit.target && typeof a.amount === 'number' && Number.isFinite(a.amount)) {
+        // Mengen-Gewohnheit: gewünschte Menge übernehmen (0 = Eintrag weg)
+        const amount = Math.max(0, Math.round(a.amount * 1000) / 1000);
+        if (amount === 0) {
+          if (log) ops.push({ op: 'remove', collection: 'habitLogs', id: log.id });
+        } else if (!log) {
+          ops.push({ op: 'add', collection: 'habitLogs', item: { habitId: a.id, date: a.day, amount } });
+        } else if (log.amount !== amount) {
+          ops.push({ op: 'update', collection: 'habitLogs', id: log.id, patch: { amount } });
+        }
+      } else if (a.done && !done) {
         if (log) ops.push({ op: 'update', collection: 'habitLogs', id: log.id, patch: { amount: habit.target } });
         else ops.push({ op: 'add', collection: 'habitLogs', item: habit.target ? { habitId: a.id, date: a.day, amount: habit.target } : { habitId: a.id, date: a.day } });
       } else if (!a.done && log) {

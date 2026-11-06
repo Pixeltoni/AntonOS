@@ -18,7 +18,16 @@ enum WidgetStore {
         let today = dayString(Date())
         if snap.day != today {
             // Neuer Tag, App noch nicht geöffnet: Tageswerte zurücksetzen
-            snap.habits = snap.habits.map { var h = $0; h.done = false; h.amount = 0; return h }
+            let gap = max(1, min(7, daysUntil(today, from: date(fromDay: snap.day) ?? Date()) ?? 1))
+            snap.habits = snap.habits.map { h in
+                var h = h
+                // Serie hält nur, wenn der letzte Tag des Stands erledigt war und genau ein Tag vergangen ist
+                if !h.done || gap > 1 { h.streak = 0 }
+                h.done = false
+                h.amount = 0
+                if let week = h.week { h.week = Array((week + Array(repeating: false, count: gap)).suffix(7)) }
+                return h
+            }
             snap.rings = snap.rings.map { var r = $0; r.share = 0; r.text = "–"; return r }
             snap.ringsClosed = false
             snap.tasks = snap.tasks.filter { !$0.done }
@@ -37,8 +46,7 @@ enum WidgetStore {
                 }
             case "habit":
                 if action.day == today, let i = snap.habits.firstIndex(where: { $0.id == action.id }) {
-                    snap.habits[i].done = action.done
-                    if snap.habits[i].target > 0 { snap.habits[i].amount = action.done ? snap.habits[i].target : 0 }
+                    snap.habits[i].apply(action)
                 }
             case "card":
                 // Gewusst: weg damit; „Nochmal“: kommt hinten noch einmal dran
@@ -63,9 +71,9 @@ enum WidgetStore {
     }
 
     /// Merkt sich einen Tipp im Widget; die App übernimmt ihn beim nächsten Öffnen.
-    static func enqueue(kind: String, id: String, done: Bool) {
+    static func enqueue(kind: String, id: String, done: Bool, amount: Double? = nil) {
         var list = pendingActions()
-        list.append(WidgetAction(kind: kind, id: id, done: done, day: dayString(Date()), at: Date().timeIntervalSince1970 * 1000))
+        list.append(WidgetAction(kind: kind, id: id, done: done, day: dayString(Date()), at: Date().timeIntervalSince1970 * 1000, amount: amount))
         if let data = try? JSONEncoder().encode(list.suffix(200)), let raw = String(data: data, encoding: .utf8) {
             defaults?.set(raw, forKey: actionsKey)
         }
@@ -95,6 +103,8 @@ struct WidgetAction: Codable {
     var done: Bool
     var day: String
     var at: Double
+    /// Nur Mengen-Gewohnheiten: gewünschte Tagesmenge nach dem Tipp
+    var amount: Double? = nil
 }
 
 /* ---------- Stand aus der App (gleiche Felder wie WidgetSnapshot in src/lib/widgets.ts) ---------- */
@@ -186,6 +196,56 @@ struct WHabit: Codable {
     var target: Double
     var unit: String
     var streak: Int
+    /// Menge pro Tipp (optional, damit ältere Stände lesbar bleiben)
+    var step: Double?
+    /// Erledigt an den letzten 7 Tagen, heute zuletzt
+    var week: [Bool]?
+
+    /// Anteil von heute, 0…1
+    var share: Double {
+        if done { return 1 }
+        return target > 0 ? min(max(amount / target, 0), 1) : 0
+    }
+
+    var isAmount: Bool { target > 0 }
+
+    /// Menge, die ein Tipp im Widget hinzufügt
+    var tapStep: Double {
+        if let step, step > 0 { return step }
+        return target >= 20 ? 5 : target >= 4 ? 1 : max(target / 4, 0.1)
+    }
+
+    /// Was ein Tipp bewirkt: Mengen bekommen eine Portion dazu, sonst umschalten (erledigt → zurück)
+    var tapIntent: ToggleItemIntent {
+        if isAmount && !done {
+            let next = (min(amount + tapStep, target) * 1000).rounded() / 1000
+            return ToggleItemIntent(kind: "habit", id: id, done: next >= target, amount: next)
+        }
+        return ToggleItemIntent(kind: "habit", id: id, done: !done, amount: isAmount ? 0 : nil)
+    }
+
+    /// „1,5 / 2 l“
+    var amountText: String {
+        let unitText = unit.isEmpty ? "" : " \(unit)"
+        return "\(Fmt.number(done ? max(amount, target) : amount))/\(Fmt.number(target))\(unitText)"
+    }
+
+    /// Tipp aus dem Widget übernehmen (Serie und Woche gleich mitziehen)
+    mutating func apply(_ action: WidgetAction) {
+        let was = done
+        if isAmount, let wanted = action.amount {
+            amount = max(0, wanted)
+            done = amount >= target
+        } else {
+            done = action.done
+            if isAmount { amount = action.done ? target : 0 }
+        }
+        if done != was { streak = max(0, streak + (done ? 1 : -1)) }
+        if var week, !week.isEmpty {
+            week[week.count - 1] = done
+            self.week = week
+        }
+    }
 }
 
 struct WTraining: Codable {
@@ -265,10 +325,11 @@ extension Snapshot {
             ],
             tasksOpen: 2,
             habits: [
-                WHabit(id: "a", name: "Lesen", icon: "📖", done: true, amount: 0, target: 0, unit: "", streak: 12),
-                WHabit(id: "b", name: "Vitamine", icon: "💊", done: true, amount: 0, target: 0, unit: "", streak: 4),
-                WHabit(id: "c", name: "Wasser", icon: "💧", done: false, amount: 1, target: 2, unit: "l", streak: 0),
-                WHabit(id: "d", name: "Meditieren", icon: "🧘", done: false, amount: 0, target: 0, unit: "", streak: 0),
+                WHabit(id: "a", name: "Lesen", icon: "📖", done: true, amount: 0, target: 0, unit: "", streak: 12, step: 0, week: [true, true, true, true, true, true, true]),
+                WHabit(id: "b", name: "Vitamine", icon: "💊", done: true, amount: 0, target: 0, unit: "", streak: 4, step: 0, week: [true, false, true, true, true, true, true]),
+                WHabit(id: "c", name: "Wasser", icon: "💧", done: false, amount: 1.5, target: 2, unit: "l", streak: 3, step: 0.5, week: [false, true, true, false, true, true, false]),
+                WHabit(id: "d", name: "Meditieren", icon: "🧘", done: false, amount: 0, target: 0, unit: "", streak: 0, step: 0, week: [true, false, false, true, false, false, false]),
+                WHabit(id: "e", name: "Dehnen", icon: "🤸", done: false, amount: 0, target: 0, unit: "", streak: 1, step: 0, week: [false, false, true, false, true, true, false]),
             ],
             training: WTraining(title: "Push", detail: "Bankdrücken · Schulterdrücken · Dips", fromPlan: true, doneToday: false, weekDone: 2, weekGoal: 4),
             exam: WCountdown(kind: "exam", title: "Lineare Algebra", date: WidgetStore.dayString(now.addingTimeInterval(12 * 86400)), time: "09:00", color: "#FF9500"),

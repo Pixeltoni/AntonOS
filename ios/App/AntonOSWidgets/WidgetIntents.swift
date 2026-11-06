@@ -10,17 +10,20 @@ struct ToggleItemIntent: AppIntent {
     @Parameter(title: "Art") var kind: String
     @Parameter(title: "Eintrag") var itemID: String
     @Parameter(title: "Erledigt") var done: Bool
+    /// Nur Mengen-Gewohnheiten: neue Tagesmenge (z. B. eine Portion mehr)
+    @Parameter(title: "Menge") var amount: Double?
 
     init() {}
 
-    init(kind: String, id: String, done: Bool) {
+    init(kind: String, id: String, done: Bool, amount: Double? = nil) {
         self.kind = kind
         self.itemID = id
         self.done = done
+        self.amount = amount
     }
 
     func perform() async throws -> some IntentResult {
-        WidgetStore.enqueue(kind: kind, id: itemID, done: done)
+        WidgetStore.enqueue(kind: kind, id: itemID, done: done, amount: amount)
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }

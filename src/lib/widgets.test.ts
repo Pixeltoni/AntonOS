@@ -3,6 +3,7 @@ import type { Alarm, Card, Habit, HabitLog, ShoppingItem, Task, Workout } from '
 import { emptyData } from '../store';
 import { defaultAlarm } from './alarm';
 import type { CalendarEntry } from './calendar';
+import { addDays } from './dates';
 import { parseWidgetActions, parseWidgetLink, resolveWidgetActions, widgetAgenda, widgetAlarm, widgetCards, widgetSnapshot, widgetTasks, widgetTraining, type WidgetAction } from './widgets';
 
 const DAY = '2026-11-02'; // Montag
@@ -100,14 +101,16 @@ describe('widgetSnapshot', () => {
   it('Gewohnheiten, Einkauf und Countdown', () => {
     const data = emptyData();
     data.habits = [{ id: 'h', name: 'Wasser', icon: '💧', target: 2, unit: 'l' }];
-    data.habitLogs = [{ id: 'l', habitId: 'h', date: DAY, amount: 1 }];
+    data.habits.push({ id: 'g', name: 'Lesen', icon: '📖' });
+    data.habitLogs = [{ id: 'l', habitId: 'h', date: DAY, amount: 1 }, { id: 'm', habitId: 'g', date: addDays(DAY, -1) }, { id: 'n', habitId: 'g', date: DAY }];
     data.shopping = [
       { id: 's1', name: 'Eier', amount: '', aisle: 'kuehl', done: true, added: DAY },
       { id: 's2', name: 'Milch', amount: '1', aisle: 'kuehl', done: false, added: DAY },
     ];
     data.exams = [{ id: 'e', title: 'Lineare Algebra', courseId: null, date: '2026-11-14', time: '09:00', location: '' }];
     const s = widgetSnapshot(data, [], now);
-    expect(s.habits[0]).toMatchObject({ done: false, amount: 1, target: 2, unit: 'l' });
+    expect(s.habits[0]).toMatchObject({ done: false, amount: 1, target: 2, unit: 'l', step: 1 });
+    expect(s.habits[1]).toMatchObject({ done: true, step: 0, streak: 2, week: [false, false, false, false, false, true, true] });
     expect(s.shopping.map((x) => x.id)).toEqual(['s2', 's1']);
     expect(s.shoppingOpen).toBe(1);
     expect(s.exam).toMatchObject({ title: 'Lineare Algebra', date: '2026-11-14' });
@@ -154,6 +157,15 @@ describe('resolveWidgetActions', () => {
     expect(resolveWidgetActions(data, [act('habit', 'lesen', false)])).toEqual([{ op: 'remove', collection: 'habitLogs', id: 'l1' }]);
     expect(resolveWidgetActions({ ...data, habitLogs: [] }, [act('habit', 'lesen', true)])).toEqual([{ op: 'add', collection: 'habitLogs', item: { habitId: 'lesen', date: DAY } }]);
     expect(resolveWidgetActions(data, [act('habit', 'gelöscht', true)])).toEqual([]);
+  });
+
+  it('Mengen-Gewohnheiten: Plus im Widget setzt die gewünschte Menge', () => {
+    const plus = (amount: number, at = 1): WidgetAction => ({ ...act('habit', 'wasser', amount >= 2, at), amount });
+    expect(resolveWidgetActions(data, [plus(1.5)])).toEqual([{ op: 'update', collection: 'habitLogs', id: 'l2', patch: { amount: 1.5 } }]);
+    expect(resolveWidgetActions(data, [plus(1.5, 1), plus(2, 2)])).toEqual([{ op: 'update', collection: 'habitLogs', id: 'l2', patch: { amount: 2 } }]);
+    expect(resolveWidgetActions(data, [plus(1)])).toEqual([]);
+    expect(resolveWidgetActions(data, [plus(0)])).toEqual([{ op: 'remove', collection: 'habitLogs', id: 'l2' }]);
+    expect(resolveWidgetActions({ ...data, habitLogs: [] }, [plus(0.5)])).toEqual([{ op: 'add', collection: 'habitLogs', item: { habitId: 'wasser', date: DAY, amount: 0.5 } }]);
   });
 
   it('Lernkarten: jede Bewertung zählt der Reihe nach', () => {

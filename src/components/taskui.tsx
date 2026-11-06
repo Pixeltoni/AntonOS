@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Archive, Bell, CalendarDays, Check, Flag, Moon, Play, Repeat, Star, Sun, Tag, Timer, Trash2, X } from 'lucide-react';
+import { Archive, Bell, CalendarDays, CalendarRange, Check, Flag, Moon, Play, Repeat, Sofa, Star, StickyNote, Sun, Tag, Timer, Trash2, X } from 'lucide-react';
 import { newId, useStore } from '../store';
 import type { ID, Priority, Subtask, Task, TaskKind, TaskRepeat, TaskStatus } from '../types';
-import { addDays, formatDate, today } from '../lib/dates';
-import { describeTaskRepeat, dropPatch, formatMinutes, parseTags, WEEKDAY_SHORT } from '../lib/tasks';
+import { addDays, formatDate, parseDate, today } from '../lib/dates';
+import { describeTaskRepeat, dropPatch, formatMinutes, laterDate, parseTags, postponePatch, WEEKDAY_SHORT } from '../lib/tasks';
+import { liveNotes, noteTitle } from '../lib/notes';
+import { Sheet } from './sheet';
 import { setWhen, whenOf, type When } from '../lib/things';
 import { useFocus } from './focus';
 import { useToast } from './toast';
@@ -34,6 +36,8 @@ interface TaskUI {
   select(id: ID, how: 'only' | 'toggle' | 'range'): void;
   setSelected(ids: ID[]): void;
   clearSelection(): void;
+  /** „Später“-Menü für diese Aufgaben öffnen */
+  later(ids: ID[]): void;
 }
 
 const Ctx = createContext<TaskUI | null>(null);
@@ -48,6 +52,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [selected, setSel] = useState<Set<ID>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const [cursor, setCursor] = useState<ID | null>(null);
+  const [laterIds, setLaterIds] = useState<ID[] | null>(null);
 
   const select = useCallback((id: ID, how: 'only' | 'toggle' | 'range') => {
     setSel((prev) => {
@@ -84,6 +89,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     select,
     setSelected: (ids) => setSel(new Set(ids)),
     clearSelection: () => setSel(new Set()),
+    later: (ids) => setLaterIds(ids.length ? ids : null),
   }), [openId, selected, selectMode, cursor, select]);
 
   // Seitenwechsel: Panel und Auswahl zurücksetzen
@@ -107,6 +113,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={value}>
       {children}
       {task && <TaskInspector key={task.id} task={task} onClose={() => setOpenId(null)} />}
+      {laterIds && <LaterSheet ids={laterIds} onClose={() => setLaterIds(null)} />}
     </Ctx.Provider>
   );
 }
@@ -150,7 +157,10 @@ export function useTaskActions() {
       patchAll(ids, () => setWhen(when, t, date), count(ids.length, 'Verschoben', 'Aufgaben verschoben')),
     /** Auf morgen: überfällige Fristen wandern mit, sonst wird für morgen eingeplant */
     tomorrow: (ids: ID[]) =>
-      patchAll(ids, (task) => (task.due && task.due <= t ? { due: addDays(t, 1), plannedFor: null, someday: false } : setWhen('morgen', t)), count(ids.length, 'Auf morgen verschoben', 'Aufgaben auf morgen verschoben')),
+      patchAll(ids, (task) => postponePatch(task, addDays(t, 1), t), count(ids.length, 'Auf morgen verschoben', 'Aufgaben auf morgen verschoben')),
+    /** Auf einen späteren Tag schieben (zählt für „Aufräumen“ mit) */
+    postpone: (ids: ID[], date: string, label: string) =>
+      patchAll(ids, (task) => postponePatch(task, date, t), `${ids.length === 1 ? 'Verschoben' : `${ids.length} Aufgaben verschoben`}: ${label}`),
     due: (ids: ID[], date: string | null) => patchAll(ids, () => ({ due: date }), date ? `Frist: ${formatDate(date)}` : 'Frist entfernt'),
     move: (ids: ID[], target: string) => {
       const p = dropPatch(target, t);
@@ -180,6 +190,53 @@ export function useTaskActions() {
       location.hash = '#/fokus';
     },
   };
+}
+
+/* ---------- „Später“-Menü ---------- */
+
+const dayHint = (d: string) => parseDate(d).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
+
+/** Wie in Things: Heute, Heute Abend, Morgen, Wochenende, nächste Woche, Irgendwann oder ein Tag */
+function LaterSheet({ ids, onClose }: { ids: ID[]; onClose: () => void }) {
+  const { data } = useStore();
+  const actions = useTaskActions();
+  const t = today();
+  const tasks = data.tasks.filter((x) => ids.includes(x.id));
+  if (!tasks.length) return null;
+  const run = (fn: () => void) => {
+    fn();
+    onClose();
+  };
+  const morgen = laterDate('morgen', t);
+  const wochenende = laterDate('wochenende', t);
+  const woche = laterDate('naechste-woche', t);
+  const options: { key: string; icon: ReactNode; color: string; label: string; hint?: string; act: () => void }[] = [
+    { key: 'heute', icon: <Star size={16} />, color: '#FFB800', label: 'Heute', act: () => actions.when(ids, 'heute') },
+    { key: 'abends', icon: <Moon size={16} />, color: '#5856D6', label: 'Heute Abend', act: () => actions.when(ids, 'abends') },
+    { key: 'morgen', icon: <Sun size={16} />, color: '#FF9500', label: 'Morgen', hint: dayHint(morgen), act: () => actions.postpone(ids, morgen, 'morgen') },
+    { key: 'wochenende', icon: <Sofa size={16} />, color: '#34C759', label: 'Am Wochenende', hint: dayHint(wochenende), act: () => actions.postpone(ids, wochenende, 'Wochenende') },
+    { key: 'woche', icon: <CalendarRange size={16} />, color: '#007AFF', label: 'Nächste Woche', hint: dayHint(woche), act: () => actions.postpone(ids, woche, 'nächste Woche') },
+    { key: 'irgendwann', icon: <Archive size={16} />, color: '#8E8E93', label: 'Irgendwann', hint: 'ohne Datum', act: () => actions.when(ids, 'irgendwann') },
+  ];
+  return (
+    <Sheet title={tasks.length === 1 ? 'Wann?' : `${tasks.length} Aufgaben – wann?`} onClose={onClose}>
+      {tasks.length === 1 && <p className="later-title">{tasks[0].title}</p>}
+      <div className="later-list" role="menu">
+        {options.map((o) => (
+          <button key={o.key} type="button" role="menuitem" onClick={() => run(o.act)}>
+            <span className="later-ico" style={{ background: o.color }} aria-hidden>{o.icon}</span>
+            <span className="grow">{o.label}</span>
+            {o.hint && <span className="muted small">{o.hint}</span>}
+          </button>
+        ))}
+        <label className="later-date">
+          <span className="later-ico" style={{ background: '#FF3B30' }} aria-hidden><CalendarDays size={16} /></span>
+          <span className="grow">Anderer Tag …</span>
+          <input type="date" min={addDays(t, 1)} onChange={(e) => e.target.value && run(() => actions.postpone(ids, e.target.value, formatDate(e.target.value)))} aria-label="Tag wählen" />
+        </label>
+      </div>
+    </Sheet>
+  );
 }
 
 /* ---------- Kleine Symbole ---------- */
@@ -448,6 +505,8 @@ function TaskInspector({ task, onClose }: { task: Task; onClose: () => void }) {
           </div>
         </div>
 
+        <NoteLink task={task} />
+
         <details className="inspector-card inspector-more">
           <summary>Mehr: Art, Status, Erinnerung</summary>
           <label className="inspector-row">
@@ -488,5 +547,39 @@ function TaskInspector({ task, onClose }: { task: Task; onClose: () => void }) {
       </aside>
     </>,
     document.body,
+  );
+}
+
+/** Verknüpfte Notiz einer Aufgabe: öffnen, lösen, eine wählen oder neu anlegen */
+function NoteLink({ task }: { task: Task }) {
+  const { data, add, update } = useStore();
+  const notes = liveNotes(data.notes).sort((a, b) => b.updated.localeCompare(a.updated));
+  const note = notes.find((n) => n.id === task.noteId);
+  const set = (noteId: ID | null) => update('tasks', task.id, { noteId, noteLine: undefined });
+  const create = () => {
+    const id = add('notes', { title: task.title, courseId: task.courseId, content: '', updated: new Date().toISOString() });
+    set(id);
+    location.hash = `#/notizen/${id}`;
+  };
+  return (
+    <div className="inspector-card">
+      <div className="inspector-row col">
+        <span><StickyNote size={14} aria-hidden /> Verknüpfte Notiz</span>
+        {note ? (
+          <div className="row">
+            <a className="task-note-chip" href={`#/notizen/${note.id}`}><StickyNote size={13} aria-hidden />{noteTitle(note)}</a>
+            <button type="button" className="icon" onClick={() => set(null)} aria-label="Notiz lösen" title="Notiz lösen"><X size={14} /></button>
+          </div>
+        ) : (
+          <div className="row">
+            <select value="" onChange={(e) => e.target.value && set(e.target.value)} aria-label="Notiz verknüpfen">
+              <option value="">Notiz verknüpfen …</option>
+              {notes.slice(0, 60).map((n) => <option key={n.id} value={n.id}>{noteTitle(n)}</option>)}
+            </select>
+            <button type="button" onClick={create}>+ Neue Notiz</button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

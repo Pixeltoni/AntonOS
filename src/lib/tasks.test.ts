@@ -111,3 +111,61 @@ describe('Projektaufgaben', () => {
     expect(listTasks(tasks).map((t) => t.id)).toEqual(['a', 'c']);
   });
 });
+
+describe('Später, Aufräumen und Tag planen', () => {
+  it('findet Wochenende und nächste Woche', async () => {
+    const { laterDate } = await import('./tasks');
+    expect(laterDate('morgen', T)).toBe('2026-10-29');
+    expect(laterDate('wochenende', T)).toBe('2026-10-31');
+    expect(laterDate('wochenende', '2026-10-31')).toBe('2026-11-01');
+    expect(laterDate('wochenende', '2026-11-01')).toBe('2026-11-07');
+    expect(laterDate('naechste-woche', T)).toBe('2026-11-02');
+    expect(laterDate('naechste-woche', '2026-11-01')).toBe('2026-11-02');
+    expect(laterDate('naechste-woche', '2026-11-02')).toBe('2026-11-09');
+  });
+  it('verschiebt und zählt mit', async () => {
+    const { postponePatch } = await import('./tasks');
+    expect(postponePatch({ due: '2026-10-27' }, '2026-10-29', T)).toEqual({ postponed: 1, due: '2026-10-29', plannedFor: null, evening: false, someday: false });
+    expect(postponePatch({ due: '2026-11-10', postponed: 2 }, '2026-10-29', T)).toEqual({ postponed: 3, plannedFor: '2026-10-29', evening: false, someday: false });
+  });
+  it('erkennt Liegengebliebenes und räumt auf', async () => {
+    const { isStale, tidyPatch } = await import('./tasks');
+    expect(isStale(task({ postponed: 3 }), T)).toBe(true);
+    expect(isStale(task({ postponed: 2 }), T)).toBe(false);
+    expect(isStale(task({ due: '2026-10-10' }), T)).toBe(true);
+    expect(isStale(task({ due: '2026-10-20' }), T)).toBe(false);
+    expect(isStale(task({ postponed: 5, status: 'erledigt' }), T)).toBe(false);
+    expect(isStale(task({ postponed: 5, someday: true }), T)).toBe(false);
+    expect(tidyPatch({ due: '2026-10-10' }, 'heute', T)).toMatchObject({ plannedFor: T, due: T, postponed: 0 });
+    expect(tidyPatch({ due: '2026-10-10' }, 'irgendwann', T)).toMatchObject({ someday: true, due: null, postponed: 0 });
+  });
+  it('wählt Aufgaben für „Tag planen“', async () => {
+    const { planCandidates } = await import('./tasks');
+    const list = [
+      task({ id: 'heute', plannedFor: T }),
+      task({ id: 'ohne' }),
+      task({ id: 'bald', due: '2026-10-30' }),
+      task({ id: 'eher', due: '2026-10-29' }),
+      task({ id: 'spaeter', due: '2026-12-01' }),
+      task({ id: 'geplant', plannedFor: '2026-11-03' }),
+      task({ id: 'geplant-frist', plannedFor: '2026-11-01', due: '2026-10-31' }),
+      task({ id: 'irgendwann', someday: true }),
+      task({ id: 'fertig', status: 'erledigt' }),
+    ];
+    expect(planCandidates(list, T).map((x) => x.id)).toEqual(['eher', 'bald', 'ohne', 'spaeter', 'irgendwann']);
+    expect(planCandidates(list, T, 2)).toHaveLength(2);
+  });
+  it('färbt Fristen', async () => {
+    const { dueTone } = await import('./tasks');
+    expect(dueTone('2026-10-27', T)).toBe('late');
+    expect(dueTone(T, T)).toBe('today');
+    expect(dueTone('2026-10-30', T)).toBe('soon');
+    expect(dueTone('2026-11-30', T)).toBe('later');
+  });
+  it('übernimmt beim Wiederholen weder Verschiebungen noch Checkpunkt', () => {
+    const next = spawnRepeat(task({ due: T, repeat: { freq: 'taeglich' }, postponed: 4, noteLine: 'x', noteId: 'n' }), T)!;
+    expect(next.postponed).toBeUndefined();
+    expect(next.noteLine).toBeUndefined();
+    expect(next.noteId).toBe('n');
+  });
+});

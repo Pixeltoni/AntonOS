@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { bump } from '../lib/haptics';
-import { Archive, Bell, CalendarDays, Check, ChevronRight, Flag, GripVertical, Moon, Play, Repeat, Sun, Timer, Trash2 } from 'lucide-react';
+import { Archive, Bell, CalendarDays, Check, ChevronRight, Clock, Flag, GripVertical, Moon, Play, Repeat, StickyNote, Sun, Timer, Trash2 } from 'lucide-react';
 import { useStore } from '../store';
 import type { ID, Task } from '../types';
 import { formatDate, parseDate, relativeLabel, today } from '../lib/dates';
 import { parseQuickAdd } from '../lib/quickadd';
-import { describeTaskRepeat, dropPatch, formatMinutes, moveId, sortTasks } from '../lib/tasks';
+import { describeTaskRepeat, dropPatch, dueTone, formatMinutes, moveId, sortTasks } from '../lib/tasks';
+import { noteTitle } from '../lib/notes';
 import { whenOf } from '../lib/things';
 import { useTaskActions, useTaskUI } from './taskui';
 
@@ -141,6 +142,9 @@ interface Gesture {
 const SWIPE_DONE = 90;
 const SWIPE_OPEN = 70;
 const ACTIONS_WIDTH = 216;
+/** So lange läuft die Abhak-Animation, bevor die Aufgabe als erledigt gilt */
+const CHECK_MS = 650;
+const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
  * Aufgabenliste im Stil von Apple Erinnerungen: runder Haken in Listenfarbe,
@@ -165,6 +169,27 @@ export function TaskList({ tasks, showCourse = true, compact = false, sortable =
   const [drag, setDrag] = useState<{ id: ID; dy: number; over: number; dropping: boolean } | null>(null);
   const [swipe, setSwipe] = useState<{ id: ID; dx: number } | null>(null);
   const [swipeOpen, setSwipeOpen] = useState<ID | null>(null);
+  // Gerade abgehakt: Kreis füllt sich, Zeile gleitet weg, dann erst erledigt
+  const [checking, setChecking] = useState<Set<ID>>(new Set());
+  const checkTimers = useRef<number[]>([]);
+  useEffect(() => () => checkTimers.current.forEach((x) => clearTimeout(x)), []);
+  const check = (task: Task) => {
+    if (compact || reducedMotion()) {
+      actions.complete([task.id]);
+      return;
+    }
+    if (checking.has(task.id)) return;
+    bump();
+    setChecking((s) => new Set(s).add(task.id));
+    checkTimers.current.push(window.setTimeout(() => {
+      latest.current.actions.complete([task.id]);
+      setChecking((s) => {
+        const n = new Set(s);
+        n.delete(task.id);
+        return n;
+      });
+    }, CHECK_MS));
+  };
   const gesture = useRef<Gesture | null>(null);
   const suppressClick = useRef(false);
   const listRef = useRef<HTMLUListElement>(null);
@@ -333,9 +358,12 @@ export function TaskList({ tasks, showCourse = true, compact = false, sortable =
         const isOpen = expanded.has(task.id);
         const dx = swipe?.id === task.id ? swipe.dx : swipeOpen === task.id ? -ACTIONS_WIDTH : 0;
         const dragging = drag?.id === task.id;
+        const isChecking = checking.has(task.id);
+        const note = task.noteId ? data.notes.find((n) => n.id === task.noteId && !n.deletedAt) : undefined;
         const cls = [
           'rem-row',
           done && 'done',
+          isChecking && 'checking',
           ui.selected.has(task.id) && 'selected',
           ui.cursor === task.id && 'cursor',
           dragging && 'dragging',
@@ -357,7 +385,7 @@ export function TaskList({ tasks, showCourse = true, compact = false, sortable =
                   <span className={`rem-swipe-done ${dx > SWIPE_DONE ? 'armed' : ''}`}><Check size={18} strokeWidth={3} /> Erledigt</span>
                 ) : (
                   <span className="rem-actions">
-                    <button type="button" className="act-tomorrow" onClick={() => { setSwipeOpen(null); actions.tomorrow([task.id]); }}><Sun size={16} /> Morgen</button>
+                    <button type="button" className="act-tomorrow" onClick={() => { setSwipeOpen(null); ui.later([task.id]); }}><Clock size={16} /> Später</button>
                     <button type="button" className="act-flag" onClick={() => { setSwipeOpen(null); actions.flag([task.id]); }}><Flag size={16} /> {task.flagged ? 'Lösen' : 'Markieren'}</button>
                     <button type="button" className="act-delete" onClick={() => { setSwipeOpen(null); actions.remove([task.id]); }}><Trash2 size={16} /> Löschen</button>
                   </span>
@@ -367,12 +395,12 @@ export function TaskList({ tasks, showCourse = true, compact = false, sortable =
             <div className="rem-row-inner" style={dx ? { transform: `translateX(${dx}px)` } : undefined}>
               <button
                 type="button"
-                className={`rem-check ${done ? 'on' : ''}`}
-                onClick={() => (done ? actions.reopen([task.id]) : actions.complete([task.id]))}
+                className={`rem-check ${done || isChecking ? 'on' : ''} ${task.priority === 'hoch' ? 'prio-hoch' : ''}`}
+                onClick={() => (done ? actions.reopen([task.id]) : check(task))}
                 aria-label={done ? `${task.title} wieder öffnen` : `${task.title} erledigen`}
                 aria-pressed={done}
               >
-                {done && <Check size={12} strokeWidth={3.5} color="#fff" aria-hidden />}
+                {(done || isChecking) && <Check size={12} strokeWidth={3.5} color="#fff" aria-hidden />}
               </button>
               {renaming === task.id ? (
                 <input
@@ -399,7 +427,7 @@ export function TaskList({ tasks, showCourse = true, compact = false, sortable =
                   {task.note && !compact && <span className="rem-note">{task.note}</span>}
                   <span className="rem-meta">
                     {task.due && (
-                      <span className={overdue ? 'rem-overdue' : ''} title={formatDate(task.due)}>
+                      <span className={`rem-due ${done ? '' : `tone-${dueTone(task.due, t)}`} ${overdue ? 'rem-overdue' : ''}`} title={formatDate(task.due)}>
                         <CalendarDays size={12} aria-hidden />
                         {cap(relativeLabel(task.due, t))}
                         {task.dueTime && `, ${task.dueTime}`}
@@ -417,7 +445,24 @@ export function TaskList({ tasks, showCourse = true, compact = false, sortable =
                     )}
                     {!compact && task.kind !== 'Aufgabe' && <span>{task.kind}</span>}
                     {!compact && task.status === 'in Arbeit' && <span className="rem-doing">in Arbeit</span>}
-                    {subs.length > 0 && <span>{subsDone} von {subs.length}</span>}
+                    {subs.length > 0 && (
+                      <span className="rem-subbar" title={`${subsDone} von ${subs.length} Unteraufgaben erledigt`}>
+                        <span aria-hidden><i style={{ width: `${(subsDone / subs.length) * 100}%` }} /></span>
+                        {subsDone}/{subs.length}
+                      </span>
+                    )}
+                    {note && !compact && (
+                      <span
+                        className="rem-notelink"
+                        role="link"
+                        tabIndex={0}
+                        title="Notiz öffnen"
+                        onClick={(e) => { e.stopPropagation(); location.hash = `#/notizen/${note.id}`; }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); location.hash = `#/notizen/${note.id}`; } }}
+                      >
+                        <StickyNote size={11} aria-hidden />{noteTitle(note)}
+                      </span>
+                    )}
                     {!compact && task.estimate && <span className="rem-est"><Timer size={12} aria-hidden />{formatMinutes(task.estimate)}</span>}
                     {!compact && (task.tags ?? []).map((tag) => <span key={tag} className="rem-tag">@{tag}</span>)}
                   </span>
@@ -432,6 +477,11 @@ export function TaskList({ tasks, showCourse = true, compact = false, sortable =
                   aria-label={isOpen ? 'Unteraufgaben zuklappen' : 'Unteraufgaben zeigen'}
                 >
                   <ChevronRight size={16} />
+                </button>
+              )}
+              {!compact && !done && (
+                <button type="button" className="icon rem-focus rem-later" onClick={() => ui.later([task.id])} aria-label="Auf später verschieben" title="Später …">
+                  <Clock size={15} />
                 </button>
               )}
               {!compact && !done && (

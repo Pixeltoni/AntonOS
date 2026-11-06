@@ -125,6 +125,12 @@ export interface Task {
   estimate?: number;
   /** Im Fokus-Timer gearbeitete Minuten */
   spent?: number;
+  /** Wie oft die Aufgabe schon auf später verschoben wurde (für „Aufräumen“) */
+  postponed?: number;
+  /** Verknüpfte Notiz */
+  noteId?: ID | null;
+  /** Aus diesem Checkpunkt der Notiz entstanden (Haken bleiben verbunden) */
+  noteLine?: string;
 }
 
 export interface TaskRepeat {
@@ -158,6 +164,14 @@ export interface Note {
   updated: string;
   /** Oben in der Liste angeheftet */
   pinned?: boolean;
+  /** Eigenes Symbol (Emoji) */
+  icon?: string;
+  /** Eigene Farbe für Symbol und Galerie */
+  color?: string;
+  /** Tagesnotiz für diesen Tag */
+  daily?: DateStr;
+  /** In „Zuletzt gelöscht“ seit (ISO-Zeit); nach 30 Tagen endgültig weg */
+  deletedAt?: string;
 }
 
 export interface Card {

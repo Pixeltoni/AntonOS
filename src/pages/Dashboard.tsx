@@ -16,7 +16,7 @@ import { RingsWidget } from '../components/rings';
 import { Icon, PAGE_ICONS, stripEmoji, WIDGET_ICONS } from '../components/icons';
 import { FocusWidget, useFocus } from '../components/focus';
 import { focusMode } from '../lib/focus';
-import { noteTitle } from '../lib/notes';
+import { liveNotes, noteTitle } from '../lib/notes';
 import { CountdownWidget, SmartStack, TodayWidget, useDragReorder, WidgetGallery } from '../components/homescreen';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
 import { HabitsToday } from './Habits';
@@ -117,7 +117,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
   const activeProjects = data.projects.filter((p) => p.status === 'aktiv');
   const watching = data.media.filter((m) => WATCH_KINDS.includes(m.kind) && m.status === 'läuft');
   const reading = data.media.filter((m) => READ_KINDS.includes(m.kind) && m.status === 'läuft');
-  const notes = [...data.notes].sort((a, b) => b.updated.localeCompare(a.updated));
+  const notes = liveNotes(data.notes).sort((a, b) => b.updated.localeCompare(a.updated));
   const workouts = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date));
   const albums = [...data.albums].sort((a, b) => b.date.localeCompare(a.date));
   const month = monthTotals(data.transactions, t.slice(0, 7));

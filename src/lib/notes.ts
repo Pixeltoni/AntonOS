@@ -1,15 +1,16 @@
-import type { Note } from '../types';
+import type { DateStr, Note, Task } from '../types';
+import { parseDate } from './dates';
 
 /**
  * Notizen sind einfacher Text mit wenigen Zeichen für Formatierung, wie in Markdown:
- * „# Titel“, „## Überschrift“, „- [ ] Checkliste“, „- Liste“, **fett**, *kursiv*,
- * [[Verknüpfung]] und #tag.
+ * „# Titel“, „## Überschrift“, „- [ ] Checkliste“, „- Liste“, „> Zitat“, „! Hinweis“,
+ * „---“ (Trennlinie), **fett**, *kursiv*, [[Verknüpfung]] und #tag.
  */
 
 export type Block =
-  | { kind: 'h1' | 'h2' | 'p' | 'li'; text: string; line: number }
+  | { kind: 'h1' | 'h2' | 'p' | 'li' | 'quote' | 'callout'; text: string; line: number }
   | { kind: 'check'; text: string; done: boolean; line: number }
-  | { kind: 'empty'; line: number };
+  | { kind: 'empty' | 'hr'; line: number };
 
 export function parseBlocks(content: string): Block[] {
   return content.split('\n').map((raw, line): Block => {
@@ -17,6 +18,9 @@ export function parseBlocks(content: string): Block[] {
     if (check) return { kind: 'check', done: check[1] !== ' ', text: check[2], line };
     if (/^# /.test(raw)) return { kind: 'h1', text: raw.slice(2), line };
     if (/^## /.test(raw)) return { kind: 'h2', text: raw.slice(3), line };
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(raw)) return { kind: 'hr', line };
+    if (/^> ?/.test(raw)) return { kind: 'quote', text: raw.replace(/^> ?/, ''), line };
+    if (/^! /.test(raw)) return { kind: 'callout', text: raw.slice(2), line };
     const li = raw.match(/^\s*[-*•] (.*)$/);
     if (li) return { kind: 'li', text: li[1], line };
     if (!raw.trim()) return { kind: 'empty', line };
@@ -67,7 +71,8 @@ export function extractLinks(content: string): string[] {
   return [...new Set([...content.matchAll(/\[\[([^\]]+)\]\]/g)].map((m) => m[1].trim()).filter(Boolean))];
 }
 
-const strip = (s: string) => s.replace(/^#+ /, '').replace(/^\s*[-*] (\[[ xX]\] )?/, '').replace(/\*\*|\[\[|\]\]/g, '').trim();
+const strip = (s: string) =>
+  s.replace(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/, '').replace(/^#+ /, '').replace(/^(> ?|! )/, '').replace(/^\s*[-*] (\[[ xX]\] )?/, '').replace(/\*\*|\[\[|\]\]/g, '').trim();
 
 /** Titel: eigener Titel oder die erste Zeile mit Text */
 export function noteTitle(note: Pick<Note, 'title' | 'content'>): string {
@@ -123,7 +128,7 @@ export function togglePrefix(content: string, from: number, to: number, prefix: 
   let lineEnd = content.indexOf('\n', Math.max(from, to - (to > from ? 1 : 0)));
   if (lineEnd === -1) lineEnd = content.length;
   const block = content.slice(lineStart, lineEnd).split('\n');
-  const known = /^(# |## |- \[[ xX]\] |- )/;
+  const known = /^(# |## |- \[[ xX]\] |- |> |! )/;
   const all = block.every((l) => l.startsWith(prefix));
   const next = block.map((l) => (all ? l.slice(prefix.length) : prefix + l.replace(known, ''))).join('\n');
   const text = content.slice(0, lineStart) + next + content.slice(lineEnd);
@@ -141,3 +146,128 @@ export function wrapSelection(content: string, from: number, to: number, mark: s
   const text = content.slice(0, from) + mark + inner + mark + content.slice(to);
   return { content: text, from: from + mark.length, to: from + mark.length + inner.length };
 }
+
+/** Auswahl in `open`/`close` einschließen, z. B. „[[“ und „]]“ (ohne Auswahl landet der Cursor dazwischen) */
+export function wrapWith(content: string, from: number, to: number, open: string, close: string): { content: string; from: number; to: number } {
+  const inner = content.slice(from, to);
+  return { content: content.slice(0, from) + open + inner + close + content.slice(to), from: from + open.length, to: from + open.length + inner.length };
+}
+
+/**
+ * Setzt den Haken der ersten Checklisten-Zeile mit genau diesem Text
+ * (für Checkpunkte, aus denen eine Aufgabe wurde). Ohne Treffer bleibt alles gleich.
+ */
+export function setCheckByText(content: string, text: string, done: boolean): string {
+  const want = text.trim();
+  const lines = content.split('\n');
+  const i = lines.findIndex((l) => {
+    const m = l.match(/^\s*[-*] \[( |x|X)\] ?(.*)$/);
+    return !!m && m[2].trim() === want;
+  });
+  if (i < 0) return content;
+  lines[i] = lines[i].replace(/^(\s*[-*] \[)( |x|X)(\])/, (_, a, _m, b) => `${a}${done ? 'x' : ' '}${b}`);
+  return lines.join('\n');
+}
+
+/**
+ * Wird eine Aufgabe aus einem Checkpunkt erledigt oder wieder geöffnet,
+ * zieht der Haken in der Notiz mit.
+ */
+export function syncTaskCheck<N extends Note>(
+  notes: N[],
+  before: Pick<Task, 'status'> | undefined,
+  after: Pick<Task, 'status' | 'noteId' | 'noteLine'> | undefined,
+): N[] {
+  if (!before || !after?.noteId || !after.noteLine) return notes;
+  const done = after.status === 'erledigt';
+  if ((before.status === 'erledigt') === done) return notes;
+  return notes.map((n) => (n.id === after.noteId ? { ...n, content: setCheckByText(n.content, after.noteLine!, done) } : n));
+}
+
+/* ---------- Zuletzt gelöscht ---------- */
+
+/** So lange bleiben gelöschte Notizen in „Zuletzt gelöscht“ */
+export const TRASH_DAYS = 30;
+
+/** Notizen ohne die gelöschten */
+export const liveNotes = <T extends Pick<Note, 'deletedAt'>>(notes: T[]): T[] => notes.filter((n) => !n.deletedAt);
+
+/** Ganze Tage, bis eine gelöschte Notiz endgültig verschwindet (mindestens 0) */
+export function trashDaysLeft(deletedAt: string, now: Date): number {
+  const gone = new Date(deletedAt).getTime() + TRASH_DAYS * 86_400_000;
+  return Math.max(0, Math.ceil((gone - now.getTime()) / 86_400_000));
+}
+
+/** Entfernt Notizen, die länger als 30 Tage in „Zuletzt gelöscht“ liegen */
+export function purgeDeleted<T extends Pick<Note, 'deletedAt'>>(notes: T[], now: Date): T[] {
+  return notes.filter((n) => !n.deletedAt || trashDaysLeft(n.deletedAt, now) > 0);
+}
+
+/* ---------- Erwähnt in ---------- */
+
+/** Notizen, die per [[Titel]] auf `note` verweisen (ohne gelöschte und ohne sich selbst) */
+export function backlinks<T extends Note>(note: Pick<Note, 'id' | 'title' | 'content'>, notes: T[]): T[] {
+  const title = noteTitle(note).toLowerCase();
+  return liveNotes(notes).filter((n) => n.id !== note.id && extractLinks(n.content).some((l) => l.toLowerCase() === title));
+}
+
+/* ---------- Tagesnotiz und Vorlagen ---------- */
+
+/** „Freitag, 6. November“ */
+export function dailyTitle(day: DateStr): string {
+  return parseDate(day).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+/** Inhalt einer neuen Tagesnotiz, mit den Terminen des Tages */
+export function dailyContent(events: { time?: string; label: string }[]): string {
+  const termine = events.length ? events.map((e) => `- ${e.time ? `${e.time} ` : ''}${e.label}`).join('\n') : '- keine Termine';
+  return `## Termine\n${termine}\n\n## Wichtig heute\n- [ ] \n\n## Notizen\n\n\n## Dankbar für\n- `;
+}
+
+export interface NoteTemplate {
+  id: string;
+  label: string;
+  /** lucide-Symbolname für das Menü */
+  icon: 'file' | 'graduation-cap' | 'users' | 'layers' | 'smile' | 'shopping-basket';
+  color: string;
+  emoji?: string;
+  title: (day: DateStr) => string;
+  content: (day: DateStr) => string;
+}
+
+const shortDay = (day: DateStr) => parseDate(day).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
+
+export const NOTE_TEMPLATES: NoteTemplate[] = [
+  { id: 'leer', label: 'Leere Notiz', icon: 'file', color: '#8E8E93', title: () => '', content: () => '' },
+  {
+    id: 'vorlesung', label: 'Vorlesungsmitschrift', icon: 'graduation-cap', color: '#007AFF', emoji: '🎓',
+    title: (d) => `Vorlesung ${shortDay(d)}`,
+    content: (d) => `${shortDay(d)} · Raum \n\n## Wichtigste Punkte\n- \n\n! Klausurrelevant: \n\n## Begriffe\nBegriff: Erklärung\n\n## Offene Fragen\n- [ ] `,
+  },
+  {
+    id: 'besprechung', label: 'Besprechung', icon: 'users', color: '#30B0C7', emoji: '🗣️',
+    title: (d) => `Besprechung ${shortDay(d)}`,
+    content: () => 'Mit: \n\n## Themen\n- \n\n## Entscheidungen\n- \n\n## To-dos\n- [ ] ',
+  },
+  {
+    id: 'lernzettel', label: 'Lernzettel', icon: 'layers', color: '#5856D6', emoji: '🧠',
+    title: () => 'Lernzettel',
+    content: () => '## Begriffe\nBegriff: Erklärung\n\n## Formeln\n! \n\n## Beispiel\n\n\n---\nZeilen wie „Begriff: Erklärung“ werden mit 🧠 zu Lernkarten.',
+  },
+  {
+    id: 'woche', label: 'Wochenrückblick', icon: 'smile', color: '#FF9500', emoji: '🌤️',
+    title: (d) => `Woche bis ${shortDay(d)}`,
+    content: () => '## Was lief gut\n- \n\n## Was nicht\n- \n\n## Gelernt\n- \n\n## Nächste Woche\n- [ ] ',
+  },
+  {
+    id: 'liste', label: 'Checkliste', icon: 'shopping-basket', color: '#34C759', emoji: '✅',
+    title: () => '',
+    content: () => '- [ ] ',
+  },
+];
+
+/** Auswahl an Symbolen für Notizen */
+export const NOTE_EMOJIS = ['📝', '📌', '💡', '🎯', '📚', '🎓', '🧠', '📐', '🧮', '∑', '🔬', '💻', '🗣️', '🤖', '🎁', '🛒', '🍳', '✈️', '🏃', '💰', '❤️', '🌱', '🎵', '⭐'];
+
+/** Farben für Notizen (wie bei Listen) */
+export const NOTE_COLORS = ['#FF9500', '#FF3B30', '#FF2D55', '#AF52DE', '#5856D6', '#007AFF', '#30B0C7', '#34C759', '#A2845E', '#8E8E93'];

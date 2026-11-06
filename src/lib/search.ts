@@ -1,5 +1,5 @@
 import type { Data, NavItem } from '../types';
-import { noteTitle } from './notes';
+import { liveNotes, noteTitle } from './notes';
 
 export interface SearchHit {
   key: string;
@@ -54,7 +54,7 @@ export function searchAll(data: Data, query: string, pages: NavItem[], limitPerG
       t.title, `${t.note ?? ''} ${(t.subtasks ?? []).map((s) => s.title).join(' ')}`, t.status === 'erledigt' ? -3 : 1,
     );
   }
-  for (const n of data.notes) {
+  for (const n of liveNotes(data.notes)) {
     const title = noteTitle(n);
     push({ key: `note-${n.id}`, group: 'Notizen', icon: '📝', title, subtitle: snippetAround(n.content, query) || course(n.courseId), href: `#/notizen/${n.id}` }, title, n.content);
   }

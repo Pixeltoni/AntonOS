@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { CalendarDays, CheckSquare, ChevronDown, Keyboard, Moon, Pencil, Search, X } from 'lucide-react';
+import { CalendarDays, CheckSquare, ChevronDown, Columns3, Keyboard, List, Moon, Pencil, Search, Sunrise, X } from 'lucide-react';
 import { useStore } from '../store';
 import type { Task } from '../types';
 import { addDays, formatDate, parseDate, today } from '../lib/dates';
 import { TaskEmpty, TaskForm, TaskList } from '../components/TaskList';
 import { useTaskActions, useTaskUI, visibleTaskIds } from '../components/taskui';
 import { useCalendarEntries } from '../components/calendar';
+import { PlanDay, StaleBox, TaskBoard } from '../components/taskboard';
 import { inSomeday, inToday, logbook } from '../lib/things';
 import { collectTags, listTasks, doneToday, formatMinutes, freeMinutes, groupUpcoming, matchesQuery, upcomingDate } from '../lib/tasks';
 import { isTimedOn, onDay, sortEntries, toMin } from '../lib/calendar';
@@ -36,6 +37,10 @@ export const SMART_LISTS: SmartList[] = [
   { id: 'irgendwann', label: 'Irgendwann', color: '#34C759', drop: 'smart:irgendwann', icon: svg(<><path d="M12 2l9 5-9 5-9-5z" /><path d="M3 12l9 5 9-5M3 17l9 5 9-5" /></>), filter: (t) => inSomeday(t) },
   { id: 'erledigt', label: 'Logbuch', color: '#8E8E93', icon: svg(<><rect x="3" y="4" width="18" height="5" rx="1" /><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4" /></>), filter: (t) => !open(t) },
 ];
+
+/** Liste oder Board – gemerkt auf diesem Gerät */
+const VIEW_KEY = 'antonos:aufgaben-ansicht';
+type View = 'liste' | 'board';
 
 const LIST_COLORS = ['#007AFF', '#34C759', '#FF9500', '#FF2D55', '#AF52DE', '#5856D6', '#30B0C7', '#A2845E'];
 
@@ -70,6 +75,22 @@ export function Tasks() {
   const [editList, setEditList] = useState(false);
   const [help, setHelp] = useState(false);
   const [stuck, setStuck] = useState(false);
+  const [planning, setPlanning] = useState(false);
+  const [view, setViewState] = useState<View>(() => {
+    try {
+      return localStorage.getItem(VIEW_KEY) === 'board' ? 'board' : 'liste';
+    } catch {
+      return 'liste';
+    }
+  });
+  const setView = (v: View) => {
+    setViewState(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // egal
+    }
+  };
   const titleRef = useRef<HTMLHeadingElement>(null);
   const setListId = (id: ListId) => {
     setListIdState(id);
@@ -107,6 +128,16 @@ export function Tasks() {
   const tasks = baseTasks.filter((x) => matchesQuery(x, query) && (!tag || (x.tags ?? []).includes(tag)));
   const count = (fn: (task: Task) => boolean) => pool.filter(fn).length;
   const showCourse = !listId.startsWith('kurs:') && !listId.startsWith('liste:');
+  const canBoard = listId !== 'geplant' && listId !== 'erledigt';
+  const board = canBoard && view === 'board';
+  // Für das Board: heute Erledigtes, das (offen) in diese Liste gehören würde
+  const doneHere = board
+    ? pool.filter((x) => {
+        if (x.status !== 'erledigt' || x.completedAt !== t) return false;
+        const asOpen = { ...x, status: 'offen' as const };
+        return (smart ? smart.filter(asOpen, t) : userList ? userList.filter(asOpen) : true) && matchesQuery(x, query) && (!tag || (x.tags ?? []).includes(tag));
+      })
+    : [];
 
   // Tastatur: Pfeile, Leertaste, N, T, E, M, F, Entf, ?
   const keyState = useRef({ ui, actions, data });
@@ -236,6 +267,19 @@ export function Tasks() {
           {ownList && (
             <button type="button" className="icon" onClick={() => setEditList((x) => !x)} aria-label="Liste bearbeiten" title="Liste bearbeiten"><Pencil size={16} /></button>
           )}
+          <span className="rem-title-tools">
+            {listId === 'heute' && (
+              <button type="button" className="rem-plan-btn" onClick={() => setPlanning(true)} title="Aufgaben durchgehen und für heute einplanen">
+                <Sunrise size={15} aria-hidden /> Tag planen
+              </button>
+            )}
+            {canBoard && (
+              <span className="segmented small rem-view" role="radiogroup" aria-label="Ansicht">
+                <button type="button" role="radio" aria-checked={!board} className={!board ? 'selected' : ''} onClick={() => setView('liste')} title="Liste" aria-label="Liste"><List size={15} aria-hidden /></button>
+                <button type="button" role="radio" aria-checked={board} className={board ? 'selected' : ''} onClick={() => setView('board')} title="Board" aria-label="Board"><Columns3 size={15} aria-hidden /></button>
+              </span>
+            )}
+          </span>
         </div>
         {ownList && editList && (
           <div className="rem-edit-list">
@@ -283,7 +327,11 @@ export function Tasks() {
           />
         )}
 
-        {listId === 'heute' ? (
+        {listId === 'heute' && !query && !tag && <StaleBox />}
+
+        {board ? (
+          <TaskBoard tasks={tasks} done={doneHere} />
+        ) : listId === 'heute' ? (
           <TodayView tasks={tasks} filtered={!!query || !!tag} entries={entries} />
         ) : listId === 'geplant' ? (
           <UpcomingView tasks={tasks} entries={entries} />
@@ -334,6 +382,7 @@ export function Tasks() {
       )}
 
       {help && <ShortcutHelp onClose={() => setHelp(false)} />}
+      {planning && <PlanDay onClose={() => setPlanning(false)} />}
     </div>
   );
 }

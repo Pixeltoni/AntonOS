@@ -126,7 +126,8 @@ export function areaHints(data: Data, t: DateStr, now: Date, extras: HintExtras 
 
   const active = data.projects.filter((p) => p.status === 'aktiv').length;
   if (active) hints.projekte = `${active} aktiv`;
-  if (data.notes.length) hints.notizen = `${data.notes.length} ${data.notes.length === 1 ? 'Notiz' : 'Notizen'}`;
+  const notes = data.notes.filter((n) => !n.deletedAt).length;
+  if (notes) hints.notizen = `${notes} ${notes === 1 ? 'Notiz' : 'Notizen'}`;
   const meal = data.meals?.find((m) => m.date === t);
   if (meal) hints.essen = 'heute geplant';
 

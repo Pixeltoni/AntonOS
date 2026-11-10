@@ -6,6 +6,7 @@ import { formatMinutes } from '../lib/tasks';
 import { weekOf } from '../lib/rings';
 import { TimerRing, useFocus } from '../components/focus';
 import { CourseBadge, CourseSelect, Empty, PageHeader, Panel } from '../components/ui';
+import { Sym } from '../components/icons';
 
 const PRESETS = [25, 50, 90];
 const NONE_COLOR = '#AEAEB2';
@@ -30,7 +31,7 @@ function ModePicker() {
           style={{ ['--mode' as string]: m.color }}
           onClick={() => configure({ mode: m.id as FocusMode })}
         >
-          <span aria-hidden>{m.icon}</span> {m.label}
+          <Sym emoji={m.icon} size={16} /> {m.label}
         </button>
       ))}
     </div>
@@ -202,7 +203,7 @@ export function Focus() {
               return (
                 <li key={s.id}>
                   <span className="grow">{formatDate(s.date)}</span>
-                  <span className="tag" style={{ color: m.color }}>{m.icon} {m.label}</span>
+                  <span className="tag" style={{ color: m.color }}><Sym emoji={m.icon} size={13} /> {m.label}</span>
                   <CourseBadge id={s.courseId} />
                   <span>{s.minutes} min</span>
                   <span className="muted">{s.distractions} Ablenk.</span>

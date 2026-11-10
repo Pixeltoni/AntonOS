@@ -2,7 +2,12 @@ import {
   MoonStar,
   AlarmClock, BookOpen, Cake, Calendar, CalendarRange, CreditCard, Plane, Users, UtensilsCrossed, ChartColumn, ClipboardCheck, Clock, Dumbbell, GraduationCap, House, Images, Layers, LayoutDashboard,
   LayoutGrid, ListChecks, MessageCircleHeart, Music, NotebookPen, Pencil, Receipt, Repeat, Rocket, Search, Settings, ShoppingCart,
-  Lightbulb, PawPrint, Plus, Smile, Sparkles, Sun, Sunrise, Target, Timer, Tv, Wallet, WandSparkles, Zap, type LucideIcon } from 'lucide-react';
+  Lightbulb, PawPrint, Plus, Smile, Sparkles, Sun, Sunrise, Target, Timer, Tv, Wallet, WandSparkles, Zap,
+  Palette, Smartphone, Lock, Heart, MapPin, Mic, Cloud, CalendarDays, PiggyBank, Star, CircleCheck, Check, Banknote, Brain,
+  Camera, Flame, Euro, FolderOpen, Pin, Folder, Trash2, Briefcase, Bell, Download, Share, Wrench, Hourglass, CircleDashed,
+  Mountain, Puzzle, BicepsFlexed, Sprout, Coins, Ruler, Coffee, Leaf, PartyPopper, TriangleAlert, Moon, Library, Hand,
+  Calculator, SquareCheck,
+  type LucideIcon } from 'lucide-react';
 import type { NavItem, WidgetId } from '../types';
 
 /** Ein Symbol pro Bereich – in Sidebar, Bereichsleiste, Suche und Dashboard gleich */
@@ -87,6 +92,36 @@ export function NavIcon({ item, size = 19 }: { item: Pick<NavItem, 'path' | 'ico
   if (item.icon.trim()) return <span className="nav-emoji" aria-hidden>{item.icon}</span>;
   const Glyph = PAGE_ICONS[item.path] ?? LayoutGrid;
   return <Icon icon={Glyph} size={size} />;
+}
+
+/**
+ * Emojis, die früher als Symbole in der Oberfläche standen, und ihr Linien-Symbol.
+ * Eigene Emojis (Gewohnheiten, Routinen, Notizen …) bleiben, wie sie sind.
+ */
+export const EMOJI_ICONS: Record<string, LucideIcon> = {
+  '🎨': Palette, '📱': Smartphone, '📲': Download, '🔒': Lock, '❤️': Heart, '📍': MapPin, '🎙️': Mic, '☁️': Cloud,
+  '🗓️': CalendarDays, '📅': Calendar, '🎓': GraduationCap, '⏱️': Timer, '⏱': Timer, '🐷': PiggyBank, '🔁': Repeat,
+  '💳': CreditCard, '🎵': Music, '🧾': Receipt, '⭐': Star, '🌟': Star, '💡': Lightbulb, '📝': NotebookPen, '✅': CircleCheck,
+  '✓': Check, '💸': Banknote, '🚀': Rocket, '🧠': Brain, '🏋️': Dumbbell, '📚': Library, '📖': BookOpen, '📸': Camera, '📷': Camera,
+  '🛒': ShoppingCart, '🔥': Flame, '🎯': Target, '💶': Euro, '🗂️': FolderOpen, '📌': Pin, '☀️': Sun, '📁': Folder,
+  '🗑️': Trash2, '💼': Briefcase, '🔔': Bell, '📤': Share, '🪄': WandSparkles, '📺': Tv, '🍽️': UtensilsCrossed, '🧰': Wrench,
+  '✨': Sparkles, '🎂': Cake, '✈️': Plane, '⏳': Hourglass, '⭕': CircleDashed, '🌄': Mountain, '🧩': Puzzle, '💪': BicepsFlexed,
+  '🌱': Sprout, '💰': Coins, '📏': Ruler, '☕': Coffee, '🌿': Leaf, '🎉': PartyPopper, '⚠️': TriangleAlert, '🌙': Moon,
+  '⏰': AlarmClock, '⚡': Zap, '👋': Hand, '✏️': Pencil, '€': Euro, '🧮': Calculator, '☑️': SquareCheck,
+};
+
+/** Führendes Emoji eines Titels, z. B. „🎨“ aus „🎨 Design“ */
+export const leadingEmoji = (text: string) => text.match(/^(?:[\p{Extended_Pictographic}\p{Emoji_Presentation}✓€][\uFE0F\u200D]*)+/u)?.[0] ?? '';
+
+/** Linien-Symbol zu einem Emoji (mit oder ohne Variantenzeichen) */
+export const emojiIcon = (emoji: string): LucideIcon | undefined =>
+  EMOJI_ICONS[emoji] ?? EMOJI_ICONS[emoji.replace(/\uFE0F/g, '')] ?? EMOJI_ICONS[`${emoji}\uFE0F`];
+
+/** Symbol für ein Emoji: Linien-Symbol, wenn es eins gibt, sonst das Emoji selbst */
+export function Sym({ emoji, size = 17 }: { emoji: string; size?: number }) {
+  const Glyph = emojiIcon(emoji);
+  if (Glyph) return <Icon icon={Glyph} size={size} />;
+  return <span className="sym-emoji" aria-hidden>{emoji}</span>;
 }
 
 /** Entfernt ein führendes Emoji aus Titeln wie „✅ Aufgaben“ */

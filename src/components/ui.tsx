@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useStore } from '../store';
 import type { Course, ID } from '../types';
+import { emojiIcon, leadingEmoji } from './icons';
+import { countDuration, tween } from '../lib/motion';
 
 /**
  * Kopf jeder Seite mit großem Titel wie in iOS. Am iPhone wandert der Titel beim
@@ -31,7 +33,13 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   );
 }
 
-export function Panel({ title, icon: Glyph, actions, children }: { title?: string; icon?: LucideIcon; actions?: ReactNode; children: ReactNode }) {
+export function Panel({ title: rawTitle, icon, actions, children }: { title?: string; icon?: LucideIcon; actions?: ReactNode; children: ReactNode }) {
+  // Titel wie „🎨 Design“ bekommen statt des Emojis das passende Linien-Symbol
+  // (nur bekannte Emojis – eigene in Namen bleiben stehen)
+  const emoji = rawTitle ? leadingEmoji(rawTitle) : '';
+  const mapped = emoji ? emojiIcon(emoji) : undefined;
+  const title = mapped ? rawTitle!.slice(emoji.length).trim() : rawTitle;
+  const Glyph = icon ?? mapped;
   return (
     <section className="panel">
       {(title || actions) && (
@@ -101,7 +109,7 @@ export function Stat({ label, value, hint, href }: { label: string; value: React
   const body = (
     <>
       <span className="stat-label">{label}</span>
-      <span className="stat-value">{value}</span>
+      <span className="stat-value">{typeof value === 'number' ? <CountUp value={value} /> : value}</span>
       {hint && <span className="stat-hint">{hint}</span>}
     </>
   );
@@ -127,4 +135,35 @@ export function ProgressPie({ share, color = '#007AFF', size = 16 }: { share: nu
       {share > 0 && <path d={`M${c} ${c} L${c} ${c - r + 1.5} A${r - 1.5} ${r - 1.5} 0 ${a > Math.PI ? 1 : 0} 1 ${x} ${y} Z`} fill={color} />}
     </svg>
   );
+}
+
+const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Zahl, die beim ersten Anzeigen und bei jeder Änderung weich hochzählt
+ * (wie auf den modernen Websites). Mit „Bewegung reduzieren“ steht sie sofort da.
+ */
+export function CountUp({ value, format = (v) => String(Math.round(v)) }: { value: number; format?: (v: number) => string }) {
+  const [shown, setShown] = useState(() => (reducedMotion() ? value : 0));
+  const from = useRef(shown);
+  useEffect(() => {
+    const start = from.current;
+    const duration = reducedMotion() ? 0 : countDuration(start, value);
+    if (duration === 0) {
+      from.current = value;
+      setShown(value);
+      return;
+    }
+    let frame = 0;
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const v = tween(start, value, now - t0, duration);
+      from.current = v;
+      setShown(v);
+      if (v !== value) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  return <span className="count-up">{format(shown)}</span>;
 }

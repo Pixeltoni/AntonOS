@@ -270,7 +270,7 @@ private struct LampTile: View {
             }
             .padding(big ? 12 : 8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(lamp.on ? AnyShapeStyle(lamp.glow.gradient) : AnyShapeStyle(Color.primary.opacity(0.08)), in: RoundedRectangle(cornerRadius: big ? 18 : 12, style: .continuous))
+            .background(lamp.on ? AnyShapeStyle(lamp.glow.gradient) : AnyShapeStyle(Color.primary.opacity(0.08)), in: RoundedRectangle(cornerRadius: big ? 22 : 14, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(lamp.name) \(lamp.on ? "ausschalten" : "einschalten")")

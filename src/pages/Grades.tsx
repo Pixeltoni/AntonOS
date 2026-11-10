@@ -5,6 +5,7 @@ import { courseGrade, formatGrade, gradeLabel, PASS_LIMIT, summary } from '../li
 import { Empty, PageHeader } from '../components/ui';
 import { Sheet } from '../components/sheet';
 import { CourseGoal, DegreeGoal } from '../components/studium';
+import { Sym } from '../components/icons';
 
 /** Prüft eine Note nach deutschem System. Gibt eine Fehlermeldung oder null zurück. */
 export function checkGrade(raw: string, weightRaw: string): string | null {
@@ -83,14 +84,14 @@ export function Grades() {
       <PageHeader title="Noten" subtitle="Deutsches Notensystem, Schnitt nach ECTS gewichtet" />
       <div className="health-grid">
         <section className="health-tile" style={{ ['--h' as string]: '#5856D6' }}>
-          <span className="health-label">🎓 Notenschnitt</span>
+          <span className="health-label"><Sym emoji="🎓" size={14} /> Notenschnitt</span>
           <span className="health-value">{formatGrade(s.truncated, 1)}</span>
           <span className="muted small">{s.average === null ? 'Noch keine Noten eingetragen' : `exakt ${formatGrade(s.average)} · ${gradeLabel(s.average)}`}</span>
         </section>
         <section className="health-tile health-row" style={{ ['--h' as string]: '#34C759' }}>
           <EctsRing earned={s.earnedEcts} planned={s.plannedEcts} />
           <span className="col">
-            <span className="health-label">📚 ECTS</span>
+            <span className="health-label"><Sym emoji="📚" size={14} /> ECTS</span>
             <span className="health-value">{s.earnedEcts} <small>/ {s.plannedEcts}</small></span>
             <span className="muted small">bestanden von geplant</span>
           </span>

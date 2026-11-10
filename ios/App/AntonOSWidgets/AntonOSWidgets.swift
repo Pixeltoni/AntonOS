@@ -56,12 +56,16 @@ struct CountdownProvider: AppIntentTimelineProvider {
 
 /* ---------- Bausteine ---------- */
 
-/// Hintergrund nur auf dem Homescreen; auf dem Sperrbildschirm zeichnet iOS selbst
+/// Hintergrund nur auf dem Homescreen; auf dem Sperrbildschirm zeichnet iOS selbst.
+/// Gleicher Look wie die App (Design 2026): ruhiger Farbverlauf in der Farbe des Widgets,
+/// darüber Milchglas mit heller Kante. In den Modi „Getönt“ und „Klar“ ersetzt iOS ihn selbst.
 struct WidgetBackground: ViewModifier {
     @Environment(\.widgetFamily) private var family
     var color: Color? = nil
-    /// Zarte Tönung in der Farbe des Widgets, wie die Karten in der App
+    /// Farbe des Bereichs, wie die Karten in der App
     var tint: Color? = nil
+    /// Dunkle Hero-Karte (Ringe, wie Wallet und Ringe in der App)
+    var hero = false
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -69,15 +73,12 @@ struct WidgetBackground: ViewModifier {
         case .accessoryCircular, .accessoryRectangular, .accessoryInline:
             content.containerBackground(for: .widget) { Color.clear }
         default:
-            if let color {
+            if hero {
+                content.containerBackground(for: .widget) { HeroBackground() }
+            } else if let color {
                 content.containerBackground(for: .widget) { color }
             } else if let tint {
-                content.containerBackground(for: .widget) {
-                    ZStack {
-                        Color(uiColor: .systemBackground)
-                        LinearGradient(colors: [tint.opacity(0.16), tint.opacity(0.03)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    }
-                }
+                content.containerBackground(for: .widget) { MeshBackground(tint: tint) }
             } else {
                 content.containerBackground(.background, for: .widget)
             }
@@ -85,8 +86,38 @@ struct WidgetBackground: ViewModifier {
     }
 }
 
+/// Farbverlauf wie der Hintergrund der App: Bereichsfarbe oben links, zweite Farbe unten rechts
+struct MeshBackground: View {
+    @Environment(\.colorScheme) private var scheme
+    let tint: Color
+
+    var body: some View {
+        let dark = scheme == .dark
+        ZStack {
+            Color(uiColor: .systemBackground)
+            RadialGradient(colors: [tint.opacity(dark ? 0.42 : 0.30), .clear], center: .topLeading, startRadius: 0, endRadius: 230)
+            RadialGradient(colors: [(dark ? Color(hex: "#5e5ce6") : Color(hex: "#ff9ec4")).opacity(dark ? 0.26 : 0.22), .clear], center: .bottomTrailing, startRadius: 0, endRadius: 210)
+            // Milchglas: zarter Schimmer oben und helle Kante
+            LinearGradient(colors: [Color.white.opacity(dark ? 0.06 : 0.35), .clear], startPoint: .top, endPoint: .center)
+            ContainerRelativeShape()
+                .stroke(LinearGradient(colors: [Color.white.opacity(dark ? 0.18 : 0.7), Color.white.opacity(0), Color.white.opacity(dark ? 0.08 : 0.3)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2)
+        }
+    }
+}
+
+/// Dunkler Verlauf der Hero-Karten in der App
+struct HeroBackground: View {
+    var body: some View {
+        ZStack {
+            RadialGradient(colors: [Color(hex: "#3b3560"), Color(hex: "#1d1b33"), Color(hex: "#0d0c18")], center: .topTrailing, startRadius: 0, endRadius: 260)
+            ContainerRelativeShape()
+                .stroke(LinearGradient(colors: [Color.white.opacity(0.22), Color.white.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 2)
+        }
+    }
+}
+
 extension View {
-    func widgetBackground(_ color: Color? = nil, tint: Color? = nil) -> some View { modifier(WidgetBackground(color: color, tint: tint)) }
+    func widgetBackground(_ color: Color? = nil, tint: Color? = nil, hero: Bool = false) -> some View { modifier(WidgetBackground(color: color, tint: tint, hero: hero)) }
 }
 
 struct Caption: View {
@@ -313,7 +344,7 @@ struct RingsWidgetView: View {
 struct RingsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AntonOSRings", provider: SnapshotProvider()) { entry in
-            RingsWidgetView(entry: entry).widgetBackground(.black).widgetURL(AppLink.page("gewohnheiten"))
+            RingsWidgetView(entry: entry).widgetBackground(hero: true).widgetURL(AppLink.page("gewohnheiten"))
         }
         .configurationDisplayName("Aktivitätsringe")
         .description("Deine drei Ringe mit dem Stand von heute.")

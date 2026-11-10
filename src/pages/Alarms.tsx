@@ -85,7 +85,7 @@ function SpotifyPicker({ value, name, onPick }: { value: string; name?: string; 
       <span className="muted small">{query.trim() ? 'Suchergebnisse' : 'Deine Playlists'}</span>
       {error && <p className="alert">{error}</p>}
       {items === null ? (
-        <p className="muted small">Lade …</p>
+        <div className="skeleton" role="status" aria-label="Lädt"><i /><i /></div>
       ) : items.length === 0 ? (
         <p className="muted small">Nichts gefunden.</p>
       ) : (

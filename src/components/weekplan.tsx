@@ -23,7 +23,7 @@ function BudgetMeter({ budget, spent, monday, t }: { budget: number; spent: numb
   return (
     <a className={`wp-meter ${over ? 'over' : ahead ? 'ahead' : ''}`} href="#/finanzen">
       <span className="wp-meter-top">
-        <strong>💶 Wochenbudget</strong>
+        <strong>Wochenbudget</strong>
         <span>{over ? `${formatMoney(-left)} drüber` : `${formatMoney(left)} übrig`}</span>
       </span>
       <span className="wp-meter-bar" aria-hidden>

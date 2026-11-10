@@ -10,6 +10,7 @@ import { useFocus } from '../components/focus';
 import { defaultStudy, planStudy, statusLabel, type StudyBlock } from '../lib/studyplan';
 import { focusMode } from '../lib/focus';
 import { admissionShort } from '../components/studium';
+import { Sym } from '../components/icons';
 
 type Draft = Omit<Exam, 'id'>;
 
@@ -82,7 +83,7 @@ function StudyPlanCard({ exam, blocks, status }: { exam: Exam; blocks: StudyBloc
   return (
     <div className="study-plan">
       <div className="row between small">
-        <span>📚 {Math.round(status.done / 6) / 10} von {Math.round(status.goal / 6) / 10} Std.</span>
+        <span><Sym emoji="📚" size={13} /> {Math.round(status.done / 6) / 10} von {Math.round(status.goal / 6) / 10} Std.</span>
         <span className={status.behind > 30 && status.done < status.goal ? 'danger' : 'ok'}>{label}</span>
       </div>
       <div className="study-bar" aria-hidden><i style={{ width: `${share * 100}%` }} /></div>
@@ -155,9 +156,9 @@ export function Exams() {
                 )}
                 {c && (
                   <div className="exam-prep">
-                    <a href={`#/lernen/${c.id}`}>🧠 {due} Karten fällig</a>
-                    <a href={`#/kurse/${c.id}`}>✅ {tasks} offene Aufgaben</a>
-                    {admission && <a href={`#/kurse/${c.id}`} style={{ color: admission.color }}>📝 {admission.text}</a>}
+                    <a href={`#/lernen/${c.id}`}><Sym emoji="🧠" size={13} /> {due} Karten fällig</a>
+                    <a href={`#/kurse/${c.id}`}><Sym emoji="✅" size={13} /> {tasks} offene Aufgaben</a>
+                    {admission && <a href={`#/kurse/${c.id}`} style={{ color: admission.color }}><Sym emoji="📝" size={13} /> {admission.text}</a>}
                   </div>
                 )}
               </article>

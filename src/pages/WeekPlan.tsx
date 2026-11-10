@@ -17,6 +17,7 @@ import { dayColor } from '../components/lifting';
 import { useToast } from '../components/toast';
 import { PageHeader } from '../components/ui';
 import { MealWeek } from './Meals';
+import { Sym } from '../components/icons';
 
 const STEPS = [
   { id: 'termine', label: 'Termine', icon: '📅', next: 'Wochenziele' },
@@ -424,7 +425,7 @@ function StepBody({ days, t }: { days: DateStr[]; t: DateStr }) {
   return (
     <>
       <div className="wp-train-head">
-        <h3 className="wp-sub">🏋️ Training</h3>
+        <h3 className="wp-sub">Training</h3>
         <span className={`wp-count ${inWeek.length >= target ? 'ok' : ''}`}>{inWeek.length} / {target}</span>
       </div>
       <p className="muted small">Tipp auf die Tage, an denen du trainierst.{data.trainingPlan.length ? ' Die Reihenfolge aus deinem Trainingsplan läuft weiter.' : ''}</p>
@@ -452,7 +453,7 @@ function StepBody({ days, t }: { days: DateStr[]; t: DateStr }) {
           );
         })}
       </div>
-      <MealWeek anchor={days[0]} title="🍽️ Essen" compact />
+      <MealWeek anchor={days[0]} title="Essen" compact />
     </>
   );
 }
@@ -705,7 +706,7 @@ export function WeekPlanner({ param }: { param?: string | null }) {
             <div className="wp-main">
               <section className={`wp-panel step-${current.id}`}>
                 <header className="wp-panel-head">
-                  <span className="wp-panel-icon" aria-hidden>{current.icon}</span>
+                  <span className="wp-panel-icon" aria-hidden><Sym emoji={current.icon} size={22} /></span>
                   <div>
                     <small className="muted">Schritt {step + 1} von {STEPS.length}</small>
                     <h2>{current.label}</h2>

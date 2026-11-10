@@ -8,6 +8,7 @@ import {
 } from '../lib/focus';
 import { useToast } from './toast';
 import { notify } from '../lib/notify';
+import { Sym } from './icons';
 
 const KEY = 'antonos:focus';
 
@@ -197,7 +198,7 @@ export function FocusPill({ hidden }: { hidden?: boolean }) {
   return (
     <div className="focus-pill" role="status" style={{ ['--mode' as string]: timer.phase === 'fokus' ? mode.color : '#34C759' }}>
       <a href="#/fokus" className="focus-pill-main">
-        <span className="focus-pill-icon" aria-hidden>{timer.phase === 'fokus' ? mode.icon : '☕'}</span>
+        <span className="focus-pill-icon" aria-hidden><Sym emoji={timer.phase === 'fokus' ? mode.icon : '☕'} size={16} /></span>
         <span className="focus-pill-text">
           <span className="focus-pill-label">{label}</span>
           {(task || course) && timer.phase === 'fokus' && <span className="focus-pill-sub">{task?.title ?? course?.name}</span>}

@@ -5,6 +5,7 @@ import { boughtItems, parseReceipt, receiptCategory, type Receipt } from '../lib
 import { today } from '../lib/dates';
 import { useToast } from './toast';
 import { Sheet } from './sheet';
+import { Sym } from './icons';
 
 /** Bild verkleinern (lange Seite höchstens 2000 px) und als Base64-JPEG liefern */
 async function toBase64(file: File): Promise<string> {
@@ -63,7 +64,7 @@ export function ReceiptButton() {
 
   return (
     <>
-      <button type="button" onClick={() => file.current?.click()} disabled={busy}>{busy ? 'Liest …' : '📷 Kassenzettel'}</button>
+      <button type="button" onClick={() => file.current?.click()} disabled={busy}>{busy ? 'Liest …' : <><Sym emoji="📷" size={16} /> Kassenzettel</>}</button>
       <input
         ref={file}
         type="file"

@@ -8,6 +8,7 @@ import { isNativeApp, nativePermission } from '../lib/native';
 import { canPromptInstall, isIOS, isStandalone, onInstallChange, parseShared, promptInstall, setBadge, type SharedContent } from '../lib/pwa';
 import { useToast } from './toast';
 import { loadRecipe } from './recipeimport';
+import { Sym } from './icons';
 
 /** Zahl am App-Symbol: Aufgaben, die heute fällig oder überfällig sind */
 export function useAppBadge() {
@@ -101,7 +102,7 @@ export function ShareSheet() {
         <div className="share-options">
           {options.map((o) => (
             <button key={o.label} type="button" onClick={o.run}>
-              <span aria-hidden>{o.icon}</span>
+              <span aria-hidden><Sym emoji={o.icon} size={18} /></span>
               {o.label}
             </button>
           ))}
@@ -162,7 +163,7 @@ export function AppPanel() {
         </div>
       ) : canPromptInstall() ? (
         <div className="row wrap">
-          <button type="button" className="primary" onClick={() => promptInstall()}>📲 Als App installieren</button>
+          <button type="button" className="primary" onClick={() => promptInstall()}>Als App installieren</button>
           <span className="muted small">Mit eigenem Fenster, Symbol und Offline-Modus.</span>
         </div>
       ) : (
@@ -171,7 +172,7 @@ export function AppPanel() {
 
       <div className="row wrap app-row">
         <span className="grow">
-          <strong>🔔 Mitteilungen</strong>
+          <strong>Mitteilungen</strong>
           <br />
           <span className="muted small">
             {permission === 'granted' ? 'Erlaubt – für Termine, Vorlesungen, Ringe und den Fokus-Timer.'

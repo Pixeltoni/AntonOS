@@ -10,6 +10,7 @@ import { tripPhase } from './trips';
 import { ranToday, routineStreak } from './routines';
 import { onDay, type CalendarEntry } from './calendar';
 import { goalProgress } from './goals';
+import { budgetStatus } from './finance';
 import { formatGrade, summary } from './grades';
 import { weekPrompt } from './weekplan';
 import type { PetMood } from './pet';
@@ -329,7 +330,7 @@ export function storyWeek(t: DateStr): { day: DateStr; until: DateStr; current: 
 }
 
 export type DayPhase = 'morgen' | 'tag' | 'abend';
-export type TodaySection = 'abschluss' | 'routine' | 'wecker' | 'termin' | 'aufgaben' | 'woche' | 'ringe' | 'ziele' | 'essen' | 'demnaechst';
+export type TodaySection = 'abschluss' | 'routine' | 'wecker' | 'termin' | 'kacheln' | 'aufgaben' | 'woche' | 'ringe' | 'ziele' | 'essen' | 'demnaechst';
 
 /**
  * Tageszeit für die Heute-Seite: morgens bis 11 Uhr, abends ab 18 Uhr
@@ -347,9 +348,9 @@ export function dayPhase(now: Date, dayCloseTime = '21:30'): DayPhase {
 
 /** Reihenfolge der Abschnitte auf „Heute“ – morgens der Plan (mit der Morgenroutine gleich darunter), abends der Abschluss oben */
 export function todaySections(phase: DayPhase): TodaySection[] {
-  if (phase === 'morgen') return ['termin', 'routine', 'aufgaben', 'woche', 'ringe', 'ziele', 'essen', 'demnaechst'];
+  if (phase === 'morgen') return ['termin', 'routine', 'kacheln', 'aufgaben', 'woche', 'ringe', 'ziele', 'essen', 'demnaechst'];
   if (phase === 'abend') return ['abschluss', 'routine', 'wecker', 'woche', 'ringe', 'ziele', 'aufgaben', 'termin', 'demnaechst'];
-  return ['termin', 'aufgaben', 'routine', 'woche', 'ringe', 'ziele', 'essen', 'demnaechst'];
+  return ['termin', 'kacheln', 'aufgaben', 'routine', 'woche', 'ringe', 'ziele', 'essen', 'demnaechst'];
 }
 
 export function greeting(now: Date): string {
@@ -358,4 +359,33 @@ export function greeting(now: Date): string {
   if (h < 11) return 'Guten Morgen';
   if (h < 18) return 'Hallo';
   return 'Guten Abend';
+}
+
+/** Eine Kachel im Kachel-Raster auf „Heute“: Zahl, die beim Öffnen hochzählt */
+export interface TodayTile {
+  key: 'aufgaben' | 'budget' | 'fokus' | 'lernen';
+  label: string;
+  value: number;
+  /** Wie die Zahl angezeigt wird */
+  unit: 'anzahl' | 'euro' | 'minuten';
+  hint: string;
+  href: string;
+}
+
+/** Die vier Kacheln unter dem nächsten Termin: Aufgaben, Budget, Fokus und Lernkarten */
+export function todayTiles(data: Data, t: DateStr): TodayTile[] {
+  const open = listTasks(data.tasks).filter((x) => x.status !== 'erledigt');
+  const dueToday = open.filter((x) => !x.someday && ((x.due !== null && x.due <= t) || (!!x.plannedFor && x.plannedFor <= t)));
+  const overdue = dueToday.filter((x) => x.due !== null && x.due < t).length;
+  const finance = data.settings.finance ?? { budget: 0, categoryBudgets: [], balanceCorrections: [] };
+  const money = budgetStatus(data.transactions, finance, t.slice(0, 7), t);
+  const weekStart = addDays(t, -6);
+  const focus = data.sessions.filter((s) => s.date >= weekStart && s.date <= t).reduce((sum, s) => sum + s.minutes, 0);
+  const cards = data.cards.filter((c) => isDue(c, t)).length;
+  return [
+    { key: 'aufgaben', label: 'Aufgaben', value: dueToday.length, unit: 'anzahl', hint: overdue ? `${overdue} überfällig` : dueToday.length ? 'für heute' : 'alles frei', href: '#/aufgaben' },
+    { key: 'budget', label: money.budget > 0 ? 'Budget frei' : 'Saldo im Monat', value: money.available, unit: 'euro', hint: money.daysLeft ? `noch ${money.daysLeft} ${money.daysLeft === 1 ? 'Tag' : 'Tage'}` : 'diesen Monat', href: '#/finanzen' },
+    { key: 'fokus', label: 'Fokus', value: focus, unit: 'minuten', hint: 'letzte 7 Tage', href: '#/fokus' },
+    { key: 'lernen', label: 'Lernkarten', value: cards, unit: 'anzahl', hint: cards ? 'heute fällig' : 'alles wiederholt', href: '#/lernen' },
+  ];
 }

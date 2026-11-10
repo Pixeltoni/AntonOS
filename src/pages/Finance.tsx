@@ -15,6 +15,7 @@ export function nextLabel(r: Recurring, on: string): string {
 }
 import { Empty, PageHeader, Panel } from '../components/ui';
 import { ReceiptButton } from '../components/receipt';
+import { Sym } from '../components/icons';
 
 const CATEGORIES = ['Lebensmittel', 'Miete', 'Mobilität', 'Freizeit', 'Studium', 'Abos', 'Kleidung', 'Gesundheit', 'Sparen', 'Gehalt', 'BAföG', 'Sonstiges'];
 const ACCOUNTS = ['Girokonto', 'Bar', 'Kreditkarte', 'Sparkonto'];
@@ -60,7 +61,7 @@ export function TransactionList({ txs }: { txs: Transaction[] }) {
             <div className="meta">
               <span>{x.category}</span>
               <span title={formatDate(x.date)}>{relativeLabel(x.date, t)}</span>
-              {x.id.startsWith('rec-') && <span title="Dauerauftrag">🔁</span>}
+              {x.id.startsWith('rec-') && <span title="Dauerauftrag" className="muted"><Sym emoji="🔁" size={13} /></span>}
             </div>
           </div>
           <strong className={`tx-amount ${x.type === 'Einnahme' ? 'positive' : ''}`}>
@@ -216,9 +217,9 @@ function Warnings({ status }: { status: BudgetStatus }) {
   const rest = status.daysLeft > 0 ? ` – noch ${status.daysLeft} ${status.daysLeft === 1 ? 'Tag' : 'Tage'} im Monat.` : '.';
   return (
     <div className="budget-warnings" role="status">
-      {total && <p>⚠️ Gesamtbudget bei {Math.round((status.spent / status.budget) * 100)} %{rest}</p>}
+      {total && <p className="row"><Sym emoji="⚠️" size={15} /> Gesamtbudget bei {Math.round((status.spent / status.budget) * 100)} %{rest}</p>}
       {warn.map((c) => (
-        <p key={c.category}>⚠️ {c.category} bei {Math.round(c.share * 100)} % deines Budgets{rest}</p>
+        <p key={c.category} className="row"><Sym emoji="⚠️" size={15} /> {c.category} bei {Math.round(c.share * 100)} % deines Budgets{rest}</p>
       ))}
     </div>
   );

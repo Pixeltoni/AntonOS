@@ -8,6 +8,7 @@ import { dayColor, DeleteSeriesButton, LogSheet, TrainingPlanPanel } from '../co
 import { formatNumber, MAX_SERIES, seriesDates, volume, type WorkoutRepeat } from '../lib/training';
 import { weekdayOf } from '../lib/recurrence';
 import { newId, useStore } from '../store';
+import { Sym } from '../components/icons';
 
 const TYPES = ['Laufen', 'Krafttraining', 'Radfahren', 'Schwimmen', 'Yoga', 'Dehnen', 'Mannschaftssport', 'Sonstiges'];
 const ICONS: Record<string, string> = { Laufen: '🏃', Krafttraining: '🏋️', Radfahren: '🚴', Schwimmen: '🏊', Yoga: '🧘', Dehnen: '🤸', Mannschaftssport: '⚽' };
@@ -170,7 +171,7 @@ export function Training() {
       />
       <div className="health-grid">
         <section className="health-tile" style={{ ['--h' as string]: '#A6FF00' }}>
-          <span className="health-label">🔥 Diese Woche</span>
+          <span className="health-label"><Sym emoji="🔥" size={14} /> Diese Woche</span>
           <span className="health-value">{weekMinutes} <small>Min.</small></span>
           <div className="fit-bars" aria-label="Minuten pro Tag">
             {week.map((x) => (
@@ -182,7 +183,7 @@ export function Training() {
           </div>
         </section>
         <section className="health-tile" style={{ ['--h' as string]: '#FF9500' }}>
-          <span className="health-label">📅 Geplant</span>
+          <span className="health-label"><Sym emoji="📅" size={14} /> Geplant</span>
           <span className="health-value">{planned.length}</span>
           <span className="muted small">{planned[0] ? `Nächstes: ${planned[0].title} ${relativeLabel(planned[0].date, t)}` : 'Nichts geplant'}</span>
         </section>

@@ -196,7 +196,7 @@ export function Flashcards({ courseId }: { courseId: ID | null }) {
           <h2>{deckName} <span className="muted">· {list.length}</span></h2>
           {deck !== 'alle' && <button type="button" className="link" onClick={() => setDeck('alle')}>Alle zeigen</button>}
         </div>
-        <input type="search" placeholder="🔍 Karten durchsuchen" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Karten durchsuchen" />
+        <input type="search" placeholder="Karten durchsuchen" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Karten durchsuchen" />
         {list.length === 0 ? <Empty>Keine Karten gefunden.</Empty> : (
           <ul className="ios-list">
             {list.map((c) => (

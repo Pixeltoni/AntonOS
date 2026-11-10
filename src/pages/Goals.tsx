@@ -7,6 +7,7 @@ import { Empty, PageHeader, Progress } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
 import { GoalResults } from '../components/goals';
 import { goalProgress } from '../lib/goals';
+import { Sym } from '../components/icons';
 
 const AREAS: { area: GoalArea; icon: string }[] = [
   { area: 'Studium', icon: '🎓' },
@@ -86,7 +87,7 @@ export function Goals() {
           if (goals.length === 0) return null;
           return (
             <section key={a} className="board-col">
-              <h2>{icon} {a}</h2>
+              <h2 className="row"><Sym emoji={icon} size={18} /> {a}</h2>
               {goals.map((g) => {
                 const measured = (g.results ?? []).length > 0;
                 const progress = goalProgress(g, data, t);

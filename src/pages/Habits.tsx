@@ -10,6 +10,7 @@ import { Empty, PageHeader, Panel, Progress } from '../components/ui';
 import { useToast } from '../components/toast';
 import { askNotifications } from '../lib/notify';
 import { AddButton, Sheet } from '../components/sheet';
+import { Sym } from '../components/icons';
 
 /** Abhaken bzw. wieder öffnen. Mengen-Gewohnheiten werden beim Abhaken auf das Tagesziel gesetzt. */
 export function useToggleHabit() {
@@ -71,7 +72,7 @@ export function HabitsToday({ variant = 'standard' }: { variant?: WidgetVariant 
               <input type="checkbox" checked={checked} onChange={() => toggle(h.id, t)} aria-label={h.name} />
               <span className="grow task-title">{h.icon} {h.name}</span>
               {h.target && !checked && <span className="muted small">{num(habitAmount(data.habitLogs, h.id, t))}/{num(h.target)} {h.unit}</span>}
-              <span className="muted small" title="Serie">🔥 {streak(data.habitLogs, h, t)}</span>
+              <span className="muted small streak" title="Serie"><Sym emoji="🔥" size={13} /> {streak(data.habitLogs, h, t)}</span>
               {variant === 'detail' && (
                 <span className="dots" aria-label="Letzte 7 Tage">
                   {week.map((d) => <span key={d} className={isHabitDone(data.habitLogs, h, d) ? 'on' : ''} title={d} />)}
@@ -295,8 +296,8 @@ function HealthStrip() {
   return (
     <section className="panel health-strip" aria-label="Apple Health">
       <div className="health-now">
-        <span>👟 <b>{stepsLabel(now?.steps ?? 0)}</b> Schritte heute</span>
-        {now?.sleepMinutes ? <span>😴 <b>{Math.floor(now.sleepMinutes / 60)} Std. {now.sleepMinutes % 60} Min.</b> geschlafen</span> : null}
+        <span><b>{stepsLabel(now?.steps ?? 0)}</b> Schritte heute</span>
+        {now?.sleepMinutes ? <span><b>{Math.floor(now.sleepMinutes / 60)} Std. {now.sleepMinutes % 60} Min.</b> geschlafen</span> : null}
       </div>
       <div className="health-bars" aria-hidden>
         {values.map((v, i) => (
@@ -361,7 +362,7 @@ export function Habits() {
                         <input type="checkbox" checked={isHabitDone(data.habitLogs, h, d)} onChange={() => toggle(h.id, d)} aria-label={`${h.name} am ${d}`} />
                       </td>
                     ))}
-                    <td>🔥 {streak(data.habitLogs, h, t)}</td>
+                    <td className="streak"><Sym emoji="🔥" size={13} /> {streak(data.habitLogs, h, t)}</td>
                     <td>{Math.round(completionRate(data.habitLogs, h, t))} %</td>
                     <td>
                       <button className="icon" onClick={() => confirm(`„${h.name}“ mit Verlauf löschen?`) && remove('habits', h.id)} aria-label="Löschen" title="Löschen">×</button>

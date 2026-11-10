@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { demoData } from '../demo';
-import { AREA_COLORS, areaBadges, areaColor, areaHints, areaSummary, areaUrgent, dayPhase, DEFAULT_TABS, greeting, moveNavItem, NEUTRAL_COLOR, normalizeTabs, pageColor, pushRecent, quickActions, RECENT_MAX, storyWeek, tileColor, todaySections } from './areas';
+import { AREA_COLORS, areaBadges, areaColor, areaHints, areaSummary, areaUrgent, dayPhase, DEFAULT_TABS, greeting, moveNavItem, NEUTRAL_COLOR, normalizeTabs, pageColor, pushRecent, quickActions, RECENT_MAX, storyWeek, tileColor, todaySections, todayTiles } from './areas';
 import type { NavItem } from '../types';
 
 describe('Bereichsfarben', () => {
@@ -189,5 +189,31 @@ describe('Schnellaktionen', () => {
     const routines = [{ id: 'r', name: 'Morgen', icon: '🌅', color: '', steps: [{ id: 's', title: 'x', icon: '', minutes: 1 }], runs: [] }];
     expect(quickActions('routinen', { routines })).toEqual([{ label: '🌅 Morgen starten', href: '#/routinen/start/r' }]);
     expect(quickActions('fokus', { routines: [] })[0]).toEqual({ label: 'Fokus starten', run: 'focus' });
+  });
+});
+
+describe('Kacheln auf Heute', () => {
+  it('vier Kacheln in fester Reihenfolge mit Links', () => {
+    const tiles = todayTiles(demoData(), '2026-11-10');
+    expect(tiles.map((x) => x.key)).toEqual(['aufgaben', 'budget', 'fokus', 'lernen']);
+    expect(tiles.every((x) => x.href.startsWith('#/') && Number.isFinite(x.value))).toBe(true);
+  });
+  it('zählt nur offene Aufgaben bis heute und nennt Überfällige', () => {
+    const d = demoData();
+    const base = { courseId: null, kind: 'Aufgabe', priority: 'mittel', note: '', status: 'offen' } as const;
+    d.tasks = [
+      { ...base, id: 'a', title: 'Gestern', due: '2026-11-09' },
+      { ...base, id: 'b', title: 'Heute', due: '2026-11-10' },
+      { ...base, id: 'c', title: 'Morgen', due: '2026-11-11' },
+      { ...base, id: 'd', title: 'Erledigt', due: '2026-11-10', status: 'erledigt' },
+    ] as typeof d.tasks;
+    const tile = todayTiles(d, '2026-11-10')[0];
+    expect(tile.value).toBe(2);
+    expect(tile.hint).toBe('1 überfällig');
+  });
+  it('ohne Budget zeigt die Kachel den Saldo', () => {
+    const d = demoData();
+    d.settings.finance = { budget: 0, categoryBudgets: [], balanceCorrections: [] };
+    expect(todayTiles(d, '2026-11-10')[1].label).toBe('Saldo im Monat');
   });
 });

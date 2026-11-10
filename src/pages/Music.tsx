@@ -11,7 +11,7 @@ export function Music() {
 
   return (
     <>
-      <PageHeader title="Musik" subtitle="Dein Spotify direkt in AntonOS" />
+      <PageHeader title="Musik" subtitle="Dein Spotify direkt in Daywerk" />
       <Panel title="🎵 Spotify">
         <SpotifyPlayer />
       </Panel>

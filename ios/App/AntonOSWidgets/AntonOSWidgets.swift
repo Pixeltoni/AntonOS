@@ -140,7 +140,7 @@ struct EmptyHint: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Image(systemName: "arrow.up.forward.app").font(.title3).foregroundStyle(.blue)
-            Text("AntonOS einmal öffnen").font(.caption.weight(.semibold))
+            Text("Daywerk einmal öffnen").font(.caption.weight(.semibold))
             Text("Dann erscheinen hier deine Daten.").font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -286,7 +286,7 @@ struct AlarmWidget: Widget {
             AlarmView(entry: entry).widgetBackground(tint: .orange).widgetURL(AppLink.page("wecker"))
         }
         .configurationDisplayName("Nächster Wecker")
-        .description("Wann dein nächster AntonOS-Wecker klingelt.")
+        .description("Wann dein nächster Daywerk-Wecker klingelt.")
         .supportedFamilies([.systemSmall, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
@@ -585,14 +585,14 @@ struct HabitsView: View {
             if entry.empty {
                 VStack(alignment: .leading, spacing: 1) {
                     Label("Gewohnheiten", systemImage: "checkmark.seal.fill").font(.headline).widgetAccentable()
-                    Text("AntonOS einmal öffnen").font(.caption)
+                    Text("Daywerk einmal öffnen").font(.caption)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 rectangular
             }
         case .accessoryInline:
-            Text(entry.empty ? "AntonOS öffnen" : snap.habits.isEmpty ? "Keine Gewohnheiten" : "✓ \(snap.habitsDone)/\(snap.habits.count) Gewohnheiten")
+            Text(entry.empty ? "Daywerk öffnen" : snap.habits.isEmpty ? "Keine Gewohnheiten" : "✓ \(snap.habitsDone)/\(snap.habits.count) Gewohnheiten")
         default:
             VStack(alignment: .leading, spacing: 8) {
                 header
@@ -601,7 +601,7 @@ struct HabitsView: View {
                 } else if snap.habits.isEmpty {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Noch keine Gewohnheiten").font(.caption.weight(.semibold))
-                        Text("In AntonOS anlegen – dann hakst du sie hier ab.").font(.caption2).foregroundStyle(.secondary)
+                        Text("In Daywerk anlegen – dann hakst du sie hier ab.").font(.caption2).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
                 } else if family == .systemSmall {

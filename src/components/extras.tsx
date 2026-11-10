@@ -130,7 +130,7 @@ if (typeof document !== 'undefined') {
   });
 }
 
-/** Zeigt gesperrte Seiten erst nach Face ID. Entsperrt bleibt es, bis AntonOS eine Minute im Hintergrund war. */
+/** Zeigt gesperrte Seiten erst nach Face ID. Entsperrt bleibt es, bis Daywerk eine Minute im Hintergrund war. */
 export function LockGate({ page, children }: { page: string; children: ReactNode }) {
   const { data } = useStore();
   const lock = data.settings.lock ?? defaultLock();
@@ -140,7 +140,7 @@ export function LockGate({ page, children }: { page: string; children: ReactNode
   const asked = useRef(false);
 
   const unlock = async () => {
-    const { ok } = await extras((p) => p.authenticate({ reason: 'Private Bereiche in AntonOS entsperren' }), { ok: false });
+    const { ok } = await extras((p) => p.authenticate({ reason: 'Private Bereiche in Daywerk entsperren' }), { ok: false });
     if (ok) {
       unlocked = true;
       setOpen(true);

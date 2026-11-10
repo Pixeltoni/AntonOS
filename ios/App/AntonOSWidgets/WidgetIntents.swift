@@ -4,7 +4,7 @@ import WidgetKit
 /// Abhaken direkt im Widget (Aufgabe, Gewohnheit, Einkauf). Läuft in der Widget-Erweiterung,
 /// merkt sich den Tipp im gemeinsamen Speicher – die App übernimmt ihn beim nächsten Öffnen.
 struct ToggleItemIntent: AppIntent {
-    static let title: LocalizedStringResource = "In AntonOS abhaken"
+    static let title: LocalizedStringResource = "In Daywerk abhaken"
     static let isDiscoverable: Bool = false
 
     @Parameter(title: "Art") var kind: String

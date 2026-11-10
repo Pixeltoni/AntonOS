@@ -3,7 +3,7 @@ import type { Recipe } from '../types';
 /**
  * Rezept-Import per Link: Fast jede Rezeptseite (Chefkoch, Food-Blogs mit WordPress …) liefert ihr Rezept
  * maschinenlesbar als JSON-LD nach schema.org/Recipe mit. Hier wird es aus der Seite gelesen und in ein
- * AntonOS-Rezept übersetzt. Die Seite lädt in der iPhone-App das Gerät selbst, im Browser die
+ * Daywerk-Rezept übersetzt. Die Seite lädt in der iPhone-App das Gerät selbst, im Browser die
  * Supabase-Funktion `rezept` (supabase/functions/rezept) – sie schickt nur diese Bausteine zurück.
  */
 
@@ -227,7 +227,7 @@ function absolute(url: string, base: string): string {
 /** Seitentitel ohne „ | Chefkoch“ o. Ä. */
 const siteless = (t: string) => t.replace(/\s+[|–—-]\s+[^|–—-]{2,40}$/, '').trim();
 
-/** Übersetzt die Daten einer Seite in ein AntonOS-Rezept. Ohne Rezeptdaten bleiben Titel, Foto und Link. */
+/** Übersetzt die Daten einer Seite in ein Daywerk-Rezept. Ohne Rezeptdaten bleiben Titel, Foto und Link. */
 export function recipeFromPage(page: PageData, url: string): ImportResult | null {
   const r = findRecipe(page.jsonld);
   if (r) {

@@ -59,7 +59,7 @@ function normalizeAppearance(stored: Partial<Appearance> | undefined): Appearanc
 
 /**
  * Ergänzt fehlende Sammlungen, z. B. bei Importen älterer Exporte.
- * Unbekannte Bereiche (von einer neueren AntonOS-Version) bleiben erhalten,
+ * Unbekannte Bereiche (von einer neueren Daywerk-Version) bleiben erhalten,
  * damit eine ältere Version beim Speichern nichts davon löscht.
  */
 export function normalize(raw: unknown): Data {

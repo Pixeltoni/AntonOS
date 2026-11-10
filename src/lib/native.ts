@@ -4,7 +4,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { alreadyDelivered, noticeId, type PlannedNotice } from './schedule';
 import type { NativeAlarm } from './alarm';
 
-/** Läuft AntonOS gerade als echte App aus dem App Store bzw. TestFlight? */
+/** Läuft Daywerk gerade als echte App aus dem App Store bzw. TestFlight? */
 export const isNativeApp = (): boolean => Capacitor.isNativePlatform();
 
 const LOG_KEY = 'antonos:geplant';
@@ -92,7 +92,7 @@ export async function planRoutineNotices(list: { at: number; title: string; body
   }
 }
 
-/** Nur die nächste (bzw. alle) Mitteilungen der Routine zurückziehen – z. B. weil AntonOS gerade offen ist */
+/** Nur die nächste (bzw. alle) Mitteilungen der Routine zurückziehen – z. B. weil Daywerk gerade offen ist */
 export async function cancelRoutineNotices(onlyNext = false): Promise<void> {
   if (!isNativeApp()) return;
   try {
@@ -114,7 +114,7 @@ export async function replacePlanned(plan: PlannedNotice[]): Promise<void> {
       notifications: plan.map((p) => ({ id: noticeId(`${p.tag}|${p.at}`), title: p.title, body: p.body, schedule: { at: new Date(p.at), allowWhileIdle: true }, extra: { href: p.href } })),
     });
   }
-  // Merken, was geplant ist: Was davon schon gezeigt wurde, meldet das offene AntonOS nicht noch einmal
+  // Merken, was geplant ist: Was davon schon gezeigt wurde, meldet das offene Daywerk nicht noch einmal
   const now = Date.now();
   const kept = readLog().filter((l) => l.at <= now && l.at > now - 2 * 86_400_000);
   try {
@@ -209,7 +209,7 @@ export interface FocusActivityState {
   goal?: string;
 }
 
-/** Aus Siri, Kurzbefehlen oder der Aktionstaste – wartet, bis AntonOS es übernimmt */
+/** Aus Siri, Kurzbefehlen oder der Aktionstaste – wartet, bis Daywerk es übernimmt */
 export interface NativeIntent {
   kind: 'text' | 'einkauf' | 'fokus' | 'seite';
   text: string;

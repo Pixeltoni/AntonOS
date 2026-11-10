@@ -1,4 +1,4 @@
-// Supabase-Funktion „licht“: reicht Befehle von AntonOS im Browser an die Govee-Schnittstelle weiter
+// Supabase-Funktion „licht“: reicht Befehle von Daywerk im Browser an die Govee-Schnittstelle weiter
 // (Govee erlaubt keine Anfragen direkt aus dem Browser). Ziel ist immer openapi.api.govee.com, nur die
 // vier Pfade aus src/lib/govee.ts. Der Govee-Schlüssel kommt im Kopf `x-govee-key` und wird nicht gespeichert.
 // Die Antwort von Govee kommt unverändert zurück, ihr Status im Kopf `x-govee-status`.

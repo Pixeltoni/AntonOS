@@ -182,7 +182,7 @@ export function Focus() {
 
   return (
     <>
-      <PageHeader title="Fokus" subtitle="Modus wählen, Timer starten – AntonOS passt sich an" />
+      <PageHeader title="Fokus" subtitle="Modus wählen, Timer starten – Daywerk passt sich an" />
       <div className="grid-2">
         <Panel><TimerPanel /></Panel>
         <div className="stack">

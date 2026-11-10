@@ -61,13 +61,13 @@ export function notifyProblemText(result: NotifyResult): string {
     case 'ok':
       return '';
     case 'unsupported':
-      return 'Dieser Browser kann keine Mitteilungen anzeigen. Auf dem iPhone geht es nur, wenn AntonOS über „Zum Home-Bildschirm“ installiert ist.';
+      return 'Dieser Browser kann keine Mitteilungen anzeigen. Auf dem iPhone geht es nur, wenn Daywerk über „Zum Home-Bildschirm“ installiert ist.';
     case 'not-allowed':
-      return 'Mitteilungen sind nicht erlaubt – bitte in den Einstellungen des Geräts für AntonOS erlauben.';
+      return 'Mitteilungen sind nicht erlaubt – bitte in den Einstellungen des Geräts für Daywerk erlauben.';
     case 'no-worker':
-      return 'Die App-Funktionen sind noch nicht geladen. Lade AntonOS einmal neu (mit Internet) und teste dann noch einmal.';
+      return 'Die App-Funktionen sind noch nicht geladen. Lade Daywerk einmal neu (mit Internet) und teste dann noch einmal.';
     case 'error':
-      return 'Das Gerät hat die Mitteilung abgelehnt. Prüfe, ob Mitteilungen für AntonOS bzw. den Browser in den Geräte-Einstellungen an sind.';
+      return 'Das Gerät hat die Mitteilung abgelehnt. Prüfe, ob Mitteilungen für Daywerk bzw. den Browser in den Geräte-Einstellungen an sind.';
   }
 }
 

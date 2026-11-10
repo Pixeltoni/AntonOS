@@ -144,7 +144,7 @@ export function Evening() {
 
 const REMINDED_KEY = 'antonos:abend';
 
-/** Erinnert im offenen AntonOS (Web) zur eingestellten Uhrzeit – die iPhone-App plant die Mitteilung im Voraus. */
+/** Erinnert im offenen Daywerk (Web) zur eingestellten Uhrzeit – die iPhone-App plant die Mitteilung im Voraus. */
 export function useDayCloseReminder() {
   const { data } = useStore();
   const { show } = useToast();

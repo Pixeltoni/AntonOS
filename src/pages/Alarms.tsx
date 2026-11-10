@@ -401,7 +401,7 @@ function AlarmSheet({ initial, id, native, onClose }: { initial: Draft; id?: ID;
           <p className="ios-note">
             {native
               ? 'Spotify und YouTube kann das iPhone nicht als Weckton abspielen – Apple lässt dafür nur Dateien aus der App zu. Am gesperrten iPhone klingelt deshalb zuerst der Ton unten, nach dem Stopp startet dein Lied. Bei offener App spielt es sofort.'
-              : 'Spielt, solange AntonOS offen ist. In der iOS-App klingelt am gesperrten iPhone zuerst der Ton unten, nach dem Stopp startet dein Lied.'}
+              : 'Spielt, solange Daywerk offen ist. In der iOS-App klingelt am gesperrten iPhone zuerst der Ton unten, nach dem Stopp startet dein Lied.'}
           </p>
         )}
         <span className="ios-caption">{song ? (native && a.sound !== 'datei' ? 'Ton am gesperrten iPhone' : 'Ersatzton, falls das Lied nicht klappt') : 'Weckton'}</span>
@@ -595,7 +595,7 @@ function NightMode({ alarms, onClose }: { alarms: Alarm[]; onClose: () => void }
       <span className="alarm-night-clock">{hhmm(now)}</span>
       <span className="alarm-night-next">{next ? `⏰ ${next.alarm.time} · ${untilLabel(next.at, now)}` : 'Kein Wecker an'}</span>
       <span className="small alarm-night-hint">
-        {awake ? 'Tippen dimmt die Uhr. Handy ans Ladekabel und AntonOS offen lassen.' : 'Dieses Handy kann den Bildschirm nicht wach halten – stell die automatische Sperre auf „Nie“.'}
+        {awake ? 'Tippen dimmt die Uhr. Handy ans Ladekabel und Daywerk offen lassen.' : 'Dieses Handy kann den Bildschirm nicht wach halten – stell die automatische Sperre auf „Nie“.'}
       </span>
       <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }}>Beenden</button>
     </div>
@@ -684,7 +684,7 @@ function WakeStatsPanel() {
           );
         })}
       </ul>
-      <p className="muted small">Pünktlich heißt: nicht geschlummert und spätestens 10 Minuten nach dem Klingeln aus. Gezählt wird, wenn du den Wecker in AntonOS ausschaltest.</p>
+      <p className="muted small">Pünktlich heißt: nicht geschlummert und spätestens 10 Minuten nach dem Klingeln aus. Gezählt wird, wenn du den Wecker in Daywerk ausschaltest.</p>
     </Panel>
   );
 }
@@ -796,19 +796,19 @@ export function Alarms() {
       {isNativeApp() && real !== null && real !== 'unavailable' && (
         <Panel title="Echter iPhone-Wecker">
           {native && failed > 0 && (
-            <p className="alert">{failed === 1 ? 'Ein Wecker ließ' : `${failed} Wecker ließen`} sich am iPhone nicht stellen und klingeln nicht. Öffne AntonOS später erneut oder schalte den Wecker aus und wieder ein.</p>
+            <p className="alert">{failed === 1 ? 'Ein Wecker ließ' : `${failed} Wecker ließen`} sich am iPhone nicht stellen und klingeln nicht. Öffne Daywerk später erneut oder schalte den Wecker aus und wieder ein.</p>
           )}
           {native ? (
             <p className="small">
               Deine Wecker sind als echte iPhone-Wecker gestellt: Sie klingeln laut, auch wenn das Handy gesperrt ist, im Lautlos-Modus und bei „Nicht stören“.
-              Mit Schlummern zeigt das iPhone <strong>Schlummern</strong> statt „Aufgabe lösen“ – nach <strong>Stopp</strong> kommt dann eine Mitteilung, die AntonOS bei der Aufgabe öffnet.
-              Löst du die Aufgabe nicht innerhalb einer Minute, klingelt er wieder. Ausgelassene und pausierte Wecker stellt AntonOS als einzelne Termine für die nächsten zwei Wochen – öffne die App ab und zu.
+              Mit Schlummern zeigt das iPhone <strong>Schlummern</strong> statt „Aufgabe lösen“ – nach <strong>Stopp</strong> kommt dann eine Mitteilung, die Daywerk bei der Aufgabe öffnet.
+              Löst du die Aufgabe nicht innerhalb einer Minute, klingelt er wieder. Ausgelassene und pausierte Wecker stellt Daywerk als einzelne Termine für die nächsten zwei Wochen – öffne die App ab und zu.
             </p>
           ) : real === 'denied' ? (
-            <p className="small">AntonOS darf keine Wecker stellen. Erlaube es unter Einstellungen → Apps → AntonOS → Wecker, dann klingeln sie auch bei gesperrtem Handy.</p>
+            <p className="small">Daywerk darf keine Wecker stellen. Erlaube es unter Einstellungen → Apps → Daywerk → Wecker, dann klingeln sie auch bei gesperrtem Handy.</p>
           ) : (
             <>
-              <p className="small">Erlaube AntonOS, echte Wecker zu stellen – dann klingeln sie auch bei gesperrtem Handy und im Lautlos-Modus.</p>
+              <p className="small">Erlaube Daywerk, echte Wecker zu stellen – dann klingeln sie auch bei gesperrtem Handy und im Lautlos-Modus.</p>
               <button type="button" className="primary" onClick={() => void nativeAlarmPermission(true).then(setReal)}>Wecker erlauben</button>
             </>
           )}
@@ -817,8 +817,8 @@ export function Alarms() {
       {mobile && !native && (
         <Panel title="Damit er klingelt">
           <p className="small">
-            AntonOS ist eine Web-App: Das Handy hält sie an, sobald der Bildschirm aus ist oder du eine andere App öffnest. Starte darum
-            vor dem Schlafen den <strong>Nachtmodus</strong>, lass das Handy am Ladekabel und AntonOS offen. Lautstärke vorher aufdrehen.
+            Daywerk ist eine Web-App: Das Handy hält sie an, sobald der Bildschirm aus ist oder du eine andere App öffnest. Starte darum
+            vor dem Schlafen den <strong>Nachtmodus</strong>, lass das Handy am Ladekabel und Daywerk offen. Lautstärke vorher aufdrehen.
           </p>
           <button type="button" className="primary" onClick={() => { unlockAlarmAudio(); setNight(true); }}>Nachtmodus starten</button>
         </Panel>

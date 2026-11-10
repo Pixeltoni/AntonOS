@@ -16,7 +16,7 @@ export function Lights() {
   const [editing, setEditing] = useState(false);
   const set = (patch: Partial<LightSettings>) => updateSettings({ lights: { ...settings, ...patch } });
 
-  if (!lights.key) return (<><PageHeader title="Licht" subtitle="Deine Govee-Lampen in AntonOS und als Widget" /><KeySetup onSave={(key) => set({ key })} /></>);
+  if (!lights.key) return (<><PageHeader title="Licht" subtitle="Deine Govee-Lampen in Daywerk und als Widget" /><KeySetup onSave={(key) => set({ key })} /></>);
 
   const visible = orderLights(lights.devices, settings.order, settings.hidden);
   const all = orderLights(lights.devices, settings.order, settings.hidden, true);
@@ -101,7 +101,7 @@ export function Lights() {
                 );
               })}
             </ul>
-            <button type="button" className="danger" onClick={() => { if (confirm('Govee-Schlüssel entfernen? Die Lampen verschwinden dann aus AntonOS und dem Widget.')) set({ key: '' }); }}>Govee-Schlüssel entfernen</button>
+            <button type="button" className="danger" onClick={() => { if (confirm('Govee-Schlüssel entfernen? Die Lampen verschwinden dann aus Daywerk und dem Widget.')) set({ key: '' }); }}>Govee-Schlüssel entfernen</button>
           </>
         ) : (
           <p className="small muted">
@@ -129,7 +129,7 @@ function KeySetup({ onSave }: { onSave: (key: string) => void }) {
         <input className="grow" type="text" autoComplete="off" autoCapitalize="off" spellCheck={false} value={key} onChange={(e) => setKey(e.target.value)} placeholder="z. B. 1a2b3c4d-…" aria-label="Govee-API-Schlüssel" />
         <button type="submit" className="primary" disabled={!ok}>Verbinden</button>
       </form>
-      <p className="small muted">Der Schlüssel bleibt in deinen AntonOS-Daten (und wird mit deinem Konto synchronisiert, damit es am PC und am iPhone klappt).</p>
+      <p className="small muted">Der Schlüssel bleibt in deinen Daywerk-Daten (und wird mit deinem Konto synchronisiert, damit es am PC und am iPhone klappt).</p>
     </Panel>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * Ziele, die sich selbst messen: Ein Ziel bekommt Schlüsselergebnisse, deren Stand AntonOS
+ * Ziele, die sich selbst messen: Ein Ziel bekommt Schlüsselergebnisse, deren Stand Daywerk
  * aus den eigenen Daten liest (Spartopf, Lernkarten, Training, Noten, Projekt, Gewohnheit).
  */
 import type { Data, DateStr, Goal, ID, KeyResult, KeyResultKind } from '../types';

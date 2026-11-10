@@ -824,7 +824,7 @@ interface Ringing {
   test: boolean;
   /** Neu zählen bei jedem neuen Klingeln, damit die Aufgabe neu startet */
   round: number;
-  /** Kam vom echten iPhone-Wecker: Das iPhone klingelt wieder, falls AntonOS zugeht */
+  /** Kam vom echten iPhone-Wecker: Das iPhone klingelt wieder, falls Daywerk zugeht */
   native?: boolean;
   /** Wie oft schon geschlummert */
   snoozes: number;
@@ -874,7 +874,7 @@ export function AlarmRinger() {
     if (nativeState !== 'granted') return;
     const sweep = () => expiredOneShots(alarmsRef.current, new Date()).forEach((a) => update('alarms', a.id, { enabled: false }));
     sweep();
-    // Auch bei offener App: Ein Wecker ohne Aufgabe meldet sein Klingeln nicht an AntonOS
+    // Auch bei offener App: Ein Wecker ohne Aufgabe meldet sein Klingeln nicht an Daywerk
     const timer = setInterval(sweep, 60_000);
     const onResume = NativeApp.addListener('appStateChange', ({ isActive }) => isActive && sweep());
     return () => {
@@ -953,7 +953,7 @@ export function AlarmRinger() {
     };
   }, [update]);
 
-  // iOS-App: Solange die Aufgabe offen ist, bleibt am iPhone ein Wecker gestellt – geht AntonOS zu, klingelt er wieder
+  // iOS-App: Solange die Aufgabe offen ist, bleibt am iPhone ein Wecker gestellt – geht Daywerk zu, klingelt er wieder
   const ringingId = ringing?.alarm.id;
   const ringingPhase = ringing?.phase;
   const watchNative = !!ringing && isNativeApp() && nativeState === 'granted' && (!!ringing.native || !ringing.test);

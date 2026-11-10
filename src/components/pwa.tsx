@@ -35,7 +35,7 @@ export function OfflineBanner() {
   return <p className="offline-banner" role="status">✈️ Offline – alles funktioniert weiter. Änderungen werden synchronisiert, sobald du wieder online bist.</p>;
 }
 
-/** Teilen-Menü: Links und Texte aus anderen Apps in AntonOS ablegen */
+/** Teilen-Menü: Links und Texte aus anderen Apps in Daywerk ablegen */
 export function ShareSheet() {
   const { add } = useStore();
   const { show } = useToast();
@@ -89,9 +89,9 @@ export function ShareSheet() {
 
   return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && clear()}>
-      <div className="modal share-sheet" role="dialog" aria-modal="true" aria-label="Mit AntonOS teilen">
+      <div className="modal share-sheet" role="dialog" aria-modal="true" aria-label="Mit Daywerk teilen">
         <div className="row between">
-          <h2>Mit AntonOS teilen</h2>
+          <h2>Mit Daywerk teilen</h2>
           <button type="button" className="icon" onClick={clear} aria-label="Schließen">×</button>
         </div>
         <label>
@@ -130,7 +130,7 @@ export function AppPanel() {
     const result = await askNotifications();
     setPermission(result);
     if (result === 'granted') {
-      const result = await showNotice('AntonOS', 'Mitteilungen sind eingeschaltet 🎉');
+      const result = await showNotice('Daywerk', 'Mitteilungen sind eingeschaltet 🎉');
       if (result !== 'ok') show(`Mitteilungen sind erlaubt, die erste kam aber nicht an. ${notifyProblemText(result)}`, undefined, 8000);
     } else if (result === 'denied') {
       show('Mitteilungen sind blockiert – du kannst sie in den Einstellungen des Geräts erlauben.', undefined, 7000);
@@ -138,7 +138,7 @@ export function AppPanel() {
   };
 
   const test = async () => {
-    const result = await showNotice('AntonOS', 'So sieht eine Mitteilung aus.', 'test');
+    const result = await showNotice('Daywerk', 'So sieht eine Mitteilung aus.', 'test');
     if (result === 'ok') show('Test-Mitteilung gesendet. Nichts zu sehen? Dann sind Mitteilungen in den Geräte-Einstellungen aus.', undefined, 6000);
     else show(`Test fehlgeschlagen. ${notifyProblemText(result)}`, undefined, 8000);
     if (native) setPermission(await nativePermission(false));
@@ -148,17 +148,17 @@ export function AppPanel() {
   return (
     <div className="col app-panel">
       {native ? (
-        <p>✅ <strong>Du nutzt die iOS-App von AntonOS.</strong> Alles liegt auf dem Gerät und funktioniert auch offline.</p>
+        <p>✅ <strong>Du nutzt die iOS-App von Daywerk.</strong> Alles liegt auf dem Gerät und funktioniert auch offline.</p>
       ) : standalone ? (
-        <p>✅ <strong>AntonOS läuft als App.</strong> Es funktioniert auch offline und zeigt am Symbol, wie viele Aufgaben heute fällig sind.</p>
+        <p>✅ <strong>Daywerk läuft als App.</strong> Es funktioniert auch offline und zeigt am Symbol, wie viele Aufgaben heute fällig sind.</p>
       ) : ios ? (
         <div className="install-steps">
-          <p><strong>So kommt AntonOS als App auf dein iPhone oder iPad – kostenlos, ohne App Store:</strong></p>
+          <p><strong>So kommt Daywerk als App auf dein iPhone oder iPad – kostenlos, ohne App Store:</strong></p>
           <ol>
             <li>Öffne diese Seite in <strong>Safari</strong>.</li>
             <li>Tippe unten auf <strong>Teilen</strong> <span className="ios-share" aria-hidden>⬆︎</span>.</li>
             <li>Wähle <strong>„Zum Home-Bildschirm“</strong> und tippe auf <strong>Hinzufügen</strong>.</li>
-            <li>Starte AntonOS über das neue Symbol und erlaube danach hier die Mitteilungen.</li>
+            <li>Starte Daywerk über das neue Symbol und erlaube danach hier die Mitteilungen.</li>
           </ol>
         </div>
       ) : canPromptInstall() ? (
@@ -167,7 +167,7 @@ export function AppPanel() {
           <span className="muted small">Mit eigenem Fenster, Symbol und Offline-Modus.</span>
         </div>
       ) : (
-        <p className="muted">Im Browser-Menü findest du „App installieren“ bzw. „Zum Startbildschirm hinzufügen“. Danach läuft AntonOS in einem eigenen Fenster und auch offline.</p>
+        <p className="muted">Im Browser-Menü findest du „App installieren“ bzw. „Zum Startbildschirm hinzufügen“. Danach läuft Daywerk in einem eigenen Fenster und auch offline.</p>
       )}
 
       <div className="row wrap app-row">
@@ -176,7 +176,7 @@ export function AppPanel() {
           <br />
           <span className="muted small">
             {permission === 'granted' ? 'Erlaubt – für Termine, Vorlesungen, Ringe und den Fokus-Timer.'
-              : permission === 'denied' ? (native ? 'Blockiert – in den iPhone-Einstellungen unter AntonOS → Mitteilungen erlauben.' : 'Blockiert – in den Geräte-Einstellungen für diese Seite erlauben.')
+              : permission === 'denied' ? (native ? 'Blockiert – in den iPhone-Einstellungen unter Daywerk → Mitteilungen erlauben.' : 'Blockiert – in den Geräte-Einstellungen für diese Seite erlauben.')
               : permission === 'unsupported' ? (ios && !standalone ? 'Auf dem iPhone erst nach dem Installieren möglich (iOS 16.4 oder neuer).' : 'Werden von diesem Browser nicht unterstützt.')
               : 'Noch nicht erlaubt.'}
           </span>
@@ -186,8 +186,8 @@ export function AppPanel() {
       </div>
       <p className="muted small">
         {native
-          ? 'Erinnerungen an Termine, Aufgaben, Geburtstage, Kündigungsfristen und Reisen der nächsten zwei Wochen sind beim iPhone angemeldet und kommen auch, wenn AntonOS ganz geschlossen ist.'
-          : 'Mitteilungen kommen, solange AntonOS geöffnet ist oder als App im Hintergrund läuft. Für Mitteilungen bei ganz geschlossener App gibt es die iOS-App.'}
+          ? 'Erinnerungen an Termine, Aufgaben, Geburtstage, Kündigungsfristen und Reisen der nächsten zwei Wochen sind beim iPhone angemeldet und kommen auch, wenn Daywerk ganz geschlossen ist.'
+          : 'Mitteilungen kommen, solange Daywerk geöffnet ist oder als App im Hintergrund läuft. Für Mitteilungen bei ganz geschlossener App gibt es die iOS-App.'}
       </p>
     </div>
   );

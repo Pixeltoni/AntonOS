@@ -334,7 +334,7 @@ function StepTasks({ days, loads, t, wide, drop }: { days: DateStr[]; loads: Day
   return (
     <>
       <p className="wp-lead">
-        {pool.length === 0 ? 'Alles Offene hat schon einen Tag. 👌' : wide ? 'Zieh Aufgaben auf einen Tag – oder lass AntonOS das Dringende verteilen.' : 'Tipp auf einen Tag – oder lass AntonOS das Dringende verteilen.'}
+        {pool.length === 0 ? 'Alles Offene hat schon einen Tag. 👌' : wide ? 'Zieh Aufgaben auf einen Tag – oder lass Daywerk das Dringende verteilen.' : 'Tipp auf einen Tag – oder lass Daywerk das Dringende verteilen.'}
       </p>
       <div className="row wrap wp-auto">
         <button type="button" className="primary" onClick={auto} disabled={count === 0}>✨ {count ? `${plural(count, 'Aufgabe', 'Aufgaben')} verteilen` : 'Nichts Dringendes'}</button>

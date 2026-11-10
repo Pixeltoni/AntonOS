@@ -5,7 +5,7 @@ import { dueNotices } from './reminders';
 
 /** Eine Mitteilung, die die iOS-App im Voraus beim System anmeldet. */
 export interface PlannedNotice {
-  /** Gleiche Kennung wie bei den Mitteilungen im offenen AntonOS – so kommt nichts doppelt */
+  /** Gleiche Kennung wie bei den Mitteilungen im offenen Daywerk – so kommt nichts doppelt */
   tag: string;
   /** Zeitpunkt in ms */
   at: number;

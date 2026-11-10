@@ -51,7 +51,7 @@ export function dayCloseNotices(settings: DayCloseSettings, now: Date, days = 7)
   return out;
 }
 
-/** Ist die Erinnerung jetzt fällig (offenes AntonOS)? Ab der Uhrzeit bis Mitternacht. */
+/** Ist die Erinnerung jetzt fällig (offenes Daywerk)? Ab der Uhrzeit bis Mitternacht. */
 export function dayCloseDue(settings: DayCloseSettings, now: Date): DateStr | null {
   if (!settings.enabled || !/^\d{2}:\d{2}$/.test(settings.time)) return null;
   const t = toDateStr(now);

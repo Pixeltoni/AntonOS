@@ -1,4 +1,4 @@
-/** Hilfen für AntonOS als installierte App (PWA). */
+/** Hilfen für Daywerk als installierte App (PWA). */
 import { Capacitor } from '@capacitor/core';
 
 interface InstallPromptEvent extends Event {
@@ -45,7 +45,7 @@ export async function promptInstall(): Promise<boolean> {
   return outcome === 'accepted';
 }
 
-/** Läuft AntonOS gerade als installierte App (ohne Browser-Leisten)? */
+/** Läuft Daywerk gerade als installierte App (ohne Browser-Leisten)? */
 export function isStandalone(): boolean {
   return Capacitor.isNativePlatform() || window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 }

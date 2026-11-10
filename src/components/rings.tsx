@@ -152,7 +152,7 @@ const REMINDED_KEY = 'antonos:ring-reminder';
 
 /**
  * Erinnert am Abend, wenn ein Ring noch offen ist – als System-Mitteilung, falls erlaubt,
- * sonst als Hinweis in der App. Funktioniert, solange AntonOS geöffnet ist.
+ * sonst als Hinweis in der App. Funktioniert, solange Daywerk geöffnet ist.
  */
 export function useRingReminder() {
   const { data } = useStore();
@@ -183,7 +183,7 @@ export function useRingReminder() {
       const open = openRings(ringDay(data, goals, t));
       if (open.length === 0) return;
       const text = `Noch offen: ${open.join(', ')}`;
-      notify('AntonOS – schließ deine Ringe', text, 'ringe').then((ok) => {
+      notify('Daywerk – schließ deine Ringe', text, 'ringe').then((ok) => {
         if (!ok) show(`⭕ ${text}`, { label: 'Ansehen', run: () => (location.hash = '#/gewohnheiten') }, 10000);
       });
     };

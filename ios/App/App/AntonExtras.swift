@@ -10,7 +10,7 @@ import UserNotifications
 import ActivityKit
 #endif
 
-/// Weitere iPhone-Funktionen für AntonOS (src/lib/native.ts → `AntonExtras`):
+/// Weitere iPhone-Funktionen für Daywerk (src/lib/native.ts → `AntonExtras`):
 /// Face ID, Live-Aktivität des Fokus-Timers, Siri-Warteschlange, Apple Health,
 /// Texterkennung für Kassenzettel und Erinnerungen beim Ankommen an Orten.
 @objc(AntonExtrasPlugin)
@@ -76,7 +76,7 @@ public class AntonExtrasPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDe
     @objc func authenticate(_ call: CAPPluginCall) {
         let context = LAContext()
         context.localizedCancelTitle = "Abbrechen"
-        let reason = call.getString("reason") ?? "AntonOS entsperren"
+        let reason = call.getString("reason") ?? "Daywerk entsperren"
         context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) { ok, _ in
             call.resolve(["ok": ok])
         }
@@ -386,7 +386,7 @@ public class AntonExtrasPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDe
                 region.notifyOnEntry = !onExit
                 region.notifyOnExit = onExit
                 let content = UNMutableNotificationContent()
-                content.title = item["title"] as? String ?? "AntonOS"
+                content.title = item["title"] as? String ?? "Daywerk"
                 content.body = item["body"] as? String ?? ""
                 content.sound = .default
                 // Gleiches Format wie @capacitor/local-notifications: Tippen öffnet die Seite (onNoticeTap)
@@ -433,7 +433,7 @@ enum FocusActivityController {
             detail: raw["detail"] as? String,
             goal: raw["goal"] as? String
         )
-        // Läuft die Phase ab, ohne dass AntonOS aktualisiert, gilt die Anzeige als veraltet
+        // Läuft die Phase ab, ohne dass Daywerk aktualisiert, gilt die Anzeige als veraltet
         let content = ActivityContent(state: state, staleDate: state.paused ? nil : state.endAt.addingTimeInterval(5))
         if let current = running.first {
             await current.update(content)

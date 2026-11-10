@@ -13,7 +13,7 @@ export interface Notice {
   href: string;
 }
 
-/** So viele Tage vor einer Kündigungsfrist erinnert AntonOS */
+/** So viele Tage vor einer Kündigungsfrist erinnert Daywerk */
 export const NOTICE_DAYS = 14;
 
 /**

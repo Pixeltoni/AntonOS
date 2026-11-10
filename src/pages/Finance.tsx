@@ -243,7 +243,7 @@ function TxForm() {
         const value = parseAmount(amount);
         if (!(value > 0)) return;
         const base = { type, description: description.trim(), amount: value, category: category.trim() || 'Sonstiges', account: account.trim() || 'Girokonto' };
-        // Daueraufträge bucht AntonOS selbst – auch diesen Monat, sobald der Tag erreicht ist
+        // Daueraufträge bucht Daywerk selbst – auch diesen Monat, sobald der Tag erreicht ist
         if (repeat) add('recurring', { ...base, day: Number(date.slice(8)), start: date.slice(0, 7), lastBooked: null });
         else add('transactions', { ...base, date });
         setDescription('');
@@ -428,7 +428,7 @@ function BudgetSettings() {
         <input className="narrow" inputMode="decimal" placeholder="€" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Budget der Kategorie" />
         <button type="submit">Budget setzen</button>
       </form>
-      <p className="muted small">Ab 90 % eines Budgets warnt AntonOS dich.</p>
+      <p className="muted small">Ab 90 % eines Budgets warnt Daywerk dich.</p>
     </div>
   );
 }

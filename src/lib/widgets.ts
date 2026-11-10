@@ -1,7 +1,7 @@
 /**
  * iOS-Widgets: Die App rechnet hier einen kleinen Stand („Schnappschuss“) aus, den sie
  * in den gemeinsamen Speicher (App Group) legt. Die Widget-Erweiterung (ios/App/AntonOSWidgets)
- * liest nur diesen Stand – sie kennt AntonOS-Daten sonst nicht.
+ * liest nur diesen Stand – sie kennt Daywerk-Daten sonst nicht.
  *
  * Abhaken im Widget landet als Aktion in einer Warteschlange, die die App beim nächsten
  * Öffnen mit `resolveWidgetActions` übernimmt.

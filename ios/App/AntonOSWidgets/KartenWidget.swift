@@ -146,10 +146,10 @@ private struct HomeCard: View {
                     .buttonStyle(.plain)
                 }
             } else if left > 0 {
-                // Das Widget kennt nur die ersten Karten – die nächsten bringt AntonOS beim Öffnen mit
+                // Das Widget kennt nur die ersten Karten – die nächsten bringt Daywerk beim Öffnen mit
                 Spacer(minLength: 0)
                 Text("Weitere Karten warten").font(.headline)
-                Text("Tippen öffnet AntonOS mit den nächsten Karten.").font(.caption2).foregroundStyle(.secondary)
+                Text("Tippen öffnet Daywerk mit den nächsten Karten.").font(.caption2).foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             } else {
                 Spacer(minLength: 0)

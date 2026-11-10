@@ -1,8 +1,9 @@
-# AntonOS – Hinweise für Claude
+# Daywerk (früher AntonOS) – Hinweise für Claude
 
 Persönlicher Life-Organizer (Studium, Aufgaben, Kalender, Finanzen …) als React-PWA im Apple-Stil.
 Nutzer und Sprache: **Deutsch** – Oberfläche, Code-Kommentare und Commit-Nachrichten auf Deutsch.
 Funktionsübersicht für Nutzer steht in `README.md` (nur bei Bedarf lesen).
+Sichtbarer App-Name ist **Daywerk** (Texte, Info.plist, Manifest). Interne Kennungen heißen weiter AntonOS/antonos und bleiben so: Bundle-ID, App Group, Repo, `localStorage`-Schlüssel, Swift-Typen, Widget-`kind`s (sonst verschwinden platzierte Widgets), Ordner `AntonOSWidgets`. App-Symbol: Vorlage `scripts/app-icon.svg` (Haken im Kreis); daraus erzeugt sind `public/icons/*.png`, `AppIcon.appiconset` und `Splash.imageset` (iOS-Bilder ohne Alphakanal).
 
 ## Befehle
 - `npm test` – Vitest (nur `src/lib/*.test.ts`, reine Logik)

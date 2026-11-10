@@ -109,7 +109,7 @@ function AboSheet({ initial, id, onClose }: { initial: Draft; id?: string; onClo
         {id && <label>Gekündigt zum<input type="date" value={d.endsOn ?? ''} onChange={(e) => set('endsOn', e.target.value || null)} /></label>}
         {id && <label className="check"><input type="checkbox" checked={!!d.paused} onChange={(e) => set('paused', e.target.checked)} /> Pausiert</label>}
       </div>
-      <p className="muted small">AntonOS bucht die Zahlung automatisch in den Finanzen und erinnert dich zwei Wochen vor einer Kündigungsfrist.</p>
+      <p className="muted small">Daywerk bucht die Zahlung automatisch in den Finanzen und erinnert dich zwei Wochen vor einer Kündigungsfrist.</p>
       {id && (
         <button type="button" className="danger" onClick={() => { if (confirm(`„${d.description}“ löschen? Schon gebuchte Einträge bleiben.`)) { remove('recurring', id); onClose(); } }}>Abo löschen</button>
       )}

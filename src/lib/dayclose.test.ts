@@ -41,7 +41,7 @@ describe('Tag abschließen', () => {
     expect(dayCloseNotices({ ...s, enabled: false }, now)).toEqual([]);
   });
 
-  it('ist im offenen AntonOS ab der Uhrzeit fällig', () => {
+  it('ist im offenen Daywerk ab der Uhrzeit fällig', () => {
     const s = { enabled: true, time: '21:30' };
     expect(dayCloseDue(s, at('2026-11-03', '21:00'))).toBeNull();
     expect(dayCloseDue(s, at('2026-11-03', '21:31'))).toBe('2026-11-03');

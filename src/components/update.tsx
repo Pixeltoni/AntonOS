@@ -4,7 +4,7 @@ import { useSync } from './sync';
 
 const CHECK_INTERVAL = 5 * 60_000;
 
-/** Prüft, ob eine neuere AntonOS-Version veröffentlicht wurde. */
+/** Prüft, ob eine neuere Daywerk-Version veröffentlicht wurde. */
 function useUpdateAvailable(): boolean {
   const [available, setAvailable] = useState(false);
   useEffect(() => {
@@ -40,8 +40,8 @@ export function UpdateBanner() {
     <div className="alert update" role="status">
       <span>
         {outdated
-          ? 'Auf einem anderen Gerät wurde eine neuere Version von AntonOS genutzt. Lade neu, damit hier alles (z. B. neue Kalendertermine) angezeigt und wieder synchronisiert wird.'
-          : 'Eine neue Version von AntonOS ist verfügbar.'}
+          ? 'Auf einem anderen Gerät wurde eine neuere Version von Daywerk genutzt. Lade neu, damit hier alles (z. B. neue Kalendertermine) angezeigt und wieder synchronisiert wird.'
+          : 'Eine neue Version von Daywerk ist verfügbar.'}
       </span>
       <button className="primary" onClick={() => location.reload()}>Jetzt neu laden</button>
     </div>

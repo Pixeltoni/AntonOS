@@ -193,7 +193,7 @@ export function Shopping() {
           )}
           <Panel title="⭐ Häufig gekauft">
             {suggestions.length === 0 ? (
-              <Empty>Nach deinen ersten Einkäufen schlägt AntonOS hier vor, was du oft brauchst.</Empty>
+              <Empty>Nach deinen ersten Einkäufen schlägt Daywerk hier vor, was du oft brauchst.</Empty>
             ) : (
               <div className="shop-suggest">
                 {suggestions.map((f) => (

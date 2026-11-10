@@ -232,7 +232,7 @@ export interface Goal {
   results?: KeyResult[];
 }
 
-/** Woran sich ein Ziel misst – AntonOS liest den Stand aus den eigenen Daten */
+/** Woran sich ein Ziel misst – Daywerk liest den Stand aus den eigenen Daten */
 export type KeyResultKind = 'spartopf' | 'karten' | 'training' | 'note' | 'schnitt' | 'projekt' | 'gewohnheit' | 'manuell';
 
 export interface KeyResult {
@@ -1005,7 +1005,7 @@ export interface Data {
   workouts: Workout[];
   trainingPlan: TrainingDay[];
   events: CalEvent[];
-  /** Datenformat-Version der AntonOS-Version, die zuletzt gespeichert hat */
+  /** Datenformat-Version der Daywerk-Version, die zuletzt gespeichert hat */
   schemaVersion?: number;
   albums: Album[];
   tools: Tool[];

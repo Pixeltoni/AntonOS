@@ -55,7 +55,7 @@ function ResultSheet({ goal, result, onClose }: { goal: Goal; result?: KeyResult
 
   return (
     <Sheet title={result ? 'Messgröße bearbeiten' : 'Ziel messbar machen'} submitLabel={result ? 'Sichern' : 'Hinzufügen'} submitDisabled={missingRef} onClose={onClose} onSubmit={save}>
-      <p className="muted small">AntonOS liest den Stand aus deinen Daten, der Fortschritt von „{goal.title}“ rechnet sich dann selbst.</p>
+      <p className="muted small">Daywerk liest den Stand aus deinen Daten, der Fortschritt von „{goal.title}“ rechnet sich dann selbst.</p>
       <div className="kr-kinds" role="radiogroup" aria-label="Woran misst sich das Ziel?">
         {RESULT_KINDS.map((k) => (
           <button key={k.kind} type="button" role="radio" aria-checked={kind === k.kind} className={kind === k.kind ? 'on' : ''} onClick={() => pick(k.kind)}>

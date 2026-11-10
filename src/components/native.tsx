@@ -17,7 +17,7 @@ import { useCalendarEntries } from './calendar';
 
 /**
  * Nur in der iOS-App: meldet Erinnerungen der nächsten zwei Wochen beim System an,
- * damit sie auch kommen, wenn AntonOS ganz geschlossen ist.
+ * damit sie auch kommen, wenn Daywerk ganz geschlossen ist.
  */
 export function useNativeNotifications() {
   const { data } = useStore();

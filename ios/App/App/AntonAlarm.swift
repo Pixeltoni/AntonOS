@@ -21,7 +21,7 @@ class AntonBridgeViewController: CAPBridgeViewController {
 /// Gemeinsamer Speicher zwischen Plugin und Intents (auch wenn die App im Hintergrund geweckt wird).
 enum AlarmStore {
     static let defaults = UserDefaults.standard
-    /// AlarmKit-ID → Wecker-ID aus AntonOS
+    /// AlarmKit-ID → Wecker-ID aus Daywerk
     static let mapKey = "antonAlarm.map"
     /// AlarmKit-IDs des Nachklingelns (läuft, bis die Aufgabe gelöst ist) – früher eine einzelne ID
     static let fallbackKey = "antonAlarm.fallback"
@@ -235,7 +235,7 @@ enum AlarmScheduler {
         if notify {
             let content = UNMutableNotificationContent()
             content.title = "⏰ Aufgabe lösen"
-            content.body = "Öffne AntonOS und löse die Aufgabe – sonst klingelt der Wecker in einer Minute wieder."
+            content.body = "Öffne Daywerk und löse die Aufgabe – sonst klingelt der Wecker in einer Minute wieder."
             content.sound = .default
             content.interruptionLevel = .timeSensitive
             let request = UNNotificationRequest(identifier: "antonos-wecker-aufgabe", content: content, trigger: nil)
@@ -334,7 +334,7 @@ struct AntonAlarmSnoozeIntent: LiveActivityIntent {
     }
 }
 
-/// „Aufgabe lösen“: öffnet AntonOS direkt bei der Aufgabe.
+/// „Aufgabe lösen“: öffnet Daywerk direkt bei der Aufgabe.
 @available(iOS 26.0, *)
 struct AntonAlarmOpenIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Aufgabe lösen"

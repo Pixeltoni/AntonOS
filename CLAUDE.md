@@ -25,6 +25,7 @@ Funktionsübersicht für Nutzer steht in `README.md` (nur bei Bedarf lesen).
 - `vite.config.ts` – erzeugt auch `sw.js` (Service Worker, Offline-Cache) und `version.json`
 
 ## Konventionen
+- Design (Glas + Kacheln): Maße nur über Tokens in `styles.css` – Radien `--r-s`/`--r-m`/`--r-l` (8/14/22), Schrift `--fs-micro` … `--fs-title`, Karten `background: var(--card)` + `--card-shadow` (kein `backdrop-filter` auf Karten, nur auf schwebenden Leisten). Hintergrund `.app-mesh` (in `AppearanceLayer`) färbt sich nach `--accent` des Bereichs; Plus-Knopf in `--brand`. Keine Emojis als Symbole in der Oberfläche: `Sym`/`EMOJI_ICONS` (`components/icons.tsx`), `Panel` tauscht führende Emojis selbst. Zahlen mit `CountUp` (`components/ui.tsx`, Kurven in `lib/motion.ts`), Einblenden mit Klasse `rise-in` + `--delay`, Lichtkante mit `glow-edge`. iOS-Widgets nutzen denselben Look über `MeshBackground`/`HeroBackground` (`AntonOSWidgets.swift`).
 - Datum als String `YYYY-MM-DD` (`DateStr`); immer Helfer aus `src/lib/dates.ts` nutzen, nie `toISOString()` für Tage (Zeitzone).
 - Neue Logik nach `src/lib/` und dort testen; Komponenten bleiben schlank.
 - Neue Datensammlung in `Data`: in `emptyData()` (`store.tsx`) ergänzen und `SCHEMA_VERSION` in `src/lib/version.ts` erhöhen.

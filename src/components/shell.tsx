@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import type { NavItem } from '../types';
 import { DEFAULT_SIDEBAR, mergeWithDefaults } from '../lib/layout';
 import { normalizeTabs } from '../lib/areas';
-import { Icon, NavIcon, PAGE_ICONS } from './icons';
+import { Icon, NavIcon, PAGE_ICONS, Sym } from './icons';
 import { openSpotlight } from './spotlight';
 import { openAssistant } from './assistant';
 import { useFocus } from './focus';
@@ -35,8 +35,12 @@ export function TabBar({ current }: { current: string }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Gleitende Glas-Kapsel hinter dem aktiven Tab (Bereiche = Platz nach den drei Tabs)
+  const active = areasActive ? tabs.length : tabs.indexOf(current);
+
   return (
-    <nav className="tabbar" aria-label="Tabs">
+    <nav className="tabbar" aria-label="Tabs" style={{ ['--tab-i' as string]: active, ['--tab-n' as string]: tabs.length + 2 }}>
+      <span className="tabbar-pill" aria-hidden="true" />
       {tabs.map((path) => {
         const it = item(path);
         return (
@@ -106,7 +110,7 @@ export function PlusButton({ hidden }: { hidden?: boolean }) {
         <div className="plus-menu" role="menu" aria-label="Schnell eintragen">
           {PLUS_ACTIONS.map((a) => (
             <button key={a.label} type="button" role="menuitem" onClick={() => run(a)}>
-              <span aria-hidden="true">{a.emoji}</span>
+              <span aria-hidden="true"><Sym emoji={a.emoji} size={18} /></span>
               {a.label}
             </button>
           ))}

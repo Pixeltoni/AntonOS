@@ -153,7 +153,7 @@ private struct HomeCard: View {
                 Spacer(minLength: 0)
             } else {
                 Spacer(minLength: 0)
-                Text("Alles gelernt 🎉").font(.headline)
+                Label("Alles gelernt", systemImage: "checkmark.seal.fill").font(.headline)
                 Text("Heute ist keine Karte mehr fällig.").font(.caption2).foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             }
@@ -198,7 +198,7 @@ private struct LockCard: View {
         } else {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Lernkarten").font(.caption2).foregroundStyle(.secondary)
-                Text("Alles gelernt 🎉").font(.headline)
+                Label("Alles gelernt", systemImage: "checkmark.seal.fill").font(.headline)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

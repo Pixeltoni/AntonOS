@@ -753,7 +753,7 @@ function Playlists() {
       .then((r) => setLists(r?.items.filter(Boolean) ?? []))
       .catch(() => setLists([]));
   }, [s.clientId]);
-  if (lists === null) return <p className="muted small">Lade Playlists …</p>;
+  if (lists === null) return <div className="skeleton" role="status" aria-label="Lade Playlists"><i /><i /><i /></div>;
   if (lists.length === 0) return <Empty>Keine Playlists gefunden.</Empty>;
   return (
     <div className="playlists">

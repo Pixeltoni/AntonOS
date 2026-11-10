@@ -4,7 +4,7 @@ import type { Appearance, ThemeMode } from '../types';
 import { backgroundCss, dimOpacity } from '../lib/appearance';
 import { ImageInput } from './widgets';
 
-/** Setzt helles oder dunkles Design und das eigene Hintergrundbild für die ganze App. */
+/** Setzt helles oder dunkles Design, das eigene Hintergrundbild oder den fließenden Farbverlauf für die ganze App. */
 export function AppearanceLayer() {
   const { data } = useStore();
   const a = data.settings.appearance;
@@ -22,7 +22,14 @@ export function AppearanceLayer() {
     document.documentElement.classList.toggle('has-bg', bg !== null);
   }, [bg]);
 
-  if (!bg) return null;
+  // Ohne eigenes Bild: ruhig fließender Farbverlauf in der Farbe des Bereichs (Glas-Look)
+  if (!bg) {
+    return (
+      <div className="app-mesh" aria-hidden>
+        <i /><i /><i /><i />
+      </div>
+    );
+  }
   return (
     <div className="app-bg" aria-hidden>
       <div className="app-bg-image" style={{ background: bg }} />

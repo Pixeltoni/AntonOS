@@ -136,7 +136,7 @@ export function GoalResults({ goal }: { goal: Goal }) {
           </div>
         );
       })}
-      <button type="button" className="link kr-add" onClick={() => setSheet({})}>{results.length ? '+ Weitere Messgröße' : '📏 Messbar machen'}</button>
+      <button type="button" className="link kr-add" onClick={() => setSheet({})}>{results.length ? '+ Weitere Messgröße' : 'Messbar machen'}</button>
       {sheet && <ResultSheet goal={goal} result={sheet.result} onClose={() => setSheet(null)} />}
     </div>
   );

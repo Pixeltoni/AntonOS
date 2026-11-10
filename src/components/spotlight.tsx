@@ -9,7 +9,7 @@ import { categorize, parseShopping } from '../lib/shopping';
 import { calculate, matchScore, searchAll, topHit, type SearchHit } from '../lib/search';
 import { useFocus } from './focus';
 import { useToast } from './toast';
-import { NavIcon } from './icons';
+import { NavIcon, Sym } from './icons';
 import { openAssistant } from './assistant';
 
 const OPEN_EVENT = 'antonos:spotlight';
@@ -230,7 +230,7 @@ export function Spotlight() {
                   onMouseMove={() => i !== index && setIndex(i)}
                   onClick={() => r.run()}
                 >
-                  <span className="spotlight-icon" aria-hidden>{r.icon}</span>
+                  <span className="spotlight-icon" aria-hidden>{typeof r.icon === 'string' ? <Sym emoji={r.icon} size={18} /> : r.icon}</span>
                   <span className="spotlight-text">
                     <span className="spotlight-title"><Highlight text={r.title} query={r.group === 'Aktionen' ? '' : q} /></span>
                     {r.subtitle && <span className="spotlight-sub">{r.subtitle}</span>}

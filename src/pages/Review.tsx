@@ -11,6 +11,7 @@ import { focusState, mondayOf, planFor } from '../lib/weekplan';
 import { Rings } from '../components/rings';
 import { useToast } from '../components/toast';
 import { Empty, PageHeader, Panel } from '../components/ui';
+import { Sym } from '../components/icons';
 
 const hoursText = (min: number) => {
   const h = Math.floor(min / 60);
@@ -431,7 +432,7 @@ export function Review() {
         <div className="col">
           <Story week={week} prev={prevWeeks[0]} title={title} weekLabel={weekLabel} />
           <div className="row wrap review-actions">
-            <button type="button" className="story-share" onClick={share}>📤 Als Bild teilen</button>
+            <button type="button" className="story-share" onClick={share}><Sym emoji="📤" size={16} /> Als Bild teilen</button>
             <a className="button story-share" href="#/wochenplan">🗓️ Woche planen</a>
           </div>
         </div>

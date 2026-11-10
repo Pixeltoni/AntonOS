@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { addDays, isoWeek, parseDate, today } from '../lib/dates';
-import { areaHints, dayPhase, greeting, storyWeek, todaySections, type TodaySection } from '../lib/areas';
+import { areaHints, dayPhase, greeting, storyWeek, todaySections, todayTiles, type TodaySection, type TodayTile } from '../lib/areas';
 import { onDay, sortEntries } from '../lib/calendar';
 import { inToday } from '../lib/things';
 import { listTasks } from '../lib/tasks';
@@ -11,7 +11,11 @@ import { headline, weekReview } from '../lib/review';
 import { useCalendarEntries } from '../components/calendar';
 import { TaskList } from '../components/TaskList';
 import { RingsWidget } from '../components/rings';
+import { Sparkles } from 'lucide-react';
 import { Icon, PAGE_ICONS } from '../components/icons';
+import { CountUp } from '../components/ui';
+import { staggerDelay } from '../lib/motion';
+import { formatMoney } from '../lib/life';
 import { GoalsThisWeek } from '../components/goals';
 import { hasWeekCard, WeekCard } from '../components/weekplan';
 import { RoutineToday, useRoutine } from '../components/routine';
@@ -167,9 +171,30 @@ function StoryBubble({ onOpen }: { onOpen: () => void }) {
   const seen = readSeen() === label;
   return (
     <button type="button" className={`story-bubble ${seen ? 'seen' : ''}`} onClick={onOpen} aria-label={`Wochenrückblick ${label} ansehen`}>
-      <span className="story-bubble-ring"><span>🌟</span></span>
+      <span className="story-bubble-ring"><span><Icon icon={Sparkles} size={20} /></span></span>
       <small>{range.current ? 'Diese Woche' : label}</small>
     </button>
+  );
+}
+
+const tileFormat: Record<TodayTile['unit'], (v: number) => string> = {
+  anzahl: (v) => String(Math.round(v)),
+  euro: (v) => formatMoney(v),
+  minuten: (v) => (v >= 90 ? `${(v / 60).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Std.` : `${Math.round(v)} Min.`),
+};
+
+/** Kachel-Raster mit Zahlen, die beim Öffnen hochzählen */
+function TodayTiles({ tiles }: { tiles: TodayTile[] }) {
+  return (
+    <div className="bento">
+      {tiles.map((x) => (
+        <a key={x.key} className={`bento-tile tile-${x.key}`} href={x.href}>
+          <span className="bento-label"><Icon icon={PAGE_ICONS[x.key === 'budget' ? 'finanzen' : x.key]} size={14} />{x.label}</span>
+          <strong className={`bento-value ${x.unit === 'euro' && x.value < 0 ? 'negative' : ''}`}><CountUp value={x.value} format={tileFormat[x.unit]} /></strong>
+          <small>{x.hint}</small>
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -185,6 +210,7 @@ export function Today() {
   const phase = dayPhase(now, dayClose.time);
   const name = data.settings.name.trim().split(' ')[0];
   const hints = useMemo(() => areaHints(data, t, now), [data, t, now]);
+  const tiles = useMemo(() => todayTiles(data, t), [data, t]);
 
   const time = hhmm(now);
   const todays = sortEntries(entries.filter((e) => onDay(e, t) && !e.done && e.kind !== 'task'));
@@ -207,7 +233,7 @@ export function Today() {
         if (!nextEvent && phase === 'abend') return null;
         if (!nextEvent) {
           return (
-            <a className="today-hero quiet" href="#/kalender">
+            <a className="today-hero quiet glow-edge" href="#/kalender">
               <small>Keine Termine mehr heute</small>
               <strong>{tomorrow[0] ? `Morgen: ${tomorrow[0].label}` : 'Freier Tag im Kalender'}</strong>
               {tomorrow[0]?.time && <small>{tomorrow[0].time} Uhr</small>}
@@ -219,7 +245,7 @@ export function Today() {
         const rest = upcoming.filter((e) => e !== nextEvent);
         return (
           <>
-            <a className="today-hero" href={nextEvent.href ?? '#/kalender'} style={nextEvent.color ? { ['--hero' as string]: nextEvent.color } : undefined}>
+            <a className="today-hero glow-edge" href={nextEvent.href ?? '#/kalender'} style={nextEvent.color ? { ['--hero' as string]: nextEvent.color } : undefined}>
               <small>{when}{nextEvent.location ? ` · ${nextEvent.location}` : ''}</small>
               <strong>{nextEvent.label}</strong>
               {nextEvent.time && <small>{nextEvent.time}{nextEvent.endTime ? ` – ${nextEvent.endTime}` : ''} Uhr</small>}
@@ -238,11 +264,13 @@ export function Today() {
           </>
         );
       }
+      case 'kacheln':
+        return <TodayTiles tiles={tiles} />;
       case 'aufgaben':
         return (
           <Section title="Aufgaben" link={['#/aufgaben', 'Alle']}>
             <div className="ios-group today-tasks">
-              <TaskList tasks={tasks} compact sortable={false} emptyText={phase === 'abend' ? 'Alles erledigt für heute 🎉' : 'Nichts für heute geplant.'} />
+              <TaskList tasks={tasks} compact sortable={false} emptyText={phase === 'abend' ? 'Alles erledigt für heute.' : 'Nichts für heute geplant.'} />
             </div>
           </Section>
         );
@@ -329,9 +357,9 @@ export function Today() {
           </button>
         ))}
       </div>
-      {view === 'plan' ? <DayPlanView /> : todaySections(phase).map((s) => {
+      {view === 'plan' ? <DayPlanView /> : todaySections(phase).map((s, i) => {
         const node = render(s);
-        return node ? <div key={s} className="today-block">{node}</div> : null;
+        return node ? <div key={s} className="today-block rise-in" style={{ ['--delay' as string]: `${staggerDelay(i, 60)}ms` }}>{node}</div> : null;
       })}
       {story && <StoryViewer onClose={() => setStory(false)} />}
     </div>

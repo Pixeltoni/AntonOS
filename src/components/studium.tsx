@@ -6,6 +6,7 @@ import { admissionState, defaultAdmission, describeAdmission, nextSheetNumber, t
 import { addDays, formatDate, relativeLabel, today } from '../lib/dates';
 import { formatNumber, parseNumber } from '../lib/training';
 import { Sheet } from './sheet';
+import { Sym } from './icons';
 
 type Tone = 'ok' | 'warn' | 'bad' | '';
 
@@ -42,7 +43,7 @@ export function CourseGoal({ course }: { course: Course }) {
   const info = courseGoalText(course, data.grades);
   return (
     <div className="goal-row">
-      <span className="goal-label">🎯 Notenziel</span>
+      <span className="goal-label"><Sym emoji="🎯" size={13} /> Notenziel</span>
       <TargetSelect label={`Notenziel für ${course.name}`} value={course.target ?? null} onChange={(target) => update('courses', course.id, { target })} />
       {info && <span className={`goal-text ${info.tone}`}>{info.text}</span>}
     </div>
@@ -69,7 +70,7 @@ export function DegreeGoal() {
 
   return (
     <section className="health-tile degree-goal" style={{ ['--h' as string]: '#5856D6' }}>
-      <span className="health-label">🎯 Notenziel fürs Studium</span>
+      <span className="health-label"><Sym emoji="🎯" size={14} /> Notenziel fürs Studium</span>
       <p className={`goal-text big ${tone}`}>{text}</p>
       {need?.current != null && <span className="muted small">Bisher {formatGrade(need.current)} aus {formatNumber(need.graded)} ECTS</span>}
       <div className="degree-inputs">
@@ -230,7 +231,7 @@ export function SheetsPanel({ course }: { course: Course }) {
   return (
     <section className="panel sheets-panel">
       <div className="panel-head">
-        <h2>📝 Übungsblätter</h2>
+        <h2>Übungsblätter</h2>
         <div className="row">
           {course.admission && <button type="button" className="link" onClick={() => setEditor({ kind: 'rule' })}>Regel</button>}
           <button type="button" className="link" onClick={() => setEditor({ kind: 'sheet' })}>+ Blatt</button>

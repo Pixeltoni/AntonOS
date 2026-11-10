@@ -161,7 +161,7 @@ export function PlacesPanel() {
           <label className="full">Adresse<input value={address} placeholder="Straße, Ort" onChange={(e) => setAddress(e.target.value)} /></label>
           <div className="row wrap full">
             <button type="button" className="primary" disabled={busy || !address.trim()} onClick={() => void add(false)}>Adresse speichern</button>
-            <button type="button" disabled={busy} onClick={() => void add(true)}>📍 Aktuellen Ort nehmen</button>
+            <button type="button" disabled={busy} onClick={() => void add(true)}>Aktuellen Ort nehmen</button>
           </div>
         </div>
       )}

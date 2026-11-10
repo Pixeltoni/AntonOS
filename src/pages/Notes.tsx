@@ -19,6 +19,7 @@ import { Sheet } from '../components/sheet';
 import { useToast } from '../components/toast';
 import { useTaskUI } from '../components/taskui';
 import { useCalendarEntries } from '../components/calendar';
+import { Sym } from '../components/icons';
 
 type Folder = 'alle' | 'angeheftet' | 'ohne' | 'tage' | 'geloescht' | `kurs:${string}`;
 
@@ -628,7 +629,7 @@ export function Notes({ selected }: { selected: ID | null }) {
           {folders.map((f) => (
             <li key={f.id}>
               <button type="button" className={folder === f.id && !tag ? 'on' : ''} onClick={() => { setFolder(f.id); setTag(null); }}>
-                <span>{f.icon} {f.label}</span>
+                <span className="row"><Sym emoji={f.icon} size={16} /> {f.label}</span>
                 <span className="muted">{f.count}</span>
               </button>
             </li>
@@ -684,7 +685,7 @@ export function Notes({ selected }: { selected: ID | null }) {
           <>
             {pinned.length > 0 && folder !== 'angeheftet' && (
               <>
-                <h3 className="notes-group">📌 Angeheftet</h3>
+                <h3 className="notes-group">Angeheftet</h3>
                 {group(pinned)}
               </>
             )}

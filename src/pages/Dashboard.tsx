@@ -13,9 +13,10 @@ import { CalendarView } from '../components/calendar';
 import { SpotifyPlayer } from '../components/spotify';
 import { AppearanceEditor } from '../components/appearance';
 import { RingsWidget } from '../components/rings';
-import { Icon, PAGE_ICONS, stripEmoji, WIDGET_ICONS } from '../components/icons';
+import { Icon, PAGE_ICONS, stripEmoji, Sym, WIDGET_ICONS } from '../components/icons';
 import { FocusWidget, useFocus } from '../components/focus';
 import { focusMode } from '../lib/focus';
+import { staggerDelay } from '../lib/motion';
 import { liveNotes, noteTitle } from '../lib/notes';
 import { CountdownWidget, SmartStack, TodayWidget, useDragReorder, WidgetGallery } from '../components/homescreen';
 import { CourseBadge, Empty, Panel, Progress, Stat } from '../components/ui';
@@ -70,15 +71,25 @@ function Banner({ editing }: { editing: boolean }) {
   const { data } = useStore();
   const cover = safeImageSrc(data.settings.cover);
   return (
-    <div className="banner-wrap">
+    <div className="banner-wrap glow-edge">
       {cover ? <img className="banner" src={cover} alt="" /> : <div className="banner placeholder-banner" />}
       <div className="banner-title">
-        <h1>{greeting()}, {data.settings.name || 'du'} 👋</h1>
+        <h1>{greeting()}, {data.settings.name || 'du'}</h1>
         <p>{formatDate(today())}</p>
       </div>
-      {!editing && <a className="button banner-edit" href="#/dashboard/bearbeiten">✏️ Bearbeiten</a>}
+      {!editing && <a className="button banner-edit" href="#/dashboard/bearbeiten"><Icon icon={PAGE_ICONS.bearbeiten} size={15} /> Bearbeiten</a>}
     </div>
   );
+}
+
+/** Lichtfleck folgt dem Zeiger über die Kacheln (nur mit Maus/Trackpad sichtbar) */
+function followPointer(e: React.PointerEvent<HTMLDivElement>) {
+  if (e.pointerType !== 'mouse') return;
+  const card = (e.target as HTMLElement).closest<HTMLElement>('.panel, .stat');
+  if (!card) return;
+  const r = card.getBoundingClientRect();
+  card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  card.style.setProperty('--my', `${e.clientY - r.top}px`);
 }
 
 function ProjectRow({ id, title }: { id: string; title: string }) {
@@ -178,7 +189,7 @@ function useWidgets(): Record<WidgetId, WidgetDef> {
         <div className={`quick ${v}`}>
           {QUICK_ACTIONS.map((a) => (
             <a key={a.label} href={a.href} title={a.label}>
-              <span aria-hidden>{a.icon}</span>
+              <span aria-hidden><Sym emoji={a.icon} size={16} /></span>
               {v !== 'kompakt' && ` ${a.label}`}
             </a>
           ))}
@@ -458,7 +469,7 @@ export function Dashboard({ editing }: { editing: boolean }) {
       <Banner editing={editing} />
       {focusing && filtered > 0 && (
         <div className="focus-banner" style={{ ['--mode' as string]: mode.color }} role="status">
-          <span>{mode.icon} Fokus: {mode.label} – {filtered} Kästen ausgeblendet</span>
+          <span><Sym emoji={mode.icon} size={15} /> Fokus: {mode.label} – {filtered} Kästen ausgeblendet</span>
           <button type="button" onClick={() => setShowAll(true)}>Alle zeigen</button>
         </div>
       )}
@@ -482,12 +493,12 @@ export function Dashboard({ editing }: { editing: boolean }) {
             <label>Dein Name<input value={data.settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></label>
             <label className="full">Titelbild<ImageInput value={data.settings.cover} onChange={(cover) => updateSettings({ cover })} /></label>
           </div>
-          <h3>🎨 Design</h3>
+          <h3>Design</h3>
           <AppearanceEditor />
         </Panel>
       ) : null}
 
-      <div ref={grid} className={`dash-grid ${editing ? 'editing' : ''}`}>
+      <div ref={grid} className={`dash-grid ${editing ? 'editing' : ''}`} onPointerMove={editing ? undefined : followPointer}>
         {layout.map((w, index) => {
           if (w.hidden || !visible(w.id)) return null;
           const def = widgets[w.id];
@@ -503,7 +514,8 @@ export function Dashboard({ editing }: { editing: boolean }) {
             <div
               key={w.id}
               data-widget={w.id}
-              className={`tile w-${w.size} ${drag?.id === w.id ? 'dragging' : ''} ${drag && drag.over === w.id && drag.id !== w.id ? 'drop-target' : ''}`}
+              className={`tile rise-in w-${w.size} ${drag?.id === w.id ? 'dragging' : ''} ${drag && drag.over === w.id && drag.id !== w.id ? 'drop-target' : ''}`}
+              style={{ ['--delay' as string]: `${staggerDelay(index)}ms` }}
             >
               <div className={`tile-inner h-${w.height} ${editing ? 'editable' : ''}`}>
                 {editing && <EditBar widget={w} def={def} index={index} layout={layout} onChange={save} onDragStart={start(w.id)} />}

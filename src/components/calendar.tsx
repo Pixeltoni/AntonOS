@@ -1062,6 +1062,17 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
     let start: { x: number; y: number; at: number } | null = null;
     let axis: 'x' | 'y' | null = null;
     let dx = 0;
+    // Letzte Fingerpositionen für die Geschwindigkeit am Ende (ein kurzer Schnipser zählt auch nach langem Halten)
+    let trail: { x: number; at: number }[] = [];
+    // Nach dem Wischen kann noch ein Klick auf den Tag bzw. Termin unter dem Finger folgen –
+    // der würde einen Tag auswählen oder einen Termin öffnen, darum kurz schlucken.
+    let swallowUntil = 0;
+    const onClickCapture = (ev: MouseEvent) => {
+      if (Date.now() < swallowUntil) {
+        ev.stopPropagation();
+        ev.preventDefault();
+      }
+    };
     const reset = (animate: boolean) => {
       if (animate && el.animate && !reduceMotion()) {
         el.animate([{ transform: `translateX(${dx}px)` }, { transform: 'translateX(0)' }], { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
@@ -1077,6 +1088,7 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
       start = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, at: Date.now() };
       axis = null;
       dx = 0;
+      trail = [{ x: 0, at: start.at }];
     };
     const onMove = (ev: TouchEvent) => {
       if (!start) return;
@@ -1087,8 +1099,11 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
         axis = Math.abs(x) > Math.abs(y) * 1.2 ? 'x' : 'y';
       }
       if (axis !== 'x') return;
-      ev.preventDefault();
+      if (ev.cancelable) ev.preventDefault();
       dx = x;
+      const now = Date.now();
+      trail.push({ x, at: now });
+      while (trail.length > 2 && now - trail[0].at > 100) trail.shift();
       el.style.transform = `translateX(${x}px)`;
     };
     const onEnd = () => {
@@ -1096,13 +1111,18 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
         start = null;
         return;
       }
-      const velocity = Math.abs(dx) / Math.max(1, Date.now() - start.at);
       start = null;
+      // Auch ein abgebrochenes Wischen soll keinen Tag antippen
+      swallowUntil = Date.now() + 600;
+      const first = trail[0];
+      const recent = first ? (dx - first.x) / Math.max(1, Date.now() - first.at) : 0;
       const w = el.getBoundingClientRect().width;
-      if (Math.abs(dx) < w * 0.22 && velocity < 0.45) {
+      const flick = Math.abs(dx) >= 30 && Math.abs(recent) >= 0.35 && Math.sign(recent) === Math.sign(dx);
+      if (Math.abs(dx) < Math.min(w * 0.2, 90) && !flick) {
         reset(true);
         return;
       }
+      const velocity = Math.max(Math.abs(recent), Math.abs(dx) / 300);
       const dir: -1 | 1 = dx < 0 ? 1 : -1;
       if (!el.animate || reduceMotion()) {
         reset(false);
@@ -1120,15 +1140,15 @@ export function CalendarView({ defaultMode = 'monat', remember = false }: { defa
         out.cancel();
       };
     };
-    const onCancel = () => {
-      if (start && axis === 'x') reset(true);
-      start = null;
-    };
+    // iOS bricht die Berührung ab, wenn es die Geste selbst übernimmt – dann wie ein normales Loslassen behandeln
+    const onCancel = () => onEnd();
+    el.addEventListener('click', onClickCapture, true);
     el.addEventListener('touchstart', onStart, { passive: true });
     el.addEventListener('touchmove', onMove, { passive: false });
     el.addEventListener('touchend', onEnd);
     el.addEventListener('touchcancel', onCancel);
     return () => {
+      el.removeEventListener('click', onClickCapture, true);
       el.removeEventListener('touchstart', onStart);
       el.removeEventListener('touchmove', onMove);
       el.removeEventListener('touchend', onEnd);

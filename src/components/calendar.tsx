@@ -103,7 +103,7 @@ function baseEntries(data: ReturnType<typeof useStore>['data']): (CalendarEntry 
 
 const REMINDED_KEY = 'antonos:erinnert';
 
-/** Erinnert vor Terminen und Vorlesungen – solange AntonOS offen ist (bzw. als App im Hintergrund läuft). */
+/** Erinnert vor Terminen und Vorlesungen – solange Daywerk offen ist (bzw. als App im Hintergrund läuft). */
 export function useEventReminders() {
   const entries = useCalendarEntries();
   const { show } = useToast();

@@ -170,7 +170,7 @@ export function SemesterSettingsForm() {
           <option value={60}>1 Stunde vorher</option>
         </select>
       </label>
-      <p className="muted small full">Ohne Datum nimmt AntonOS den üblichen Semesterbeginn an (1. Oktober bzw. 1. April) und zeigt die Kurszeiten ohne Ende.</p>
+      <p className="muted small full">Ohne Datum nimmt Daywerk den üblichen Semesterbeginn an (1. Oktober bzw. 1. April) und zeigt die Kurszeiten ohne Ende.</p>
     </div>
   );
 }

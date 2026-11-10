@@ -54,7 +54,7 @@ export interface ContractStatus {
   daysLeft: number | null;
 }
 
-/** Ab so vielen Tagen vor der Frist warnt AntonOS */
+/** Ab so vielen Tagen vor der Frist warnt Daywerk */
 export const WARN_DAYS = 30;
 
 export function contractStatus(r: Recurring, on: DateStr): ContractStatus {

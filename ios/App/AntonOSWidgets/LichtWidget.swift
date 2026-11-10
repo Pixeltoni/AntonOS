@@ -16,7 +16,7 @@ struct LichtGeraet: Codable, Hashable {
     /// #RRGGBB, leer = unbekannt
     var color: String
     var brightness: Double
-    /// Nur eigene Gruppen aus AntonOS: die Lampen darin
+    /// Nur eigene Gruppen aus Daywerk: die Lampen darin
     var members: [LichtMitglied]? = nil
 
     var isGroup: Bool { !(members ?? []).isEmpty }
@@ -285,7 +285,7 @@ private struct LichtHint: View {
         VStack(alignment: .leading, spacing: 4) {
             Image(systemName: "lightbulb.2").font(.title3).foregroundStyle(lichtColor)
             Text(noKey ? "Govee verbinden" : "Keine Lampen").font(.caption.weight(.semibold))
-            Text(noKey ? "In AntonOS unter Licht den Schlüssel eintragen." : "In AntonOS unter Licht neu laden.").font(.caption2).foregroundStyle(.secondary)
+            Text(noKey ? "In Daywerk unter Licht den Schlüssel eintragen." : "In Daywerk unter Licht neu laden.").font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }

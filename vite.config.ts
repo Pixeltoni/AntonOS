@@ -25,7 +25,7 @@ function serviceWorker(): Plugin {
     generateBundle(_, bundle) {
       const files = Object.keys(bundle).filter((f) => !f.endsWith('.map') && f !== 'version.json');
       const precache = ['./', ...files.map((f) => `./${f}`), './manifest.webmanifest', './icons/a-192.png', './icons/a-512.png', './icons/a-apple-touch.png', './icons/a-favicon.png'];
-      const source = `/* AntonOS Service Worker – automatisch erzeugt (vite.config.ts) */
+      const source = `/* Daywerk Service Worker – automatisch erzeugt (vite.config.ts) */
 const CACHE = 'antonos-${version}';
 const PRECACHE = ${JSON.stringify([...new Set(precache)])};
 
@@ -75,7 +75,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Tippen auf eine Mitteilung öffnet AntonOS (bzw. holt es in den Vordergrund)
+// Tippen auf eine Mitteilung öffnet Daywerk (bzw. holt es in den Vordergrund)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || './';

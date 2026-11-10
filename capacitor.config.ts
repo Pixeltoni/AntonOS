@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 /** Einstellungen für die iOS-App (Capacitor verpackt den Vite-Build aus `dist/`). */
 const config: CapacitorConfig = {
   appId: 'io.github.pixeltoni.antonos',
-  appName: 'AntonOS',
+  appName: 'Daywerk',
   webDir: 'dist',
   ios: {
     contentInset: 'never',

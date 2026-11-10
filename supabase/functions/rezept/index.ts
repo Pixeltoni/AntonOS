@@ -1,4 +1,4 @@
-// Supabase-Funktion „rezept“: lädt eine Rezeptseite für AntonOS im Browser (dort verhindert CORS das direkte Laden).
+// Supabase-Funktion „rezept“: lädt eine Rezeptseite für Daywerk im Browser (dort verhindert CORS das direkte Laden).
 // Zurück kommen nur die Bausteine für den Import – JSON-LD, ein paar Meta-Angaben und der Titel –,
 // nie die ganze Seite. Gelesen wird das Rezept dann in der App (src/lib/recipeimport.ts).
 // Neu veröffentlichen: über das Supabase-Dashboard oder `supabase functions deploy rezept --no-verify-jwt`.

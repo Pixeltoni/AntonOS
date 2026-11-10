@@ -6,7 +6,7 @@ import { useToast } from './toast';
 
 const REMINDED_KEY = 'antonos:hinweise';
 
-/** Geburtstage, Kündigungsfristen und Reisen: je eine Mitteilung, solange AntonOS offen ist. */
+/** Geburtstage, Kündigungsfristen und Reisen: je eine Mitteilung, solange Daywerk offen ist. */
 export function useLifeReminders() {
   const { data } = useStore();
   const { show } = useToast();

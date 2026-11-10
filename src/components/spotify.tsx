@@ -83,7 +83,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
   const player = useRef<SdkPlayer | null>(null);
-  /** In der App: Was nach dem Öffnen der Spotify-App abgespielt werden soll, sobald AntonOS wieder vorne ist. */
+  /** In der App: Was nach dem Öffnen der Spotify-App abgespielt werden soll, sobald Daywerk wieder vorne ist. */
   const pending = useRef<{ body: Record<string, unknown> | null; at: number; phone?: boolean } | null>(null);
 
   // Rückkehr vom Spotify-Login verarbeiten
@@ -148,7 +148,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Startet die Wiedergabe (body null = fortsetzen). Ist kein Gerät aktiv, sucht AntonOS selbst eins;
+   * Startet die Wiedergabe (body null = fortsetzen). Ist kein Gerät aktiv, sucht Daywerk selbst eins;
    * findet es keins, öffnet es in der App die Spotify-App und spielt nach der Rückkehr weiter.
    */
   const start = useCallback(
@@ -175,7 +175,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       }
       throw new Error(
         isNativeApp()
-          ? 'Spotify ist noch auf keinem Gerät bereit. Tippe in der Spotify-App einmal auf Play, dann übernimmt AntonOS.'
+          ? 'Spotify ist noch auf keinem Gerät bereit. Tippe in der Spotify-App einmal auf Play, dann übernimmt Daywerk.'
           : 'Kein aktives Gerät. Starte die Wiedergabe „Hier im Browser“ oder öffne Spotify auf einem Gerät.',
       );
     },
@@ -250,14 +250,14 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
 
 
   // Web Playback SDK: macht diesen Browser zu einem Spotify-Gerät (nur mit Premium).
-  // In der iOS-App fehlt dem WebView der Kopierschutz dafür – dort steuert AntonOS nur andere Geräte.
+  // In der iOS-App fehlt dem WebView der Kopierschutz dafür – dort steuert Daywerk nur andere Geräte.
   useEffect(() => {
     if (!connected || !clientId || profile?.product !== 'premium' || isNativeApp()) return;
     let cancelled = false;
     const setup = () => {
       if (cancelled || !window.Spotify) return;
       const p = new window.Spotify.Player({
-        name: 'AntonOS',
+        name: 'Daywerk',
         getOAuthToken: (cb) => void accessToken(clientId).then(cb).catch(fail),
         volume: 0.6,
       });
@@ -386,10 +386,10 @@ function Setup() {
   const uri = redirectUri();
   return (
     <div className="col spotify-setup">
-      <p>So verbindest du AntonOS einmalig mit deinem Spotify-Konto:</p>
+      <p>So verbindest du Daywerk einmalig mit deinem Spotify-Konto:</p>
       <ol className="small">
         <li>Öffne das <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer">Spotify Developer Dashboard</a> und melde dich an.</li>
-        <li>Klicke auf <strong>Create app</strong>. Name und Beschreibung sind egal (z. B. „AntonOS“).</li>
+        <li>Klicke auf <strong>Create app</strong>. Name und Beschreibung sind egal (z. B. „Daywerk“).</li>
         <li>
           Trage als <strong>Redirect URI</strong> genau diese Adresse ein:
           <div className="row">
@@ -399,7 +399,7 @@ function Setup() {
         </li>
         {isNativeApp() && (
           <li>
-            Nutzt du AntonOS auch im Browser? Dann trage dort zusätzlich die Adresse ein, die AntonOS im Browser hier anzeigt – eine Spotify-App kann mehrere Redirect URIs haben.
+            Nutzt du Daywerk auch im Browser? Dann trage dort zusätzlich die Adresse ein, die Daywerk im Browser hier anzeigt – eine Spotify-App kann mehrere Redirect URIs haben.
           </li>
         )}
         <li>Wähle bei den APIs <strong>Web API</strong> und <strong>Web Playback SDK</strong> aus und speichere.</li>

@@ -234,7 +234,7 @@ function RecipeGallery({ onImport }: { onImport?: (r: Draft) => void }) {
     <>
       {onImport && <RecipeImport onImport={onImport} />}
       {data.recipes.length > 0 && <input className="recipe-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rezepte oder Zutaten suchen …" aria-label="Rezepte durchsuchen" />}
-      {list.length === 0 ? <Empty>{data.recipes.length ? 'Kein Rezept gefunden.' : 'Noch keine Rezepte. Füg oben einfach den Link zu einem Rezept ein – AntonOS übernimmt Zutaten, Schritte, Zeit und Foto.'}</Empty> : (
+      {list.length === 0 ? <Empty>{data.recipes.length ? 'Kein Rezept gefunden.' : 'Noch keine Rezepte. Füg oben einfach den Link zu einem Rezept ein – Daywerk übernimmt Zutaten, Schritte, Zeit und Foto.'}</Empty> : (
         <div className="gallery">{list.map((r) => <RecipeCard key={r.id} recipe={r} />)}</div>
       )}
     </>

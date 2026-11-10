@@ -58,7 +58,7 @@ export function DegreeGoal() {
   const need = degree.target !== null ? degreeNeed(data.courses, data.grades, degree.ects, degree.target) : null;
   const save = (patch: Partial<typeof degree>) => updateSettings({ degree: { ...degree, ...patch } });
 
-  let text = 'Wähle einen Wunsch-Schnitt, dann rechnet AntonOS rückwärts.';
+  let text = 'Wähle einen Wunsch-Schnitt, dann rechnet Daywerk rückwärts.';
   let tone: Tone = '';
   if (degree.target !== null) {
     const goal = formatGrade(degree.target, 1);
@@ -241,7 +241,7 @@ export function SheetsPanel({ course }: { course: Course }) {
         <AdmissionBar course={course} sheets={sheets} />
       ) : (
         <div className="row between wrap">
-          <span className="muted small">Brauchst du Punkte aus den Übungen für die Klausur? Dann rechnet AntonOS mit, ob du auf Kurs bist.</span>
+          <span className="muted small">Brauchst du Punkte aus den Übungen für die Klausur? Dann rechnet Daywerk mit, ob du auf Kurs bist.</span>
           <button type="button" onClick={() => { update('courses', course.id, { admission: defaultAdmission() }); setEditor({ kind: 'rule' }); }}>Zulassung einrichten</button>
         </div>
       )}

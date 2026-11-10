@@ -52,7 +52,7 @@ function ExamSheet({ initial, id, onClose }: { initial: Draft; id?: ID; onClose:
           value={e.studyHours ?? ''}
           onChange={(x) => set('studyHours', x.target.value === '' ? null : Math.max(0, Math.min(500, Number(x.target.value))))}
         />
-        <span className="muted small">AntonOS verteilt die Zeit in freie Lücken im Kalender und plant jeden Tag neu. Gezählt wird der Fokus-Timer im Lernmodus für den Kurs.</span>
+        <span className="muted small">Daywerk verteilt die Zeit in freie Lücken im Kalender und plant jeden Tag neu. Gezählt wird der Fokus-Timer im Lernmodus für den Kurs.</span>
       </label>
       {id && (
         <button type="button" className="danger" onClick={() => { if (confirm('Prüfung löschen?')) { remove('exams', id); onClose(); } }}>

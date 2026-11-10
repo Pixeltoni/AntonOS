@@ -155,7 +155,7 @@ private struct NoPlanHint: View {
         VStack(alignment: .leading, spacing: 4) {
             Image(systemName: "figure.strengthtraining.functional").font(.title3).foregroundStyle(koerperColor)
             Text("Noch kein Körpertraining").font(.caption.weight(.semibold))
-            Text("In AntonOS unter Training anlegen.").font(.caption2).foregroundStyle(.secondary)
+            Text("In Daywerk unter Training anlegen.").font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }

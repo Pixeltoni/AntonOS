@@ -69,7 +69,7 @@ private func filled(_ text: String?) -> String? {
     return text
 }
 
-/// Knöpfe: öffnen AntonOS und schalten dort den Timer
+/// Knöpfe: öffnen Daywerk und schalten dort den Timer
 private struct FocusButtons: View {
     let state: FocusState
 
@@ -94,7 +94,7 @@ private struct FocusButtons: View {
     }
 }
 
-/// Knöpfe der Satzpause: öffnen AntonOS beim Training und verlängern bzw. beenden dort die Pause
+/// Knöpfe der Satzpause: öffnen Daywerk beim Training und verlängern bzw. beenden dort die Pause
 private struct RestButtons: View {
     var body: some View {
         HStack(spacing: 8) {
@@ -117,7 +117,7 @@ private struct RestButtons: View {
     }
 }
 
-/// Knöpfe der Routine: öffnen AntonOS und haken dort den Schritt ab bzw. geben eine Minute dazu
+/// Knöpfe der Routine: öffnen Daywerk und haken dort den Schritt ab bzw. geben eine Minute dazu
 private struct RoutineButtons: View {
     let state: FocusState
 
@@ -252,7 +252,7 @@ private struct FocusLockView: View {
                 Text(roundText(state)).font(.caption).foregroundStyle(.white.opacity(0.7))
             }
             if stale {
-                Text("Phase vorbei – öffne AntonOS").font(.title3.weight(.semibold))
+                Text("Phase vorbei – öffne Daywerk").font(.title3.weight(.semibold))
             } else {
                 FocusTime(state: state)
                     .font(.system(size: 34, weight: .semibold, design: .rounded).monospacedDigit())

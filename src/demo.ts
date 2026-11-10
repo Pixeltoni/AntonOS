@@ -5,7 +5,7 @@ import { defaultRingGoals } from './lib/rings';
 import { PUSH_PULL_TEMPLATE, SEPARATE_TEMPLATE } from './lib/training';
 
 export const defaultSettings = (): Settings => ({
-  name: 'Anton',
+  name: '',
   cover: '',
   spotifyUrl: '',
   spotifyClientId: '',

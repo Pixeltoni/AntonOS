@@ -310,7 +310,7 @@ function drawImage(week: WeekReview, title: string, weekLabel: string): HTMLCanv
   });
   g.fillStyle = 'rgba(255,255,255,0.8)';
   g.font = '600 34px Inter, -apple-system, sans-serif';
-  g.fillText('🎓 AntonOS', 90, 1270);
+  g.fillText('🎓 Daywerk', 90, 1270);
   return c;
 }
 
@@ -441,7 +441,7 @@ export function Review() {
           <Panel title="Stimmung · 4 Wochen"><MoodCalendar /></Panel>
           <Panel title="💡 Was dir guttut">
             {insights.length === 0 ? (
-              <Empty>Trag ein paar Tage deine Stimmung ein – dann zeigt AntonOS hier, ob Training, Lernen oder Schlaf einen Unterschied machen.</Empty>
+              <Empty>Trag ein paar Tage deine Stimmung ein – dann zeigt Daywerk hier, ob Training, Lernen oder Schlaf einen Unterschied machen.</Empty>
             ) : (
               <ul className="list insights">{insights.map((i) => <li key={i.text}>{i.text}</li>)}</ul>
             )}

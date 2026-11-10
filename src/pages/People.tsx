@@ -136,7 +136,7 @@ export function People() {
             </Panel>
           )}
           <Panel title={`Alle (${data.people.length})`}>
-            {data.people.length === 0 ? <Empty>Noch niemand eingetragen. Tipp auf „+“ und trag Geburtstage von Familie und Freunden ein – AntonOS erinnert dich eine Woche vorher.</Empty> : groups.map((g) => (
+            {data.people.length === 0 ? <Empty>Noch niemand eingetragen. Tipp auf „+“ und trag Geburtstage von Familie und Freunden ein – Daywerk erinnert dich eine Woche vorher.</Empty> : groups.map((g) => (
               <div key={g} className="people-group">
                 <h3>{g}</h3>
                 <ul className="list dense">

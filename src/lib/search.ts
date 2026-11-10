@@ -37,7 +37,7 @@ export function matchScore(query: string, title: string, extra = ''): number {
   return score;
 }
 
-/** Durchsucht alle Bereiche von AntonOS. */
+/** Durchsucht alle Bereiche von Daywerk. */
 export function searchAll(data: Data, query: string, pages: NavItem[], limitPerGroup = 5): SearchHit[] {
   if (!query.trim()) return [];
   const hits: SearchHit[] = [];

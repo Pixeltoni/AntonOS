@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>de</string>
 	<key>CFBundleDisplayName</key>
-        <string>AntonOS</string>
+        <string>Daywerk</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -59,25 +59,25 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSCameraUsageDescription</key>
-	<string>AntonOS nutzt die Kamera, wenn du ein Foto aufnehmen und hinzufügen möchtest.</string>
+	<string>Daywerk nutzt die Kamera, wenn du ein Foto aufnehmen und hinzufügen möchtest.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>AntonOS braucht Zugriff auf deine Fotos, wenn du ein Bild hinzufügen möchtest.</string>
+	<string>Daywerk braucht Zugriff auf deine Fotos, wenn du ein Bild hinzufügen möchtest.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>AntonOS nutzt das Mikrofon für die Spracheingabe der Assistentin.</string>
+	<string>Daywerk nutzt das Mikrofon für die Spracheingabe der Assistentin.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>AntonOS wandelt deine Sprache in Text um, damit die Assistentin dich versteht.</string>
+	<string>Daywerk wandelt deine Sprache in Text um, damit die Assistentin dich versteht.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>AntonOS zählt beim Wecker, wie oft du das Handy schüttelst, damit du wach wirst.</string>
+	<string>Daywerk zählt beim Wecker, wie oft du das Handy schüttelst, damit du wach wirst.</string>
 	<key>NSAlarmKitUsageDescription</key>
-	<string>AntonOS stellt deine Wecker als echte iPhone-Wecker, damit sie auch im Lautlos-Modus und bei „Nicht stören“ laut klingeln.</string>
+	<string>Daywerk stellt deine Wecker als echte iPhone-Wecker, damit sie auch im Lautlos-Modus und bei „Nicht stören“ laut klingeln.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>AntonOS sperrt mit Face ID private Bereiche wie Finanzen und Tagebuch.</string>
+	<string>Daywerk sperrt mit Face ID private Bereiche wie Finanzen und Tagebuch.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>AntonOS liest Workouts, Schritte und Schlaf aus Apple Health – für den Bewegungsring und dein Stimmungstagebuch.</string>
+	<string>Daywerk liest Workouts, Schritte und Schlaf aus Apple Health – für den Bewegungsring und dein Stimmungstagebuch.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>AntonOS schreibt nichts in Apple Health.</string>
+	<string>Daywerk schreibt nichts in Apple Health.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>AntonOS erinnert dich, wenn du an einem gespeicherten Ort ankommst – zum Beispiel an die Einkaufsliste im Supermarkt.</string>
+	<string>Daywerk erinnert dich, wenn du an einem gespeicherten Ort ankommst – zum Beispiel an die Einkaufsliste im Supermarkt.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>

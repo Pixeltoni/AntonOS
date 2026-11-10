@@ -7,7 +7,7 @@ export const SCHEMA_VERSION = 13;
 /** Build-Kennung, wird beim Bauen gesetzt (siehe vite.config.ts). */
 export const APP_VERSION: string = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 
-/** Wurde der Cloud-Stand von einer neueren AntonOS-Version gespeichert? */
+/** Wurde der Cloud-Stand von einer neueren Daywerk-Version gespeichert? */
 export function isNewerSchema(remote: unknown): boolean {
   if (!remote || typeof remote !== 'object') return false;
   const v = (remote as { schemaVersion?: unknown }).schemaVersion;

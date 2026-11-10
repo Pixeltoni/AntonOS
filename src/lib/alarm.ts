@@ -491,7 +491,7 @@ export function nativeAlarms(alarms: Alarm[], now = new Date()): NativeAlarm[] {
 
 /**
  * Wie lange das iPhone nach „Stopp“ still bleibt, bevor es wieder klingelt.
- * Während der Aufgabe: Restzeit plus Puffer, damit das offene AntonOS zuerst klingelt.
+ * Während der Aufgabe: Restzeit plus Puffer, damit das offene Daywerk zuerst klingelt.
  */
 export const nativeRingAgainSeconds = (phase: 'klingelt' | 'aufgabe' | 'schlummert', secondsLeft: number) =>
   phase === 'aufgabe' ? Math.max(0, secondsLeft) + 15 : phase === 'schlummert' ? Math.max(5, secondsLeft) : 30;

@@ -112,7 +112,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       const last = r.finished[r.finished.length - 1];
       chime();
       show(`${focusMode(r.timer.config.mode).icon} ${NEXT_TEXT[last.next]}`, undefined, 6000);
-      if (document.hidden) void notify('AntonOS Fokus', NEXT_TEXT[last.next], 'fokus');
+      if (document.hidden) void notify('Daywerk Fokus', NEXT_TEXT[last.next], 'fokus');
     };
     step();
     const id = setInterval(step, 500);
@@ -125,7 +125,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
 
   // Restzeit im Tab-Titel
   useEffect(() => {
-    document.title = timer.active ? `${mmss(left)} · ${timer.phase === 'fokus' ? focusMode(timer.config.mode).label : 'Pause'}` : 'AntonOS';
+    document.title = timer.active ? `${mmss(left)} · ${timer.phase === 'fokus' ? focusMode(timer.config.mode).label : 'Pause'}` : 'Daywerk';
   }, [timer.active, timer.phase, timer.config.mode, left]);
 
   const value: FocusCtx = {

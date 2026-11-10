@@ -145,7 +145,7 @@ function RingGoalsForm() {
     set({ reminder: on });
     if (on) {
       const result = await askNotifications();
-      if (result !== 'granted') show('Ohne Mitteilungen erinnert dich AntonOS mit einem Hinweis in der App.');
+      if (result !== 'granted') show('Ohne Mitteilungen erinnert dich Daywerk mit einem Hinweis in der App.');
     }
   };
   return (
@@ -189,7 +189,7 @@ function RingGoalsForm() {
       </label>
       <p className="muted small full">
         Lernen und Fokuszeit kommen automatisch aus dem Fokus-Timer, Bewegung aus erledigten Trainings (ohne Dauer zählt ein Training mit 30 Minuten),
-        Aufgaben aus heute erledigten Aufgaben. Eine einzelne Gewohnheit nutzt ihr eigenes Tagesziel. Die Erinnerung kommt, solange AntonOS geöffnet ist.
+        Aufgaben aus heute erledigten Aufgaben. Eine einzelne Gewohnheit nutzt ihr eigenes Tagesziel. Die Erinnerung kommt, solange Daywerk geöffnet ist.
       </p>
     </div>
   );

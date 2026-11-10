@@ -21,7 +21,7 @@ export function LockPanel() {
   const name = kind === 'touchID' ? 'Touch ID' : kind === 'opticID' ? 'Optic ID' : 'Face ID';
   const toggle = async (enabled: boolean) => {
     if (enabled) {
-      const { ok } = await extras((p) => p.authenticate({ reason: `${name} für AntonOS einschalten` }), { ok: false });
+      const { ok } = await extras((p) => p.authenticate({ reason: `${name} für Daywerk einschalten` }), { ok: false });
       if (!ok) return show(kind === 'none' ? 'Auf diesem iPhone ist kein Code bzw. Face ID eingerichtet.' : `${name} hat nicht geklappt.`);
     }
     updateSettings({ lock: { ...lock, enabled } });
@@ -46,7 +46,7 @@ export function LockPanel() {
           ))}
         </div>
       )}
-      <p className="muted small">Gesperrte Bereiche öffnen sich nach {name} und bleiben offen, bis AntonOS eine Minute im Hintergrund war. Auch die Suche zeigt sie erst danach.</p>
+      <p className="muted small">Gesperrte Bereiche öffnen sich nach {name} und bleiben offen, bis Daywerk eine Minute im Hintergrund war. Auch die Suche zeigt sie erst danach.</p>
     </div>
   );
 }
@@ -82,7 +82,7 @@ export function HealthPanel() {
             {health.lastSync ? `Zuletzt abgeglichen ${new Date(health.lastSync).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr` : 'Wird beim nächsten Öffnen abgeglichen'}
             {todayValues ? ` · heute ${stepsLabel(todayValues.steps)} Schritte` : ''}
           </p>
-          <p className="muted small">Was AntonOS lesen darf, legst du in der Health-App fest (Teilen → Apps → AntonOS). AntonOS schreibt nichts in Health.</p>
+          <p className="muted small">Was Daywerk lesen darf, legst du in der Health-App fest (Teilen → Apps → Daywerk). Daywerk schreibt nichts in Health.</p>
           <button type="button" onClick={() => updateSettings({ health: { ...health, enabled: false } })}>Trennen</button>
         </>
       ) : (
@@ -117,7 +117,7 @@ export function PlacesPanel() {
 
   const add = async (here: boolean) => {
     const { state } = await extras((p) => p.locationStatus({ ask: true }), { state: 'unavailable' as NativePermission });
-    if (state !== 'granted') return show('AntonOS darf deinen Standort nicht nutzen – in den iPhone-Einstellungen unter AntonOS → Standort erlauben.', undefined, 8000);
+    if (state !== 'granted') return show('Daywerk darf deinen Standort nicht nutzen – in den iPhone-Einstellungen unter Daywerk → Standort erlauben.', undefined, 8000);
     setBusy(true);
     try {
       if (here) {
@@ -177,12 +177,12 @@ export function SiriPanel() {
     <div className="iphone-stack small">
       <p>Sag zum Beispiel:</p>
       <ul className="siri-phrases">
-        <li>„Hey Siri, <b>AntonOS eintragen</b>“ – dann einen Satz wie bei der Assistentin („Zahnarzt Freitag 10 Uhr“, „12 € für Pizza“)</li>
-        <li>„Hey Siri, <b>AntonOS Einkaufsliste</b>“ – „Milch und Eier“, ohne die App zu öffnen</li>
-        <li>„Hey Siri, <b>AntonOS Fokus starten</b>“</li>
-        <li>„Hey Siri, <b>Tag abschließen mit AntonOS</b>“</li>
+        <li>„Hey Siri, <b>Daywerk eintragen</b>“ – dann einen Satz wie bei der Assistentin („Zahnarzt Freitag 10 Uhr“, „12 € für Pizza“)</li>
+        <li>„Hey Siri, <b>Daywerk Einkaufsliste</b>“ – „Milch und Eier“, ohne die App zu öffnen</li>
+        <li>„Hey Siri, <b>Daywerk Fokus starten</b>“</li>
+        <li>„Hey Siri, <b>Tag abschließen mit Daywerk</b>“</li>
       </ul>
-      <p className="muted">Alles davon findest du auch in der Kurzbefehle-App und kannst es auf die Aktionstaste legen (Einstellungen → Aktionstaste → Kurzbefehl → AntonOS).</p>
+      <p className="muted">Alles davon findest du auch in der Kurzbefehle-App und kannst es auf die Aktionstaste legen (Einstellungen → Aktionstaste → Kurzbefehl → Daywerk).</p>
     </div>
   );
 }

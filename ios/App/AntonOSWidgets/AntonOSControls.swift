@@ -13,7 +13,7 @@ struct QuickAddControl: ControlWidget {
             }
         }
         .displayName("Schnell-Eintrag")
-        .description("Öffnet AntonOS direkt mit der Assistentin zum Eintragen.")
+        .description("Öffnet Daywerk direkt mit der Assistentin zum Eintragen.")
     }
 }
 
@@ -26,6 +26,6 @@ struct FocusControl: ControlWidget {
             }
         }
         .displayName("Fokus starten")
-        .description("Öffnet AntonOS und startet eine Fokus-Sitzung.")
+        .description("Öffnet Daywerk und startet eine Fokus-Sitzung.")
     }
 }

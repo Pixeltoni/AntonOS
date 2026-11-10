@@ -1,7 +1,7 @@
 import Foundation
 import AppIntents
 
-/// Warteschlange zwischen Siri bzw. Kurzbefehlen und AntonOS: Die Intents legen Einträge ab,
+/// Warteschlange zwischen Siri bzw. Kurzbefehlen und Daywerk: Die Intents legen Einträge ab,
 /// die Web-App holt sie über `AntonExtras.takeIntents` (src/components/extras.tsx) ab.
 enum IntentQueue {
     static let key = "antonIntents.queue"
@@ -25,10 +25,10 @@ enum IntentQueue {
     }
 }
 
-/// „Hey Siri, AntonOS eintragen“ – ein Satz wie bei der Assistentin. Öffnet AntonOS mit dem Ergebnis zum Prüfen.
+/// „Hey Siri, Daywerk eintragen“ – ein Satz wie bei der Assistentin. Öffnet Daywerk mit dem Ergebnis zum Prüfen.
 @available(iOS 17.0, *)
 struct AddToAntonOSIntent: AppIntent {
-    static let title: LocalizedStringResource = "In AntonOS eintragen"
+    static let title: LocalizedStringResource = "In Daywerk eintragen"
     static let description = IntentDescription("Ein Satz wie bei der Assistentin: Aufgabe, Erinnerung, Termin, Ausgabe, Einkauf, Gewohnheit oder Notiz.")
     static let openAppWhenRun: Bool = true
 
@@ -43,11 +43,11 @@ struct AddToAntonOSIntent: AppIntent {
     }
 }
 
-/// „Hey Siri, AntonOS Einkaufsliste“ – ohne die App zu öffnen.
+/// „Hey Siri, Daywerk Einkaufsliste“ – ohne die App zu öffnen.
 @available(iOS 17.0, *)
 struct AddShoppingIntent: AppIntent {
     static let title: LocalizedStringResource = "Auf die Einkaufsliste"
-    static let description = IntentDescription("Setzt Sachen auf die Einkaufsliste von AntonOS, z. B. „Milch, 6 Eier“.")
+    static let description = IntentDescription("Setzt Sachen auf die Einkaufsliste von Daywerk, z. B. „Milch, 6 Eier“.")
 
     @Parameter(title: "Sachen", requestValueDialog: IntentDialog("Was brauchst du?"))
     var items: String
@@ -64,7 +64,7 @@ struct AddShoppingIntent: AppIntent {
 @available(iOS 17.0, *)
 struct StartFocusIntent: AppIntent {
     static let title: LocalizedStringResource = "Fokus starten"
-    static let description = IntentDescription("Öffnet AntonOS und startet den Fokus-Timer.")
+    static let description = IntentDescription("Öffnet Daywerk und startet den Fokus-Timer.")
     static let openAppWhenRun: Bool = true
 
     init() {}

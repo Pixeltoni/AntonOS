@@ -73,7 +73,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const version = useRef(0);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const queue = useRef<Promise<void>>(Promise.resolve());
-  /** Die Cloud wurde von einer neueren AntonOS-Version gespeichert: nichts mehr hochladen */
+  /** Die Cloud wurde von einer neueren Daywerk-Version gespeichert: nichts mehr hochladen */
   const outdated = useRef(false);
 
   const setMeta = useCallback((patch: Partial<SyncMeta>) => {

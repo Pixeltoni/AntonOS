@@ -158,7 +158,7 @@ export function FeedsPanel() {
         <button type="submit" className="primary" disabled={!url.trim() || busy === 'neu'}>{busy === 'neu' ? 'Lädt …' : 'Abonnieren'}</button>
       </form>
       <p className="muted small">
-        Den Link findest du meist im Campus-Portal oder in Moodle unter „Kalender exportieren“ bzw. „Abonnieren“. AntonOS lädt ihn alle drei Stunden neu – Änderungen an Räumen oder Zeiten kommen so von selbst.
+        Den Link findest du meist im Campus-Portal oder in Moodle unter „Kalender exportieren“ bzw. „Abonnieren“. Daywerk lädt ihn alle drei Stunden neu – Änderungen an Räumen oder Zeiten kommen so von selbst.
         {!isNativeApp() && ' Im Browser blockieren manche Server den Abruf; in der iPhone-App klappt es immer.'}
       </p>
     </div>

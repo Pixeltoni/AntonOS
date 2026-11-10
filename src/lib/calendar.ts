@@ -210,7 +210,7 @@ export function dueReminders(entries: (CalendarEntry & { remind?: number | null 
 
 /**
  * Aufgaben mit Erinnerung, deren Uhrzeit erreicht ist – bis zu einer Stunde danach,
- * falls AntonOS genau zur Uhrzeit geschlossen war.
+ * falls Daywerk genau zur Uhrzeit geschlossen war.
  */
 export function dueTaskReminders<T extends Pick<Task, 'due' | 'dueTime' | 'remind' | 'status'>>(tasks: T[], now: Date): T[] {
   return tasks.filter((t) => {

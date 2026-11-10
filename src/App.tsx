@@ -199,7 +199,7 @@ function Shell() {
         <div className="brand">
           <span className="brand-name">
             <span className="nav-icon" aria-hidden><Logo /></span>
-            <span className="nav-text">AntonOS</span>
+            <span className="nav-text">Daywerk</span>
           </span>
           <button className="icon search-toggle assistant-toggle" onClick={openAssistant} aria-label="Assistentin"><Icon icon={PAGE_ICONS.assistentin} size={22} /></button>
           <button className="icon search-toggle" onClick={openSpotlight} aria-label="Suchen"><Icon icon={PAGE_ICONS.suche} size={22} /></button>

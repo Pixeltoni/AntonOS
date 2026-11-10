@@ -23,8 +23,12 @@ enum AlarmStore {
     static let defaults = UserDefaults.standard
     /// AlarmKit-ID → Wecker-ID aus AntonOS
     static let mapKey = "antonAlarm.map"
-    /// AlarmKit-ID des Nachklingelns (läuft, bis die Aufgabe gelöst ist)
+    /// AlarmKit-IDs des Nachklingelns (läuft, bis die Aufgabe gelöst ist) – früher eine einzelne ID
     static let fallbackKey = "antonAlarm.fallback"
+    /// AlarmKit-ID → Einstellungen, mit denen der Wecker gestellt wurde (damit Abgleichen nichts unnötig neu stellt)
+    static let signatureKey = "antonAlarm.signatures"
+    /// Wecker, die beim Abgleichen gerade klingelten und danach nicht mehr gebraucht werden
+    static let staleKey = "antonAlarm.stale"
     /// Gestoppter Wecker, dessen Aufgabe noch offen ist: { id, at }
     static let pendingKey = "antonAlarm.pending"
     static let stoppedNotification = Notification.Name("antonAlarmStopped")
@@ -48,8 +52,26 @@ enum AlarmStore {
         set { defaults.set(newValue, forKey: mapKey) }
     }
 
-    static func markStopped(alarmID: String) {
-        let jsId = map[alarmID] ?? ""
+    static var fallbacks: [String] {
+        get {
+            if let list = defaults.stringArray(forKey: fallbackKey) { return list }
+            if let one = defaults.string(forKey: fallbackKey) { return [one] }
+            return []
+        }
+        set { defaults.set(newValue, forKey: fallbackKey) }
+    }
+
+    static var signatures: [String: String] {
+        get { defaults.dictionary(forKey: signatureKey) as? [String: String] ?? [:] }
+        set { defaults.set(newValue, forKey: signatureKey) }
+    }
+
+    static var stale: Set<String> {
+        get { Set(defaults.stringArray(forKey: staleKey) ?? []) }
+        set { defaults.set(Array(newValue), forKey: staleKey) }
+    }
+
+    static func markStopped(jsId: String) {
         defaults.set(["id": jsId, "at": Date().timeIntervalSince1970 * 1000, "snoozes": snoozes(jsId)], forKey: pendingKey)
     }
 }
@@ -57,6 +79,25 @@ enum AlarmStore {
 #if canImport(AlarmKit)
 @available(iOS 26.0, *)
 struct AntonAlarmMetadata: AlarmMetadata {}
+
+/// Führt alle Änderungen an den iPhone-Weckern nacheinander aus. Liefen sie gleichzeitig (Abgleich aus der App,
+/// „Stopp“ am Sperrbildschirm, Nachklingeln), überschrieben sie sich gegenseitig: Wecker wurden doppelt
+/// gestellt oder ein Nachklingeln ging verloren und klingelte noch nach dem Lösen der Aufgabe.
+@available(iOS 26.0, *)
+actor AlarmQueue {
+    static let shared = AlarmQueue()
+    private var last: Task<Void, Never>?
+
+    func run<T>(_ work: @escaping () async -> T) async -> T {
+        let previous = last
+        let task = Task { () async -> T in
+            await previous?.value
+            return await work()
+        }
+        last = Task { _ = await task.value }
+        return await task.value
+    }
+}
 
 @available(iOS 26.0, *)
 enum AlarmScheduler {
@@ -82,10 +123,16 @@ enum AlarmScheduler {
     /// Weckton: erster vorhandener aus „a.wav|b.wav“ – aus dem App-Paket (Standardtöne) oder
     /// Library/Sounds (eigene Lieder), sonst der iPhone-Weckton
     static func alertSound(_ names: String?) -> AlertConfiguration.AlertSound {
-        for name in (names ?? "").split(separator: "|").map(String.init) where !name.isEmpty {
-            if Bundle.main.url(forResource: name, withExtension: nil) != nil || SoundFiles.exists(name) { return .named(name) }
-        }
+        if let name = soundName(names) { return .named(name) }
         return .default
+    }
+
+    /// Name des Tons, der tatsächlich klingelt – nil = iPhone-Weckton
+    static func soundName(_ names: String?) -> String? {
+        for name in (names ?? "").split(separator: "|").map(String.init) where !name.isEmpty {
+            if Bundle.main.url(forResource: name, withExtension: nil) != nil || SoundFiles.exists(name) { return name }
+        }
+        return nil
     }
 
     static func schedule(id: UUID, title: String, schedule: Alarm.Schedule, withTask: Bool = true, snooze: Int = 0, snoozeMax: Int = 3, sound: String? = nil) async throws {
@@ -101,7 +148,7 @@ enum AlarmScheduler {
             countdownDuration: nil,
             schedule: schedule,
             attributes: attributes(title: title, withTask: withTask, snooze: snooze > 0),
-            stopIntent: withTask ? AntonAlarmStopIntent(alarmID: id.uuidString, sound: sound ?? "") : nil,
+            stopIntent: withTask ? AntonAlarmStopIntent(alarmID: id.uuidString, sound: sound ?? "") : AntonAlarmDoneIntent(alarmID: id.uuidString),
             secondaryIntent: secondary,
             sound: alertSound(sound)
         )
@@ -115,7 +162,7 @@ enum AlarmScheduler {
         var map = AlarmStore.map
         map[id.uuidString] = jsId
         AlarmStore.map = map
-        AlarmStore.defaults.set(id.uuidString, forKey: AlarmStore.fallbackKey)
+        AlarmStore.fallbacks = [id.uuidString]
         try await schedule(id: id, title: title, schedule: .fixed(Date().addingTimeInterval(max(5, seconds))), withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound)
     }
 
@@ -126,22 +173,43 @@ enum AlarmScheduler {
         if count >= maxCount {
             // Genug geschlummert: mit Aufgabe wie „Stopp“, sonst gleich wieder klingeln – ohne Schlummern
             if withTask { return await handleStop(alarmID: alarmID, notify: true, sound: sound) }
-            try? AlarmManager.shared.stop(id: UUID(uuidString: alarmID) ?? UUID())
+            silence(alarmID)
             try? await ringAgain(in: 5, jsId: jsId, title: title, withTask: false, sound: sound)
             return
         }
-        try? AlarmManager.shared.stop(id: UUID(uuidString: alarmID) ?? UUID())
+        silence(alarmID)
         AlarmStore.setSnoozes(jsId, count + 1)
         try? await ringAgain(in: TimeInterval(seconds), jsId: jsId, title: title, withTask: withTask, snooze: seconds, snoozeMax: maxCount, sound: sound)
     }
 
+    /// Streicht jedes geplante Nachklingeln
     static func cancelFallback() {
-        guard let old = AlarmStore.defaults.string(forKey: AlarmStore.fallbackKey), let uuid = UUID(uuidString: old) else { return }
-        try? AlarmManager.shared.cancel(id: uuid)
+        let old = AlarmStore.fallbacks
+        guard !old.isEmpty else { return }
         var map = AlarmStore.map
-        map.removeValue(forKey: old)
+        for id in old {
+            if let uuid = UUID(uuidString: id) { try? AlarmManager.shared.cancel(id: uuid) }
+            map.removeValue(forKey: id)
+        }
         AlarmStore.map = map
         AlarmStore.defaults.removeObject(forKey: AlarmStore.fallbackKey)
+    }
+
+    /// Wecker verstummen lassen. Ein beim Abgleichen nur behaltener (veralteter) Wecker wird ganz gelöscht –
+    /// sonst stellt iOS ihn als Wiederholung neu und er klingelt doppelt.
+    static func silence(_ alarmID: String) {
+        guard let uuid = UUID(uuidString: alarmID) else { return }
+        var stale = AlarmStore.stale
+        if stale.contains(alarmID) {
+            try? AlarmManager.shared.cancel(id: uuid)
+            stale.remove(alarmID)
+            AlarmStore.stale = stale
+            var map = AlarmStore.map
+            map.removeValue(forKey: alarmID)
+            AlarmStore.map = map
+        } else {
+            try? AlarmManager.shared.stop(id: uuid)
+        }
     }
 
     static func weekday(_ n: Int) -> Locale.Weekday? {
@@ -160,8 +228,8 @@ enum AlarmScheduler {
     /// Nach „Stopp“ oder „Aufgabe lösen“: Aufgabe merken und Nachklingeln planen.
     static func handleStop(alarmID: String, notify: Bool, sound: String = "") async {
         let jsId = AlarmStore.map[alarmID] ?? ""
-        try? AlarmManager.shared.stop(id: UUID(uuidString: alarmID) ?? UUID())
-        AlarmStore.markStopped(alarmID: alarmID)
+        silence(alarmID)
+        AlarmStore.markStopped(jsId: jsId)
         try? await ringAgain(in: afterStopSeconds, jsId: jsId, title: "Wecker – Aufgabe noch offen", sound: sound)
         NotificationCenter.default.post(name: AlarmStore.stoppedNotification, object: nil)
         if notify {
@@ -192,7 +260,30 @@ struct AntonAlarmStopIntent: LiveActivityIntent {
     init(alarmID: String, sound: String = "") { self.alarmID = alarmID; self.sound = sound }
 
     func perform() async throws -> some IntentResult {
-        await AlarmScheduler.handleStop(alarmID: alarmID, notify: true, sound: sound)
+        let alarmID = alarmID, sound = sound
+        await AlarmQueue.shared.run { await AlarmScheduler.handleStop(alarmID: alarmID, notify: true, sound: sound) }
+        return .result()
+    }
+}
+
+/// „Stopp“ bei einem Wecker ohne Aufgabe: aus – ein veralteter Wecker wird dabei ganz gelöscht.
+@available(iOS 26.0, *)
+struct AntonAlarmDoneIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Wecker ausschalten"
+    static var isDiscoverable: Bool = false
+
+    @Parameter(title: "Wecker")
+    var alarmID: String
+
+    init() { alarmID = "" }
+    init(alarmID: String) { self.alarmID = alarmID }
+
+    func perform() async throws -> some IntentResult {
+        let alarmID = alarmID
+        await AlarmQueue.shared.run {
+            AlarmScheduler.silence(alarmID)
+            AlarmStore.fallbacks = AlarmStore.fallbacks.filter { $0 != alarmID }
+        }
         return .result()
     }
 }
@@ -235,7 +326,10 @@ struct AntonAlarmSnoozeIntent: LiveActivityIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        await AlarmScheduler.handleSnooze(alarmID: alarmID, title: alarmTitle, withTask: withTask, seconds: seconds, maxCount: maxCount, sound: sound)
+        let alarmID = alarmID, title = alarmTitle, withTask = withTask, seconds = seconds, maxCount = maxCount, sound = sound
+        await AlarmQueue.shared.run {
+            await AlarmScheduler.handleSnooze(alarmID: alarmID, title: title, withTask: withTask, seconds: seconds, maxCount: maxCount, sound: sound)
+        }
         return .result()
     }
 }
@@ -257,7 +351,8 @@ struct AntonAlarmOpenIntent: LiveActivityIntent {
     init(alarmID: String, sound: String = "") { self.alarmID = alarmID; self.sound = sound }
 
     func perform() async throws -> some IntentResult {
-        await AlarmScheduler.handleStop(alarmID: alarmID, notify: false, sound: sound)
+        let alarmID = alarmID, sound = sound
+        await AlarmQueue.shared.run { await AlarmScheduler.handleStop(alarmID: alarmID, notify: false, sound: sound) }
         return .result()
     }
 }
@@ -327,46 +422,7 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
         if #available(iOS 26.0, *) {
             let list = call.getArray("alarms", JSObject.self) ?? []
             Task {
-                let fallback = AlarmStore.defaults.string(forKey: AlarmStore.fallbackKey)
-                let oldMap = AlarmStore.map
-                var map: [String: String] = [:]
-                if let fallback, let jsId = oldMap[fallback] { map[fallback] = jsId }
-                for alarm in (try? AlarmManager.shared.alarms) ?? [] where alarm.id.uuidString != fallback {
-                    // Ein gerade klingelnder Wecker bleibt – sonst verstummt er ohne Aufgabe
-                    if alarm.state == .alerting {
-                        if let jsId = oldMap[alarm.id.uuidString] { map[alarm.id.uuidString] = jsId }
-                        continue
-                    }
-                    try? AlarmManager.shared.cancel(id: alarm.id)
-                }
-                var failed = 0
-                for item in list {
-                    guard let jsId = item["id"] as? String, let hour = (item["hour"] as? NSNumber)?.intValue, let minute = (item["minute"] as? NSNumber)?.intValue else { continue }
-                    let title = item["title"] as? String ?? "Wecker"
-                    let withTask = item["task"] as? Bool ?? true
-                    let snooze = (item["snooze"] as? NSNumber)?.intValue ?? 0
-                    let snoozeMax = (item["snoozeMax"] as? NSNumber)?.intValue ?? 3
-                    let sound = item["sound"] as? String
-                    let days = (item["days"] as? JSArray ?? []).compactMap { ($0 as? NSNumber)?.intValue }.compactMap(AlarmScheduler.weekday)
-                    let schedule: Alarm.Schedule
-                    if let at = (item["at"] as? NSNumber)?.doubleValue {
-                        // Fester Termin (bestimmtes Datum, Überspringen oder Pause)
-                        let date = Date(timeIntervalSince1970: at / 1000)
-                        if date <= Date() { continue }
-                        schedule = .fixed(date)
-                    } else {
-                        let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
-                        schedule = .relative(.init(time: time, repeats: days.isEmpty ? .never : .weekly(days)))
-                    }
-                    let id = UUID()
-                    do {
-                        try await AlarmScheduler.schedule(id: id, title: title, schedule: schedule, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound)
-                        map[id.uuidString] = jsId
-                    } catch {
-                        failed += 1
-                    }
-                }
-                AlarmStore.map = map
+                let failed = await AlarmQueue.shared.run { await Self.syncAlarms(list) }
                 call.resolve(["state": Self.stateName(), "failed": failed])
             }
             return
@@ -374,6 +430,92 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
         #endif
         call.resolve(["state": "unavailable", "failed": 0])
     }
+
+    #if canImport(AlarmKit)
+    /// Gleicht die iPhone-Wecker mit der Liste ab: Unveränderte bleiben stehen, nur Neues wird gestellt und
+    /// Überflüssiges gelöscht. Gibt zurück, wie viele sich nicht stellen ließen.
+    @available(iOS 26.0, *)
+    private static func syncAlarms(_ list: [JSObject]) async -> Int {
+        let fallbacks = Set(AlarmStore.fallbacks)
+        let oldMap = AlarmStore.map
+        let oldSignatures = AlarmStore.signatures
+        var stale = AlarmStore.stale
+        var map: [String: String] = [:]
+        var signatures: [String: String] = [:]
+        for id in fallbacks { if let jsId = oldMap[id] { map[id] = jsId } }
+
+        // Gewünschte Wecker mit ihren Einstellungen (als Text zum Vergleichen)
+        struct Wanted { let jsId: String; let title: String; let withTask: Bool; let snooze: Int; let snoozeMax: Int; let sound: String?; let schedule: Alarm.Schedule; let signature: String }
+        var wanted: [Wanted] = []
+        for item in list {
+            guard let jsId = item["id"] as? String, let hour = (item["hour"] as? NSNumber)?.intValue, let minute = (item["minute"] as? NSNumber)?.intValue else { continue }
+            let title = item["title"] as? String ?? "Wecker"
+            let withTask = item["task"] as? Bool ?? true
+            let snooze = (item["snooze"] as? NSNumber)?.intValue ?? 0
+            let snoozeMax = (item["snoozeMax"] as? NSNumber)?.intValue ?? 3
+            let sound = item["sound"] as? String
+            let dayNumbers = (item["days"] as? JSArray ?? []).compactMap { ($0 as? NSNumber)?.intValue }
+            let days = dayNumbers.compactMap(AlarmScheduler.weekday)
+            let schedule: Alarm.Schedule
+            var when = "\(hour):\(minute)/\(dayNumbers.map(String.init).joined(separator: ","))"
+            if let at = (item["at"] as? NSNumber)?.doubleValue {
+                // Fester Termin (bestimmtes Datum, Überspringen oder Pause)
+                let date = Date(timeIntervalSince1970: at / 1000)
+                if date <= Date() { continue }
+                schedule = .fixed(date)
+                when = "@\(Int(at))"
+            } else {
+                let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
+                schedule = .relative(.init(time: time, repeats: days.isEmpty ? .never : .weekly(days)))
+            }
+            // Auch der tatsächlich gefundene Ton zählt – ein neu gespeichertes Lied stellt den Wecker neu
+            let tone = AlarmScheduler.soundName(sound) ?? "standard"
+            let signature = [jsId, when, title, withTask ? "aufgabe" : "", "\(snooze)x\(snoozeMax)", tone].joined(separator: "|")
+            wanted.append(Wanted(jsId: jsId, title: title, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound, schedule: schedule, signature: signature))
+        }
+
+        var open = wanted
+        for alarm in (try? AlarmManager.shared.alarms) ?? [] {
+            let key = alarm.id.uuidString
+            if fallbacks.contains(key) { continue }
+            // Unverändert: stehen lassen (auch während er klingelt)
+            if let signature = oldSignatures[key], let index = open.firstIndex(where: { $0.signature == signature }), !stale.contains(key) {
+                map[key] = open[index].jsId
+                signatures[key] = signature
+                open.remove(at: index)
+                continue
+            }
+            // Ein gerade klingelnder Wecker bleibt – sonst verstummt er ohne Aufgabe. Beim Ausschalten wird er gelöscht,
+            // damit er nicht neben dem neu gestellten weiterläuft und doppelt klingelt.
+            if alarm.state == .alerting {
+                if let jsId = oldMap[key] { map[key] = jsId }
+                stale.insert(key)
+                continue
+            }
+            try? AlarmManager.shared.cancel(id: alarm.id)
+            stale.remove(key)
+        }
+        // Nicht mehr vorhandene Wecker aus der Liste der veralteten streichen
+        let existing = Set(((try? AlarmManager.shared.alarms) ?? []).map { $0.id.uuidString })
+        stale = stale.intersection(existing)
+
+        var failed = 0
+        for item in open {
+            let id = UUID()
+            do {
+                try await AlarmScheduler.schedule(id: id, title: item.title, schedule: item.schedule, withTask: item.withTask, snooze: item.snooze, snoozeMax: item.snoozeMax, sound: item.sound)
+                map[id.uuidString] = item.jsId
+                signatures[id.uuidString] = item.signature
+            } catch {
+                failed += 1
+            }
+        }
+        AlarmStore.map = map
+        AlarmStore.signatures = signatures
+        AlarmStore.stale = stale
+        return failed
+    }
+    #endif
 
     /// Nachklingeln in `seconds` Sekunden (verschiebt ein schon geplantes)
     @objc func ringIn(_ call: CAPPluginCall) {
@@ -387,12 +529,15 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
             let snoozeMax = call.getInt("snoozeMax") ?? 3
             let sound = call.getString("sound")
             Task {
-                do {
-                    try await AlarmScheduler.ringAgain(in: seconds, jsId: jsId, title: title, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound)
-                    call.resolve()
-                } catch {
-                    call.reject("Wecker ließ sich nicht planen")
+                let ok = await AlarmQueue.shared.run { () async -> Bool in
+                    do {
+                        try await AlarmScheduler.ringAgain(in: seconds, jsId: jsId, title: title, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound)
+                        return true
+                    } catch {
+                        return false
+                    }
                 }
+                if ok { call.resolve() } else { call.reject("Wecker ließ sich nicht planen") }
             }
             return
         }
@@ -404,13 +549,24 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func solved(_ call: CAPPluginCall) {
         #if canImport(AlarmKit)
         if #available(iOS 26.0, *) {
-            AlarmScheduler.cancelFallback()
+            Task {
+                await AlarmQueue.shared.run {
+                    AlarmScheduler.cancelFallback()
+                    Self.clearPending()
+                }
+                call.resolve()
+            }
+            return
         }
         #endif
+        Self.clearPending()
+        call.resolve()
+    }
+
+    private static func clearPending() {
         AlarmStore.defaults.removeObject(forKey: AlarmStore.pendingKey)
         AlarmStore.defaults.removeObject(forKey: AlarmStore.snoozeKey)
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["antonos-wecker-aufgabe"])
-        call.resolve()
     }
 
     /// Eigenes Lied als Weckton speichern: `{ name, data }` (WAV als Base64) nach Library/Sounds

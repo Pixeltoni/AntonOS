@@ -740,6 +740,8 @@ export async function testNativeAlarm(alarm: Alarm): Promise<number> {
  * abgeglichen wird (iOS kann die Wecker verlieren, z. B. wenn die Erlaubnis entzogen wurde).
  */
 let syncedList = '';
+/** Abgleiche laufen nacheinander – gleichzeitige überschrieben sich am iPhone gegenseitig */
+let syncQueue: Promise<void> = Promise.resolve();
 /** Meldet nach jedem Stellen am iPhone, wie viele Wecker sich nicht stellen ließen */
 export const SYNC_EVENT = 'antonos:wecker-ios-gestellt';
 /** Ein eigener Ton liegt neu in der App – die Wecker müssen ihn neu einplanen */
@@ -751,15 +753,20 @@ const SOUND_EVENT = 'antonos:wecker-ton-gespeichert';
  */
 export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
   const [state, setState] = useState<AlarmPermission | null>(() => (isNativeApp() ? null : 'unavailable'));
-  // Neu gespeicherter eigener Ton: Wecker erneut stellen, auch wenn die Liste gleich bleibt
-  const [soundRev, setSoundRev] = useState(0);
+  // Neu gespeicherter eigener Ton oder App wieder im Vordergrund: Wecker erneut abgleichen, auch wenn die Liste
+  // gleich bleibt (das iPhone stellt dabei nur neu, was fehlt oder sich geändert hat)
+  const [rev, setRev] = useState(0);
   useEffect(() => {
-    const onSound = () => {
+    const again = () => {
       syncedList = '';
-      setSoundRev((n) => n + 1);
+      setRev((n) => n + 1);
     };
-    window.addEventListener(SOUND_EVENT, onSound);
-    return () => window.removeEventListener(SOUND_EVENT, onSound);
+    window.addEventListener(SOUND_EVENT, again);
+    const onResume = isNativeApp() ? NativeApp.addListener('appStateChange', ({ isActive }) => isActive && again()) : null;
+    return () => {
+      window.removeEventListener(SOUND_EVENT, again);
+      void onResume?.then((h) => h.remove());
+    };
   }, []);
   // Alle 5 Minuten neu berechnen: Einzeltermine (Überspringen, Pause) rücken weiter
   const [tick, setTick] = useState(() => Math.floor(Date.now() / 300_000));
@@ -772,7 +779,9 @@ export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
   useEffect(() => {
     if (!isNativeApp()) return;
     let cancelled = false;
-    (async () => {
+    // Hinten anstellen: Ein neuerer Stand überholt einen älteren, der noch nicht dran war
+    syncQueue = syncQueue.then(async () => {
+      if (cancelled) return;
       const wanted = JSON.parse(list).length > 0;
       const permission = await nativeAlarmPermission(wanted);
       if (cancelled) return;
@@ -780,14 +789,14 @@ export function useNativeAlarmSync(alarms: Alarm[]): AlarmPermission | null {
       if (permission !== 'granted' || syncedList === list) return;
       const res = await AntonAlarm.sync({ alarms: JSON.parse(list) }).catch(() => null);
       const failed = res ? res.failed : JSON.parse(list).length;
-      // Bei Fehlern nicht merken – bei der nächsten Änderung wird es erneut versucht
-      if (failed === 0) syncedList = list;
+      // Bei Fehlern nicht merken – beim nächsten Öffnen oder der nächsten Änderung wird es erneut versucht
+      syncedList = failed === 0 ? list : '';
       window.dispatchEvent(new CustomEvent<number>(SYNC_EVENT, { detail: failed }));
-    })();
+    }).catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [list, soundRev]);
+  }, [list, rev]);
   return state;
 }
 

@@ -164,7 +164,7 @@ function WheelColumn({ values, value, onChange, label }: { values: number[]; val
 function WheelTime({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [h, m] = value.split(':').map(Number);
   return (
-    <div className="wheel">
+    <div className="wheel no-swipe">
       <WheelColumn values={HOURS} value={h || 0} onChange={(v) => onChange(`${two(v)}:${two(m || 0)}`)} label="Stunde" />
       <span className="wheel-colon" aria-hidden>:</span>
       <WheelColumn values={MINUTES} value={m || 0} onChange={(v) => onChange(`${two(h || 0)}:${two(v)}`)} label="Minute" />

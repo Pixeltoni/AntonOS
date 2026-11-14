@@ -148,6 +148,14 @@ export function PlusButton({ hidden }: { hidden?: boolean }) {
   );
 }
 
+/** Liegt `target` (innerhalb von `sheet`) in einem Bereich, der nach unten gescrollt ist? */
+function scrolledInside(target: HTMLElement, sheet: HTMLElement): boolean {
+  for (let node: HTMLElement | null = target; node && node !== sheet; node = node.parentElement) {
+    if (node.scrollTop > 0) return true;
+  }
+  return false;
+}
+
 /**
  * Fenster (Modals) erscheinen am Handy als Blatt von unten (CSS). Hier: nach unten
  * wischen schließt das Blatt – wie in Karten oder Wallet. Das Schließen läuft über
@@ -169,6 +177,9 @@ export function useSheetSwipe() {
       if (!backdrop?.matches('.modal-backdrop, .inspector-backdrop')) return;
       // Nur ziehen, wenn das Blatt ganz oben ist und nicht in einem Eingabefeld gewischt wird
       if (el.scrollTop > 0 || target.closest('input, textarea, select, [contenteditable="true"], .no-swipe')) return;
+      // Auch nicht, solange ein Scroll-Bereich im Blatt (Inhalt des Blatts, Listen …) nicht ganz oben ist –
+      // dort scrollt man zurück; sonst zog das Blatt mit und schloss sich. Das Drehrad der Weckzeit ist `.no-swipe`.
+      if (scrolledInside(target, el)) return;
       sheet = el;
       startY = e.touches[0].clientY;
       dy = 0;

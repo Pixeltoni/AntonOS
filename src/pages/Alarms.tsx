@@ -118,23 +118,30 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 const two = (n: number) => String(n).padStart(2, '0');
 
-/** Eine Spalte des Drehrads: wischen oder tippen, rastet auf ganze Werte ein */
+/**
+ * Eine Spalte des Drehrads: wischen oder tippen, rastet auf ganze Werte ein.
+ * Die Zahl in der Mitte wird sofort übernommen (nicht erst, wenn das Rad stillsteht) – so geht beim
+ * Sichern nichts verloren. Solange das Rad sich bewegt, scrollt die App es nicht selbst zurück.
+ */
 function WheelColumn({ values, value, onChange, label }: { values: number[]; value: number; onChange: (v: number) => void; label: string }) {
   const box = useRef<HTMLDivElement>(null);
-  const settle = useRef(0);
   const index = Math.max(0, values.indexOf(value));
+  // Zeile in der Mitte – folgt dem Finger und wird hell wie am iPhone
+  const [center, setCenter] = useState(index);
+  const scrolledAt = useRef(0);
   useEffect(() => {
+    setCenter(index);
     const el = box.current;
-    if (el && Math.round(el.scrollTop / ROW) !== index) el.scrollTo({ top: index * ROW });
+    if (!el || Date.now() - scrolledAt.current < 250) return;
+    if (Math.round(el.scrollTop / ROW) !== index) el.scrollTo({ top: index * ROW });
   }, [index]);
   const onScroll = () => {
-    clearTimeout(settle.current);
-    settle.current = window.setTimeout(() => {
-      const el = box.current;
-      if (!el) return;
-      const i = Math.min(values.length - 1, Math.max(0, Math.round(el.scrollTop / ROW)));
-      if (values[i] !== value) onChange(values[i]);
-    }, 90);
+    const el = box.current;
+    if (!el) return;
+    scrolledAt.current = Date.now();
+    const i = Math.min(values.length - 1, Math.max(0, Math.round(el.scrollTop / ROW)));
+    setCenter(i);
+    if (values[i] !== value) onChange(values[i]);
   };
   return (
     <div
@@ -151,8 +158,19 @@ function WheelColumn({ values, value, onChange, label }: { values: number[]; val
         onChange(values[i]);
       }}
     >
-      {values.map((v) => (
-        <button key={v} type="button" role="option" aria-selected={v === value} className={v === value ? 'on' : ''} tabIndex={-1} onClick={() => onChange(v)}>
+      {values.map((v, i) => (
+        <button
+          key={v}
+          type="button"
+          role="option"
+          aria-selected={v === value}
+          className={i === center ? 'on' : ''}
+          tabIndex={-1}
+          onClick={() => {
+            scrolledAt.current = 0;
+            onChange(v);
+          }}
+        >
           {two(v)}
         </button>
       ))}

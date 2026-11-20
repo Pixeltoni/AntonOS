@@ -6,7 +6,7 @@ import { addDays, parseDate, today } from '../lib/dates';
 import { completionRate, formatAmounts, habitAmount, habitSteps, isHabitDone, parseAmounts, streak } from '../lib/life';
 import { awards, DEFAULT_SLOT_GOAL, defaultRingGoals, ringSlots, SLOT_COLORS, SOURCE_LABELS, sourceHasGoal } from '../lib/rings';
 import { MiniRing, RingsCard } from '../components/rings';
-import { Empty, PageHeader, Panel, Progress } from '../components/ui';
+import { CheckCircle, Empty, PageHeader, Panel, Progress, Stepper } from '../components/ui';
 import { useToast } from '../components/toast';
 import { askNotifications } from '../lib/notify';
 import { AddButton, Sheet } from '../components/sheet';
@@ -99,7 +99,7 @@ function HabitRow({ habit, onEdit }: { habit: Habit; onEdit: () => void }) {
   const s = streak(data.habitLogs, habit, t);
   return (
     <li className={`habit-row ${done ? 'done' : ''}`}>
-      <MiniRing share={share} track="rgb(0 184 212 / 0.2)" />
+      <MiniRing share={share} color="var(--brand)" track="var(--fill)" />
       <button type="button" className="grow habit-row-main" onClick={onEdit} title="Bearbeiten">
         <div className="task-title">{habit.icon} {habit.name}</div>
         <div className="meta">
@@ -107,12 +107,19 @@ function HabitRow({ habit, onEdit }: { habit: Habit; onEdit: () => void }) {
           {s > 0 && <span>Serie: {s} {s === 1 ? 'Tag' : 'Tage'}</span>}
         </div>
       </button>
-      {habit.target && !done && habitSteps(habit).map((step) => (
-        <button key={step} type="button" className="pill-btn" onClick={() => addAmount(habit, t, step)}>+ {num(step)} {habit.unit}</button>
-      ))}
-      <button type="button" className={`pill-btn ${done ? 'on' : 'accent'}`} onClick={() => toggle(habit.id, t)} aria-pressed={done}>
-        {done ? 'Erledigt ✓' : 'Abhaken'}
-      </button>
+      {habit.target ? (
+        <Stepper
+          label={habit.name}
+          value={`${num(amount)} ${habit.unit ?? ''}`.trim()}
+          canDown={amount > 0}
+          onStep={(dir) => {
+            const step = habitSteps(habit)[0] ?? 1;
+            addAmount(habit, t, dir === 1 ? step : -Math.min(step, amount));
+          }}
+        />
+      ) : (
+        <CheckCircle on={done} onClick={() => toggle(habit.id, t)} label={done ? `${habit.name} wieder öffnen` : `${habit.name} abhaken`} />
+      )}
     </li>
   );
 }

@@ -350,9 +350,9 @@ extension Snapshot {
             version: 1, at: now.timeIntervalSince1970 * 1000, day: WidgetStore.dayString(now),
             alarm: WAlarm(rings: [WAlarmRing(at: alarmAt.timeIntervalSince1970 * 1000, title: "Wecker", repeatText: "Werktags", sound: "Sonnenaufgang")]),
             rings: [
-                WRing(label: "Lernen", share: 0.75, text: "90/120 Min.", color: "#FA114F", track: "#3A0B12"),
-                WRing(label: "Bewegung", share: 1, text: "30/30 Min.", color: "#A6FF00", track: "#163A05"),
-                WRing(label: "Gewohnheiten", share: 0.5, text: "2/4", color: "#00E5FF", track: "#08303A"),
+                WRing(label: "Lernen", share: 0.75, text: "90/120 Min.", color: "#3FD674", track: "#163A22"),
+                WRing(label: "Bewegung", share: 1, text: "30/30 Min.", color: "#C4F24A", track: "#2E3A12"),
+                WRing(label: "Gewohnheiten", share: 0.5, text: "2/4", color: "#5EE6C8", track: "#163A33"),
             ],
             ringsClosed: false,
             agenda: [

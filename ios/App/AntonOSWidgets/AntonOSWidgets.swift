@@ -57,8 +57,8 @@ struct CountdownProvider: AppIntentTimelineProvider {
 /* ---------- Bausteine ---------- */
 
 /// Hintergrund nur auf dem Homescreen; auf dem Sperrbildschirm zeichnet iOS selbst.
-/// Gleicher Look wie die App (Design 2026): ruhiger Farbverlauf in der Farbe des Widgets,
-/// darüber Milchglas mit heller Kante. In den Modi „Getönt“ und „Klar“ ersetzt iOS ihn selbst.
+/// Gleicher Look wie die App (Karten-Look): ruhige helle bzw. dunkle Fläche, für Ringe eine
+/// fast schwarze Hero-Karte. In den Modi „Getönt“ und „Klar“ ersetzt iOS ihn selbst.
 struct WidgetBackground: ViewModifier {
     @Environment(\.widgetFamily) private var family
     var color: Color? = nil
@@ -86,33 +86,21 @@ struct WidgetBackground: ViewModifier {
     }
 }
 
-/// Farbverlauf wie der Hintergrund der App: Bereichsfarbe oben links, zweite Farbe unten rechts
+/// Ruhige Fläche wie der Hintergrund der App (Karten-Look). Die Bereichsfarbe färbt
+/// nicht mehr den Hintergrund, `tint` bleibt nur, damit die Aufrufe gleich bleiben.
 struct MeshBackground: View {
     @Environment(\.colorScheme) private var scheme
     let tint: Color
 
     var body: some View {
-        let dark = scheme == .dark
-        ZStack {
-            Color(uiColor: .systemBackground)
-            RadialGradient(colors: [tint.opacity(dark ? 0.42 : 0.30), .clear], center: .topLeading, startRadius: 0, endRadius: 230)
-            RadialGradient(colors: [(dark ? Color(hex: "#5e5ce6") : Color(hex: "#ff9ec4")).opacity(dark ? 0.26 : 0.22), .clear], center: .bottomTrailing, startRadius: 0, endRadius: 210)
-            // Milchglas: zarter Schimmer oben und helle Kante
-            LinearGradient(colors: [Color.white.opacity(dark ? 0.06 : 0.35), .clear], startPoint: .top, endPoint: .center)
-            ContainerRelativeShape()
-                .stroke(LinearGradient(colors: [Color.white.opacity(dark ? 0.18 : 0.7), Color.white.opacity(0), Color.white.opacity(dark ? 0.08 : 0.3)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2)
-        }
+        scheme == .dark ? Color(hex: "#181A18") : Color(hex: "#F3F4F1")
     }
 }
 
-/// Dunkler Verlauf der Hero-Karten in der App
+/// Dunkle Hero-Karte wie in der App: fast schwarz, ohne Verlauf
 struct HeroBackground: View {
     var body: some View {
-        ZStack {
-            RadialGradient(colors: [Color(hex: "#3b3560"), Color(hex: "#1d1b33"), Color(hex: "#0d0c18")], center: .topTrailing, startRadius: 0, endRadius: 260)
-            ContainerRelativeShape()
-                .stroke(LinearGradient(colors: [Color.white.opacity(0.22), Color.white.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 2)
-        }
+        Color(hex: "#121412")
     }
 }
 
@@ -128,9 +116,9 @@ struct Caption: View {
     var body: some View {
         HStack(spacing: 4) {
             if let icon { Image(systemName: icon).foregroundStyle(color) }
-            Text(text.uppercased()).tracking(0.4).foregroundStyle(icon == nil ? color : Color.secondary)
+            Text(text).foregroundStyle(icon == nil ? color : Color.secondary)
         }
-        .font(.system(size: 11, weight: .bold))
+        .font(.system(size: 12, weight: .medium))
         .lineLimit(1)
     }
 }
@@ -139,7 +127,7 @@ struct Caption: View {
 struct EmptyHint: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Image(systemName: "arrow.up.forward.app").font(.title3).foregroundStyle(.blue)
+            Image(systemName: "arrow.up.forward.app").font(.title3).foregroundStyle(Color(hex: "#2BB85D"))
             Text("Daywerk einmal öffnen").font(.caption.weight(.semibold))
             Text("Dann erscheinen hier deine Daten.").font(.caption2).foregroundStyle(.secondary)
         }
@@ -379,7 +367,7 @@ struct TodayView: View {
                     if agenda.isEmpty { Text("Keine Termine mehr").font(.caption).foregroundStyle(.secondary) }
                 }
                 Divider()
-                Caption(text: "Aufgaben · \(entry.snapshot.tasksOpen) offen", icon: "checklist", color: .blue)
+                Caption(text: "Aufgaben · \(entry.snapshot.tasksOpen) offen", icon: "checklist", color: Color(hex: "#2BB85D"))
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(tasks, id: \.id) { TaskRow(task: $0) }
                     if tasks.isEmpty { Text("Alles erledigt 🎉").font(.caption).foregroundStyle(.secondary) }

@@ -15,6 +15,7 @@ import { Sparkles } from 'lucide-react';
 import { Icon, PAGE_ICONS } from '../components/icons';
 import { CountUp } from '../components/ui';
 import { staggerDelay } from '../lib/motion';
+import { untilWords } from '../lib/countdown';
 import { formatMoney } from '../lib/life';
 import { GoalsThisWeek } from '../components/goals';
 import { hasWeekCard, WeekCard } from '../components/weekplan';
@@ -27,6 +28,10 @@ import { MealsWidget } from './Meals';
 import { MoodCheckIn, useStoryCards } from './Review';
 
 const STORY_KEY = 'antonos:story-gesehen';
+
+/** Minuten bis „HH:MM“ heute (dayOffset 0) oder an einem späteren Tag */
+const minutesUntil = (time: string, now: Date, dayOffset = 0) =>
+  dayOffset * 24 * 60 + Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)) - (now.getHours() * 60 + now.getMinutes());
 const VIEW_KEY = 'antonos:heute-ansicht';
 
 /** Übersicht oder Plan (Zeitleiste) – gemerkt auf diesem Gerät */
@@ -233,10 +238,11 @@ export function Today() {
         if (!nextEvent && phase === 'abend') return null;
         if (!nextEvent) {
           return (
-            <a className="today-hero quiet glow-edge" href="#/kalender">
+            <a className="today-hero glow-edge" href="#/kalender">
               <small>Keine Termine mehr heute</small>
               <strong>{tomorrow[0] ? `Morgen: ${tomorrow[0].label}` : 'Freier Tag im Kalender'}</strong>
               {tomorrow[0]?.time && <small>{tomorrow[0].time} Uhr</small>}
+              {tomorrow[0]?.time && <span className="today-countdown">{untilWords(minutesUntil(tomorrow[0].time, now, 1) * 60_000)}</span>}
             </a>
           );
         }
@@ -249,6 +255,7 @@ export function Today() {
               <small>{when}{nextEvent.location ? ` · ${nextEvent.location}` : ''}</small>
               <strong>{nextEvent.label}</strong>
               {nextEvent.time && <small>{nextEvent.time}{nextEvent.endTime ? ` – ${nextEvent.endTime}` : ''} Uhr</small>}
+              {minutes !== null && minutes >= 60 && <span className="today-countdown">{untilWords(minutes * 60_000)}</span>}
             </a>
             {rest.length > 0 && (
               <ul className="ios-group today-list">

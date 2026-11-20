@@ -14,7 +14,7 @@ import { isNativeApp, nativeAlarmPermission, type AlarmPermission } from '../lib
 import { useSpotify } from '../components/spotify';
 import { api } from '../lib/spotify';
 import { safeImageSrc } from '../lib/life';
-import { Empty, PageHeader, Panel } from '../components/ui';
+import { Countdown, Empty, PageHeader, Panel, Stepper } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
 
 const soundLabel = (a: Pick<Alarm, 'tone' | 'sound' | 'soundName'>) => {
@@ -748,11 +748,11 @@ export function Alarms() {
       <section className="alarm-next">
         {next ? (
           <>
-            <span className="alarm-next-label">Nächster Wecker</span>
-            <strong>
-              {next.at.toLocaleDateString('de-DE', { weekday: 'long' })} {next.alarm.time}
-              <span className="muted"> · {untilLabel(next.at, now)}</span>
-            </strong>
+            <span className="alarm-next-label">Nächster Wecker klingelt in</span>
+            <Countdown to={next.at} className="alarm-countdown" />
+            <span className="alarm-next-when">
+              {next.at.toLocaleDateString('de-DE', { weekday: 'long' })} · {next.alarm.time}
+            </span>
             <span className="muted small">
               {bed && bed > now
                 ? `Für ${durationLabel(sleep.goal)} Schlaf um ${hhmm(bed)} ins Bett.`
@@ -773,14 +773,16 @@ export function Alarms() {
         )}
       </section>
 
-      <div className="alarm-quick">
-        <span className="muted small">Power-Nap</span>
-        {[20, 30, 60].map((m) => (
-          <button key={m} type="button" className="alarm-chip" onClick={() => { unlockAlarmAudio(); add('alarms', quickAlarm(m, new Date())); }}>
-            in {m} Min.
-          </button>
-        ))}
-      </div>
+      <section className="alarm-nap">
+        <span className="alarm-nap-title">Power-Nap</span>
+        <div className="alarm-nap-row">
+          {[20, 30, 60].map((m) => (
+            <button key={m} type="button" onClick={() => { unlockAlarmAudio(); add('alarms', quickAlarm(m, new Date())); }}>
+              {m} Min.
+            </button>
+          ))}
+        </div>
+      </section>
 
       {alarms.length === 0 ? <Panel><Empty>Noch kein Wecker. Tippe auf +.</Empty></Panel> : (
         <ul className="alarm-list">
@@ -792,12 +794,19 @@ export function Alarms() {
       <Panel title="Schlaf">
         <ul className="ios-group flush">
           <li>
-            <label className="ios-row">
+            <div className="ios-row">
               <span className="grow">Schlafziel</span>
-              <select value={sleep.goal} onChange={(e) => setSleep({ goal: Number(e.target.value) })}>
-                {SLEEP_GOALS.map((g) => <option key={g} value={g}>{durationLabel(g)}</option>)}
-              </select>
-            </label>
+              <Stepper
+                label="Schlafziel"
+                value={durationLabel(sleep.goal)}
+                canDown={SLEEP_GOALS.some((g) => g < sleep.goal)}
+                canUp={SLEEP_GOALS.some((g) => g > sleep.goal)}
+                onStep={(dir) => {
+                  const list = dir === 1 ? SLEEP_GOALS.filter((g) => g > sleep.goal) : SLEEP_GOALS.filter((g) => g < sleep.goal).reverse();
+                  if (list[0] !== undefined) setSleep({ goal: list[0] });
+                }}
+              />
+            </div>
           </li>
           <SwitchRow label="Erinnerung zur Schlafenszeit" hint="Mitteilung, wenn es Zeit fürs Bett ist" checked={sleep.remind} onChange={(v) => setSleep({ remind: v })} />
           <li>

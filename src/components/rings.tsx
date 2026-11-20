@@ -61,6 +61,20 @@ export function useRingDay(date: DateStr = today()): RingDay {
   return ringDay(data, data.settings.rings ?? defaultRingGoals(), date);
 }
 
+/** Legende als schmale Fortschrittslinien (Karten-Look) */
+function Bars({ day }: { day: RingDay }) {
+  return (
+    <dl className="ring-bars">
+      {day.rings.map((r) => (
+        <div key={r.slot}>
+          <dt><span>{r.label}</span><span>{r.text}</span></dt>
+          <dd><i style={{ width: `${Math.min(1, Math.max(0, r.share)) * 100}%`, background: r.color }} /></dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function Legend({ day }: { day: RingDay }) {
   return (
     <dl className="ring-legend">
@@ -115,11 +129,14 @@ export function RingsCard() {
   return (
     <section className="rings-card" aria-label="Aktivitätsringe heute">
       <div className="rings-card-main">
-        <Rings rings={day.rings} size={150} />
-        <div>
+        <div className="rings-card-ring">
+          <Rings rings={day.rings} size={132} />
+          <span><strong>{day.rings.filter((r) => r.share >= 1).length}/{day.rings.length}</strong><small>Ringe</small></span>
+        </div>
+        <div className="rings-card-side">
           <h2>Heute</h2>
-          <Legend day={day} />
-          {day.closed && <p className="rings-closed">Alle Ringe geschlossen 🎉</p>}
+          <Bars day={day} />
+          {day.closed && <p className="rings-closed">Alle Ringe geschlossen</p>}
         </div>
       </div>
       <WeekStrip />

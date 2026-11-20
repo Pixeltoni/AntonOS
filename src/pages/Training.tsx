@@ -170,7 +170,7 @@ export function Training() {
         actions={<AddButton label="Neues Training" onClick={() => setSheet({ initial: { title: '', type: TYPES[0], date: t, done: true, notes: '' } })} />}
       />
       <div className="health-grid">
-        <section className="health-tile" style={{ ['--h' as string]: '#A6FF00' }}>
+        <section className="health-tile" style={{ ['--h' as string]: 'var(--brand)' }}>
           <span className="health-label"><Sym emoji="🔥" size={14} /> Diese Woche</span>
           <span className="health-value">{weekMinutes} <small>Min.</small></span>
           <div className="fit-bars" aria-label="Minuten pro Tag">

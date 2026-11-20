@@ -9,7 +9,7 @@
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "theme_color": "#f3f4f1",
   "icons": [
     { "src": "icons/a-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/a-512.png", "sizes": "512x512", "type": "image/png" },

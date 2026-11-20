@@ -2,8 +2,9 @@ import type { DateStr, FocusSession, Habit, HabitLog, RingGoals, RingSlot, RingS
 import { addDays, parseDate } from './dates';
 import { habitAmount, isHabitDone, streak } from './life';
 
-export const RING_COLORS = { learn: '#FA114F', move: '#A6FF00', habits: '#00E5FF' } as const;
-export const RING_TRACKS = { learn: '#3A0B12', move: '#163A05', habits: '#08303A' } as const;
+// Karten-Look: drei Grüntöne statt Apple-Rot/-Gelbgrün/-Cyan, Spuren als dunkle Tönung derselben Farbe
+export const RING_COLORS = { learn: '#3FD674', move: '#C4F24A', habits: '#5EE6C8' } as const;
+export const RING_TRACKS = { learn: '#163A22', move: '#2E3A12', habits: '#163A33' } as const;
 /** Farben nach Position (außen, Mitte, innen) wie bei Apple Fitness */
 export const SLOT_COLORS = [RING_COLORS.learn, RING_COLORS.move, RING_COLORS.habits] as const;
 export const SLOT_TRACKS = [RING_TRACKS.learn, RING_TRACKS.move, RING_TRACKS.habits] as const;

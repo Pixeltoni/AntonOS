@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { Check, Minus, Plus, type LucideIcon } from 'lucide-react';
 import { useStore } from '../store';
 import type { Course, ID } from '../types';
 import { emojiIcon, leadingEmoji } from './icons';
 import { countDuration, tween } from '../lib/motion';
+import { clockCountdown } from '../lib/countdown';
 
 /**
  * Kopf jeder Seite mit großem Titel wie in iOS. Am iPhone wandert der Titel beim
@@ -119,6 +120,38 @@ export function Stat({ label, value, hint, href }: { label: string; value: React
     </a>
   ) : (
     <div className="stat">{body}</div>
+  );
+}
+
+/** Stepper „− Wert +“ (Karten-Look): Wasser, Schlafziel, Wiederholungen … */
+export function Stepper({ value, label, onStep, canDown = true, canUp = true, big = false }: {
+  value: ReactNode; label: string; onStep: (dir: -1 | 1) => void; canDown?: boolean; canUp?: boolean; big?: boolean;
+}) {
+  return (
+    <div className={`stepper ${big ? 'big' : ''}`} role="group" aria-label={label}>
+      <button type="button" onClick={() => onStep(-1)} disabled={!canDown} aria-label={`${label} weniger`}><Minus size={14} strokeWidth={2.6} /></button>
+      <output>{value}</output>
+      <button type="button" onClick={() => onStep(1)} disabled={!canUp} aria-label={`${label} mehr`}><Plus size={14} strokeWidth={2.6} /></button>
+    </div>
+  );
+}
+
+/** Läuft sekundengenau bis zu einem Zeitpunkt herunter (Wecker, Satzpause). */
+export function Countdown({ to, className }: { to: Date; className?: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <span className={`countdown ${className ?? ''}`}>{clockCountdown(to.getTime() - now)}</span>;
+}
+
+/** Runder grüner Haken zum Abhaken (Karten-Look) */
+export function CheckCircle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button type="button" className={`check-circle ${on ? 'on' : ''}`} onClick={onClick} aria-pressed={on} aria-label={label}>
+      <Check size={14} strokeWidth={3} />
+    </button>
   );
 }
 

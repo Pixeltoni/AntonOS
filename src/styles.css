@@ -1,15 +1,15 @@
 :root {
-  /* Farben wie in iOS: graue Fläche, weiße Gruppen, Systemblau */
-  --bg: #f2f2f7;
-  --sidebar: #f9f9fb;
+  /* Karten-Look: hellgraue Fläche mit Grünstich, weiße Karten, fast schwarze Schrift */
+  --bg: #f3f4f1;
+  --sidebar: #f8f9f6;
   --surface: #ffffff;
-  --surface-2: #ececf0;
-  --border: #e3e3e8;
-  --text: #1c1c1e;
-  --muted: #86868b;
+  --surface-2: #eceee9;
+  --border: #e4e6e1;
+  --text: #141714;
+  --muted: #868c85;
   --accent: #007aff;
   --danger: #ff3b30;
-  --ok: #248a3d;
+  --ok: #1f9e4b;
   --warn: #c76a00;
   /* Einheitliche Maße (Design 2026): vier Radien, eine Schriftskala */
   --r-s: 8px;   /* Felder, kleine Marken */
@@ -25,7 +25,7 @@
   --fs-number: 1.733rem;  /* 26 px – große Zahl */
   --fs-title: 2rem;       /* 30 px – Seitentitel */
   /* Fester Markenton, unabhängig von der Bereichsfarbe (Plus-Knopf, Fokus-Ringe) */
-  --brand: #007aff;
+  --brand: #2bb85d;
   /* Feinschliff: Füllfarbe für Felder/Knöpfe, weiche Karten-Schatten, Federkurven, runde Ziffern */
   --fill: color-mix(in srgb, var(--text) 6%, var(--surface));
   --card-shadow: 0 0.5px 0 rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.05), 0 8px 24px -8px rgb(0 0 0 / 0.10);
@@ -43,15 +43,15 @@
 /* Dunkles Design: automatisch nach System oder fest über data-theme */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #000000;
-    --sidebar: #121214;
-    --surface: #1c1c1e;
-    --surface-2: #2c2c2e;
-    --border: #38383a;
-    --text: #f2f2f7;
-    --muted: #98989f;
+    --bg: #0a0b0a;
+    --sidebar: #111311;
+    --surface: #181a18;
+    --surface-2: #232623;
+    --border: #2c2f2b;
+    --text: #f1f3f0;
+    --muted: #8d948b;
     --accent: #0a84ff;
-    --brand: #0a84ff;
+    --brand: #3fd674;
     --danger: #ff453a;
     --ok: #30d158;
     --warn: #ff9f0a;
@@ -61,14 +61,14 @@
   }
 }
 :root[data-theme='dark'] {
-  --brand: #0a84ff;
-  --bg: #000000;
-  --sidebar: #121214;
-  --surface: #1c1c1e;
-  --surface-2: #2c2c2e;
-  --border: #38383a;
-  --text: #f2f2f7;
-  --muted: #98989f;
+  --brand: #3fd674;
+  --bg: #0a0b0a;
+  --sidebar: #111311;
+  --surface: #181a18;
+  --surface-2: #232623;
+  --border: #2c2f2b;
+  --text: #f1f3f0;
+  --muted: #8d948b;
   --accent: #0a84ff;
   --danger: #ff453a;
   --ok: #30d158;
@@ -2014,7 +2014,6 @@ input.plain { border: 0 !important; background: transparent !important; padding:
 .alarm-next-label { font-size: var(--fs-label); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .alarm-next strong { font-size: var(--fs-card); font-weight: 600; }
 .alarm-paused { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; color: #C76A00; font-size: var(--fs-small); margin-top: 0.3rem; }
-.alarm-quick { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin: 0 0 0.8rem; }
 .alarm-chip { border: 0; border-radius: 999px; padding: 0.35rem 0.8rem; background: var(--surface-2); color: var(--text); font-size: var(--fs-small); font-variant-numeric: tabular-nums; cursor: pointer; }
 .alarm-chip.selected { background: #FF9500; color: #000; }
 .alarm-chip.selected .muted { color: rgb(0 0 0 / 0.6); }
@@ -3297,160 +3296,140 @@ body.has-planday { overflow: hidden; }
 @media (max-width: 800px) { .note-title-row .note-title { font-size: var(--fs-section); } }
 
 /* =====================================================================
-   Design 2026: Glas + Kacheln
-   Fließender Farbverlauf im Hintergrund (Farbe des Bereichs), Karten aus
-   Milchglas, schwebende Tab-Leiste mit gleitender Kapsel, Lichtkante am
-   Wichtigsten, Kacheln die nacheinander erscheinen und Zahlen die hochzählen.
-   Karten bekommen bewusst KEIN backdrop-filter (zu teuer beim Scrollen am
-   iPhone) – nur schwebende Leisten und Knöpfe.
+   Design 2027: Karten
+   Ruhige, helle Fläche statt Farbverlauf, rein weiße Karten mit sehr weichem
+   Schatten, ein grüner Markenton (Plus, Haken, Ringe, Schalter), schwarze
+   Hauptknöpfe als Pillen und pro Seite höchstens eine dunkle Hero-Karte für
+   das Wichtigste. Bereichsfarben bleiben für Symbole und Punkte.
+   Karten bekommen bewusst KEIN backdrop-filter – nur schwebende Leisten.
    ===================================================================== */
-@property --mesh-a { syntax: '<color>'; inherits: true; initial-value: #007aff; }
-@property --edge { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-
 :root {
-  --card: rgb(255 255 255 / 0.66);
-  --card-solid: #ffffff;
-  --card-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.045), inset 0 1px 0 rgb(255 255 255 / 0.85), 0 10px 30px -14px rgb(40 50 90 / 0.22);
-  --card-shadow-hover: 0 0 0 0.5px rgb(0 0 0 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.9), 0 18px 40px -16px rgb(40 50 90 / 0.3);
+  --card: var(--surface);
+  --card-solid: var(--surface);
+  --card-shadow: 0 1px 1px rgb(20 23 20 / 0.03), 0 6px 18px -8px rgb(20 23 20 / 0.10);
+  --card-shadow-hover: 0 1px 2px rgb(20 23 20 / 0.04), 0 12px 28px -10px rgb(20 23 20 / 0.16);
   --fill: color-mix(in srgb, var(--text) 6%, transparent);
-  --pill: rgb(255 255 255 / 0.78);
-  --pill-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 14px -4px rgb(0 0 0 / 0.16);
-  --hero-dark: radial-gradient(130% 140% at 100% 0%, #3b3560 0%, #1d1b33 50%, #0d0c18 100%);
-  --mesh-bg: #eceff6;
-  --mesh-b: #ff9ec4;
-  --mesh-c: #ffd27a;
-  --mesh-d: #8fe3c0;
-  --mesh-o: 0.55;
-  --edge-light: #ffffff;
-  --e2: 0 2px 6px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.3);
+  --pill: var(--surface);
+  --pill-shadow: 0 1px 3px rgb(0 0 0 / 0.10);
+  --hero-dark: #121412;
+  --hero-text: #f3f5f2;
+  --hero-muted: #8d958b;
+  --ink: #121412;
+  --ink-text: #ffffff;
+  --brand-soft: color-mix(in srgb, var(--brand) 14%, var(--surface));
+  --e2: 0 2px 6px rgb(0 0 0 / 0.06), 0 24px 48px -16px rgb(0 0 0 / 0.22);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --card: rgb(32 32 38 / 0.6);
-    --card-solid: #1c1c1e;
-    --card-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.06), 0 12px 32px -14px rgb(0 0 0 / 0.7);
-    --card-shadow-hover: 0 0 0 0.5px rgb(255 255 255 / 0.14), inset 0 1px 0 rgb(255 255 255 / 0.08), 0 18px 40px -14px rgb(0 0 0 / 0.8);
-    --pill: rgb(255 255 255 / 0.12);
-    --pill-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.15);
-    --mesh-bg: #050508;
-    --mesh-b: #5e5ce6;
-    --mesh-c: #30b0c7;
-    --mesh-d: #bf5af2;
-    --mesh-o: 0.3;
+    --card-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.06);
+    --card-shadow-hover: 0 0 0 0.5px rgb(255 255 255 / 0.12), 0 14px 32px -14px rgb(0 0 0 / 0.8);
+    --pill: color-mix(in srgb, var(--text) 16%, var(--surface));
+    --pill-shadow: none;
+    --hero-dark: #20231f;
+    --ink: #f1f3f0;
+    --ink-text: #0a0b0a;
     --e2: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 24px 48px -16px rgb(0 0 0 / 0.8);
   }
 }
 :root[data-theme='dark'] {
-  --card: rgb(32 32 38 / 0.6);
-  --card-solid: #1c1c1e;
-  --card-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.06), 0 12px 32px -14px rgb(0 0 0 / 0.7);
-  --card-shadow-hover: 0 0 0 0.5px rgb(255 255 255 / 0.14), inset 0 1px 0 rgb(255 255 255 / 0.08), 0 18px 40px -14px rgb(0 0 0 / 0.8);
-  --pill: rgb(255 255 255 / 0.12);
-  --pill-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.15);
-  --mesh-bg: #050508;
-  --mesh-b: #5e5ce6;
-  --mesh-c: #30b0c7;
-  --mesh-d: #bf5af2;
-  --mesh-o: 0.3;
+  --card-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.06);
+  --card-shadow-hover: 0 0 0 0.5px rgb(255 255 255 / 0.12), 0 14px 32px -14px rgb(0 0 0 / 0.8);
+  --pill: color-mix(in srgb, var(--text) 16%, var(--surface));
+  --pill-shadow: none;
+  --hero-dark: #20231f;
+  --ink: #f1f3f0;
+  --ink-text: #0a0b0a;
   --e2: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 24px 48px -16px rgb(0 0 0 / 0.8);
 }
 
-/* ---- Fließender Farbverlauf ---- */
-html { background: var(--mesh-bg); }
+/* ---- Ruhiger Hintergrund ---- */
+html { background: var(--bg); }
 body { background: transparent; }
-.app-mesh { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background: var(--mesh-bg); --mesh-a: var(--accent); transition: --mesh-a 1.2s var(--ease); }
-.app-mesh i {
-  position: absolute; width: 80vmax; height: 80vmax; border-radius: 50%; opacity: var(--mesh-o);
-  will-change: transform; animation: mesh-drift 40s ease-in-out infinite alternate;
-}
-.app-mesh i:nth-child(1) { left: -30vmax; top: -38vmax; background: radial-gradient(closest-side, var(--mesh-a), transparent); }
-.app-mesh i:nth-child(2) { right: -38vmax; top: -12vmax; background: radial-gradient(closest-side, var(--mesh-b), transparent); animation-duration: 48s; animation-delay: -14s; }
-.app-mesh i:nth-child(3) { left: -26vmax; bottom: -44vmax; background: radial-gradient(closest-side, var(--mesh-c), transparent); animation-duration: 54s; animation-delay: -22s; }
-.app-mesh i:nth-child(4) { right: -30vmax; bottom: -34vmax; background: radial-gradient(closest-side, color-mix(in srgb, var(--mesh-a) 45%, var(--mesh-d)), transparent); animation-duration: 44s; animation-delay: -6s; }
-@keyframes mesh-drift {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(9vmax, 7vmax, 0) scale(1.12); }
-  100% { transform: translate3d(-7vmax, 11vmax, 0) scale(0.92); }
-}
+.app-mesh { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bg); }
 
-/* ---- Milchglas-Karten ---- */
+/* ---- Weiße Karten ---- */
 .panel, .stat, .course-card, .goal, .top-nav a, .gallery-card, .rem-tile, .rem-lists, .ios-group,
 .wp-panel, .wp-col, .wp-aside, .wp-meter, .rt-card, .rt-today, .today-hero.quiet, .bento-tile {
   background: var(--card);
   box-shadow: var(--card-shadow);
 }
 .panel, .stat, .gallery-card, .bento-tile { border-radius: var(--r-l); }
-/* Am Desktop die Seitenleiste ebenfalls aus Glas */
-.sidebar { background: color-mix(in srgb, var(--sidebar) 62%, transparent); border-right: 0.5px solid var(--glass-line); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6); }
-.sidebar nav a.active { background: color-mix(in srgb, var(--area, var(--accent)) 14%, transparent); }
-/* Felder und Segmente durchscheinend, damit sie zur Glas-Karte passen */
-.segmented button.selected { background: var(--pill); box-shadow: var(--pill-shadow); }
+.sidebar { background: var(--sidebar); border-right: 0.5px solid var(--border); }
+.sidebar nav a.active { background: var(--fill); }
 .modal { box-shadow: var(--e2); }
 
-/* Dunkle Hero-Karten (Wallet, Ringe, Abend, Wecker) teilen sich einen Verlauf */
-.wallet-card, .rings-card, .today-evening, .today-alarm {
-  background: var(--hero-dark);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 14px 34px -14px rgb(20 16 60 / 0.55);
+/* ---- Pillen: Segment-Tabs, Hauptknöpfe, Schalter, Haken ---- */
+.segmented { border-radius: 999px; padding: 3px; gap: 0; }
+.segmented button { border-radius: 999px; }
+.segmented button.selected { background: var(--pill); color: var(--text); box-shadow: var(--pill-shadow); }
+button.primary, a.button.primary {
+  background: var(--ink); color: var(--ink-text); border-color: transparent; box-shadow: none; border-radius: 999px; font-weight: 600;
 }
+button.primary:hover:not(:disabled) { filter: none; opacity: 0.88; }
+button.selected { background: var(--brand-soft); color: var(--text); }
+input[type='checkbox'], input[type='range'] { accent-color: var(--brand); }
+input.switch:checked { background: var(--brand); }
+.check-pill.on { background: var(--brand) !important; border-color: var(--brand) !important; }
+.count { background: var(--brand); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Dunkle Hero-Karten (Wallet, Ringe, Abend, Wecker, nächster Termin) */
+.wallet-card, .rings-card, .today-evening, .today-alarm, .today-hero, .rings-widget {
+  background: var(--hero-dark); color: var(--hero-text); box-shadow: none;
+}
+.today-evening a { color: var(--brand); }
 
 /* ---- Einheitlicher Seitenkopf ---- */
 .page-header h1, .today-head h1 { font-size: var(--fs-title); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
 .page-header p.muted { font-size: var(--fs-small); margin: 2px 0 0; }
-.today-date { font-size: var(--fs-label); letter-spacing: 0.06em; }
+.today-date { font-size: var(--fs-label); letter-spacing: 0.06em; color: var(--brand); }
 .panel-head h2 { font-size: var(--fs-card); font-weight: 700; letter-spacing: -0.01em; }
 .today-section-head h2 { font-size: var(--fs-section); font-weight: 700; letter-spacing: -0.02em; }
-.stat-label, .bento-label { font-size: var(--fs-label); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.stat-label, .bento-label { font-size: var(--fs-small); font-weight: 500; color: var(--muted); }
 .stat-value { font-size: var(--fs-number); letter-spacing: -0.03em; }
-/* Plus auf den Seiten: Glas-Kreis mit Symbol in der Bereichsfarbe */
+/* Plus auf den Seiten: weißer Kreis mit dunklem Symbol */
 .add-btn {
-  background: var(--card) !important; color: var(--accent) !important; box-shadow: var(--card-shadow);
+  background: var(--card) !important; color: var(--text) !important; box-shadow: var(--card-shadow);
   font-size: var(--fs-section); font-weight: 600;
 }
 
-/* ---- Schwebende Tab-Leiste mit gleitender Kapsel und Plus-Knopf ---- */
+/* ---- Schwebende Tab-Leiste mit gleitender Kapsel und grünem Plus-Knopf ---- */
 .tabbar-pill { display: none; }
 @media (max-width: 800px) {
-  .tabbar { --tab-n: 5; --tab-i: 0; }
+  .tabbar { --tab-n: 5; --tab-i: 0; background: color-mix(in srgb, var(--surface) 88%, transparent); border-color: transparent; box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.25), 0 0 0 0.5px var(--glass-line); }
   .tabbar-pill {
     display: block; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--tab-n));
-    border-radius: 27px; background: var(--pill); box-shadow: var(--pill-shadow);
+    border-radius: 27px; background: var(--fill);
     transform: translateX(calc(var(--tab-i) * 100%)); transition: transform 0.55s var(--spring);
   }
   .tabbar a, .tabbar button { position: relative; z-index: 1; margin: 4px 0; }
-  .tabbar a.on { background: none; }
+  .tabbar a.on { background: none; color: var(--text); }
   .tabbar a:active, .tabbar button:active { transform: scale(0.9); }
   .tabbar .lucide-icon { transition: transform 0.4s var(--spring); }
   .tabbar a.on .lucide-icon { transform: translateY(-1px) scale(1.06); }
   .plus-fab {
-    background: var(--glass); color: var(--brand); border: 0.5px solid var(--glass-line); box-shadow: var(--glass-shadow);
-    backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    background: var(--brand); color: #fff; border: 0;
+    box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--brand) 70%, transparent);
     transition: transform 0.45s var(--spring);
   }
-  .plus-fab.open { background: var(--glass); color: var(--text); box-shadow: var(--glass-shadow); }
-  .plus-menu button { background: var(--glass); backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); box-shadow: var(--glass-shadow); }
+  .plus-fab.open { background: var(--ink); color: var(--ink-text); box-shadow: none; }
+  .plus-menu button { background: var(--surface); border-color: transparent; box-shadow: var(--e2); }
   .plus-menu button span { display: grid; place-items: center; color: var(--brand); }
 }
 
-/* ---- Lichtkante: ein heller Schein läuft um die wichtigste Karte ---- */
-.glow-edge { position: relative; isolation: isolate; }
-.glow-edge::before {
-  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: inherit; padding: 1.5px;
-  background: conic-gradient(from var(--edge), transparent 0 60%, color-mix(in srgb, var(--edge-light) 35%, transparent) 72%, var(--edge-light) 80%, color-mix(in srgb, var(--edge-light) 35%, transparent) 88%, transparent 96%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
-  animation: edge-spin 6s linear infinite;
-}
-@keyframes edge-spin { to { --edge: 360deg; } }
-.today-hero.quiet { --edge-light: var(--accent); }
-.today-hero:not(.quiet) { box-shadow: 0 14px 34px -12px color-mix(in srgb, var(--hero) 55%, transparent); }
+/* Früher Lichtkante – im Karten-Look bewusst ruhig, die Klasse bleibt als Markierung */
+.glow-edge { position: relative; }
 .today-hero { border-radius: var(--r-l); }
+.today-hero small { color: var(--hero-muted); opacity: 1; }
+.today-countdown { margin-top: 6px; display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; background: rgb(255 255 255 / 0.1); border-radius: 999px; padding: 4px 10px; }
+.today-countdown::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
 
 /* ---- Kachel-Raster auf Heute ---- */
 .bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 @media (min-width: 640px) { .bento { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .bento-tile {
   position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 96px;
-  padding: 0.75rem 0.85rem; color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent;
+  padding: 0.8rem 0.9rem; color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent;
   transition: transform 0.3s var(--spring), box-shadow 0.2s ease;
 }
 .bento-tile:hover { text-decoration: none; box-shadow: var(--card-shadow-hover); }
@@ -3460,27 +3439,16 @@ body { background: transparent; }
 .bento-value { margin-top: auto; font-family: var(--rounded); font-size: var(--fs-number); font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bento-value.negative { color: var(--danger); }
 .bento-tile small { color: var(--muted); font-size: var(--fs-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Leichter Farbschein in der Ecke jeder Kachel */
-.bento-tile::after { content: ''; position: absolute; right: -30px; top: -30px; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--tile-c, var(--accent)) 28%, transparent), transparent); pointer-events: none; }
 .tile-aufgaben { --tile-c: #ff9500; }
 .tile-budget { --tile-c: #34c759; }
 .tile-fokus { --tile-c: #5856d6; }
 .tile-lernen { --tile-c: #ff2d55; }
 .count-up { font-variant-numeric: tabular-nums; }
 
-/* ---- Lichtfleck folgt dem Zeiger über die Dashboard-Kacheln ---- */
-.dash-grid .panel, .dash-grid .stat { position: relative; }
-.dash-grid .panel::after, .dash-grid .stat::after {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
-  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%);
-}
-@media (hover: hover) { .dash-grid .panel:hover::after, .dash-grid .stat:hover::after { opacity: 1; } }
-
 /* ---- Kacheln erscheinen nacheinander (aus sichtbarem Ruhezustand) ---- */
 .rise-in { animation: rise-in 0.7s var(--spring) both; animation-delay: var(--delay, 0ms); }
 @keyframes rise-in { from { opacity: 0.001; transform: translateY(18px); } }
 .dash-grid.editing .rise-in, .tile.dragging { animation: none; }
-
 /* ---- Schimmer statt „Lädt …“ ---- */
 .skeleton { display: flex; flex-direction: column; gap: 8px; }
 .skeleton i { display: block; height: 12px; border-radius: var(--r-s); background: linear-gradient(90deg, var(--fill) 0 30%, color-mix(in srgb, var(--text) 12%, transparent) 50%, var(--fill) 70%); background-size: 300% 100%; animation: shimmer 1.4s linear infinite; }
@@ -3496,17 +3464,70 @@ body { background: transparent; }
 .focus-mode .lucide-icon, .segmented .lucide-icon { vertical-align: -3px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-mesh i, .glow-edge::before, .rise-in, .skeleton i { animation: none !important; }
-  .tabbar-pill, .app-mesh { transition: none !important; }
+  .rise-in, .skeleton i { animation: none !important; }
+  .tabbar-pill { transition: none !important; }
 }
 .sidebar:hover, .sidebar.editing { background: color-mix(in srgb, var(--sidebar) 88%, transparent); }
 /* Zeilen in Glas-Karten durchsichtig – beim Wischen und Ziehen wieder deckend */
 .rem-row-inner { background: transparent; }
 .rem-row.swiping .rem-row-inner, .rem-row.dragging .rem-row-inner { background: var(--card-solid); }
 .ios-widget { background: var(--card); border: 0; box-shadow: var(--card-shadow); }
-.rings-widget { background: var(--hero-dark); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1); }
 .quick a { display: flex; align-items: center; gap: 8px; }
 .quick a .lucide-icon { color: var(--accent); }
+
+/* ---------- Karten-Bausteine: Stepper, Haken, Ringe, Countdown ---------- */
+.stepper { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.stepper button { width: 30px; height: 30px; min-height: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; background: var(--fill); color: var(--text); border: 0; }
+.stepper output { min-width: 3.4rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stepper.big output { font-size: var(--fs-title); letter-spacing: -0.03em; min-width: 7rem; }
+.stepper.big button { width: 36px; height: 36px; }
+.check-circle { width: 28px; height: 28px; min-height: 0; flex: none; border-radius: 50%; padding: 0; display: grid; place-items: center; border: 1.5px solid var(--border); background: transparent; color: transparent; transition: background 0.2s, border-color 0.2s, transform 0.3s var(--spring); }
+.check-circle.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+.rings-card { background: var(--hero-dark); color: var(--hero-text); box-shadow: none; }
+.rings-card-main { flex: 1; flex-wrap: nowrap; }
+.rings-card-ring { position: relative; display: grid; place-items: center; flex: none; }
+.rings-card-ring > span { position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.rings-card-ring strong { font-size: var(--fs-section); font-variant-numeric: tabular-nums; }
+.rings-card-ring small { font-size: var(--fs-micro); color: var(--hero-muted); }
+.rings-card-side { flex: 1; min-width: 0; }
+.ring-bars { margin: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+.ring-bars dt { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-label); color: var(--hero-muted); font-variant-numeric: tabular-nums; }
+.ring-bars dd { margin: 4px 0 0; height: 6px; border-radius: 999px; background: rgb(255 255 255 / 0.1); overflow: hidden; }
+.ring-bars dd i { display: block; height: 100%; border-radius: inherit; transition: width 0.6s var(--ease); }
+.ring-week-day { color: var(--hero-muted); }
+.ring-week-day.today span { background: rgb(255 255 255 / 0.14); }
+.pill-btn.accent { background: var(--brand); border-color: var(--brand); }
+@media (max-width: 520px) { .rings-card-main { gap: 1rem; } .rings-card-ring svg { width: 112px; height: 112px; } }
+
+.progress span { background: var(--brand); }
+
+/* Wecker: großer Countdown, Power-Nap als Pillen-Reihe */
+.alarm-next { align-items: center; text-align: center; gap: 2px; background: var(--card); border: 0; box-shadow: var(--card-shadow); border-radius: var(--r-l); padding: 1.1rem 1rem 1rem; }
+.alarm-next-label { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: var(--fs-small); }
+.alarm-countdown { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.alarm-next-when { font-weight: 600; text-transform: capitalize; }
+.alarm-nap { display: flex; flex-direction: column; gap: 8px; background: var(--card); box-shadow: var(--card-shadow); border-radius: var(--r-l); padding: 0.9rem 1rem; margin-bottom: 0.8rem; }
+.alarm-nap-title { font-weight: 700; }
+.alarm-nap-row { display: flex; background: var(--fill); border-radius: 999px; padding: 3px; }
+.alarm-nap-row button { flex: 1; border-radius: 999px; background: transparent; font-weight: 600; font-size: var(--fs-small); padding: 0.45rem 0.4rem; color: var(--text); }
+.alarm-nap-row button:active { background: var(--pill); box-shadow: var(--pill-shadow); }
+.alarm-chip.selected { background: var(--brand); color: #fff; }
+
+/* Fokus: grüner Ring, Modus-Pillen, schwarzer Start-Knopf */
+.focus-timer, .focus-widget { --mode: var(--brand) !important; }
+.focus-modes { background: var(--fill); }
+.focus-modes button.on { background: var(--pill); color: var(--text); box-shadow: var(--pill-shadow); }
+.focus-time { font-weight: 600; letter-spacing: -0.04em; }
+.focus-controls { gap: 10px; }
+.round-btn { width: auto; height: 48px; min-width: 120px; border-radius: 999px; padding: 0 1.6rem; font-size: var(--fs-body); box-shadow: none; }
+.round-btn.cancel { background: var(--fill); color: var(--text); box-shadow: none; }
+.round-btn.go { background: var(--ink); color: var(--ink-text); }
+.round-btn.pause { background: var(--fill); color: var(--text); }
+.focus-widget .round-btn { width: auto; height: 42px; min-width: 96px; }
+
+/* Aufgaben: aktive Liste ohne blauen Rahmen */
+.rem-tile.active { background: var(--card) !important; box-shadow: 0 0 0 2px var(--brand), var(--card-shadow); }
 
 /* Verliehen & Garantien */
 .belong-icon { background: var(--accent); }

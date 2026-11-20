@@ -159,11 +159,10 @@ export function FocusProvider({ children }: { children: ReactNode }) {
 /** Großer runder Timer mit Fortschrittsring in der Modusfarbe */
 export function TimerRing({ size = 260, children }: { size?: number; children?: ReactNode }) {
   const { timer, progress } = useFocus();
-  const mode = focusMode(timer.config.mode);
   const sw = Math.round(size / 26);
   const r = size / 2 - sw;
   const c = 2 * Math.PI * r;
-  const color = timer.phase === 'fokus' ? mode.color : '#34C759';
+  const color = timer.phase === 'fokus' ? 'var(--brand)' : '#5EE6C8';
   return (
     <div className="timer-ring" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
@@ -196,7 +195,7 @@ export function FocusPill({ hidden }: { hidden?: boolean }) {
   const task = data.tasks.find((t) => t.id === timer.config.taskId);
   const label = timer.phase === 'fokus' ? `Fokus · ${mode.label}` : timer.phase === 'pause' ? 'Kurze Pause' : 'Lange Pause';
   return (
-    <div className="focus-pill" role="status" style={{ ['--mode' as string]: timer.phase === 'fokus' ? mode.color : '#34C759' }}>
+    <div className="focus-pill" role="status" style={{ ['--mode' as string]: timer.phase === 'fokus' ? 'var(--brand)' : '#5EE6C8' }}>
       <a href="#/fokus" className="focus-pill-main">
         <span className="focus-pill-icon" aria-hidden><Sym emoji={timer.phase === 'fokus' ? mode.icon : '☕'} size={16} /></span>
         <span className="focus-pill-text">

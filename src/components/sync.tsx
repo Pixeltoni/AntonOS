@@ -4,6 +4,7 @@ import { emptyData, normalize, useStore } from '../store';
 import type { Data } from '../types';
 import { decide, loadMeta, saveMeta, supabase, type SyncMeta } from '../lib/cloud';
 import { isNewerSchema, SCHEMA_VERSION } from '../lib/version';
+import { isNativeApp } from '../lib/native';
 
 export type SyncStatus = 'aus' | 'verbinde' | 'synchron' | 'speichert' | 'offline' | 'konflikt' | 'fehler' | 'veraltet';
 
@@ -24,6 +25,8 @@ interface SyncCtx {
   resetPassword(email: string): Promise<void>;
   setNewPassword(password: string): Promise<void>;
   signOut(clearLocal: boolean): Promise<void>;
+  /** Löscht das Konto samt Cloud-Daten endgültig und leert dieses Gerät */
+  deleteAccount(): Promise<void>;
   resolve(keep: 'cloud' | 'geraet'): Promise<void>;
   syncNow(): void;
 }
@@ -39,7 +42,11 @@ export function useSync(): SyncCtx {
 const PUSH_DELAY = 1500;
 const PULL_INTERVAL = 60_000;
 
-const redirectTo = () => location.origin + location.pathname;
+/** Öffentliche Web-Version – Ziel für Links in Bestätigungs- und Passwort-Mails aus der iPhone-App */
+export const WEB_APP_URL = 'https://pixeltoni.github.io/AntonOS/';
+
+// In der iPhone-App ist die eigene Adresse capacitor://localhost, die ein Mail-Link nicht öffnen kann
+const redirectTo = () => (isNativeApp() ? WEB_APP_URL : location.origin + location.pathname);
 
 function message(e: unknown): string {
   const text = e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e);
@@ -302,6 +309,25 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       }
       setMeta({ userId: null, lastSynced: null, dirty: false });
     },
+    async deleteAccount() {
+      clearTimeout(pushTimer.current);
+      // Nichts mehr hochladen, während das Konto verschwindet
+      outdated.current = true;
+      try {
+        await queue.current;
+        const { error: err } = await supabase.rpc('delete_my_account');
+        if (err) throw new Error(message(err));
+      } finally {
+        outdated.current = false;
+      }
+      await supabase.auth.signOut({ scope: 'local' });
+      setConflict(null);
+      const empty = emptyData();
+      applied.current = empty;
+      replaceAll(empty);
+      setMeta({ userId: null, lastSynced: null, dirty: false });
+      setStatus('aus');
+    },
     async resolve(keep) {
       const c = conflictRef.current;
       const u = userRef.current;
@@ -428,6 +454,27 @@ export function CloudPanel() {
             Abmelden und Gerät leeren
           </button>
         </div>
+        <details className="danger-zone">
+          <summary className="muted small">Konto löschen</summary>
+          <p className="muted small">
+            Löscht dein Konto und alle Daten in der Cloud endgültig. Auch die Daten auf diesem Gerät werden entfernt. Das lässt sich nicht
+            rückgängig machen – exportiere vorher ein Backup, wenn du etwas behalten möchtest.
+          </p>
+          <button
+            className="danger"
+            disabled={busy}
+            onClick={() =>
+              confirm('Konto und alle Daten endgültig löschen? Das lässt sich nicht rückgängig machen.') &&
+              void run(async () => {
+                await s.deleteAccount();
+                return 'Dein Konto und alle Daten wurden gelöscht.';
+              })
+            }
+          >
+            Konto endgültig löschen
+          </button>
+          {err && <p className="danger small">{err}</p>}
+        </details>
       </div>
     );
   }

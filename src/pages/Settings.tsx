@@ -10,6 +10,15 @@ import { AppPanel } from '../components/pwa';
 import { PageHeader, Panel } from '../components/ui';
 import { HealthPanel, LockPanel, PlacesPanel, SiriPanel } from '../components/iphone';
 import { isNativeApp } from '../lib/native';
+import { Browser } from '@capacitor/browser';
+import { WEB_APP_URL } from '../components/sync';
+
+/** Öffnet eine Seite der Web-Version – in der iPhone-App im eingebetteten Safari */
+function openWebPage(page: string) {
+  const url = WEB_APP_URL + page;
+  if (isNativeApp()) void Browser.open({ url, presentationStyle: 'popover' });
+  else window.open(url, '_blank', 'noopener');
+}
 
 export function Settings() {
   const { data, replaceAll, updateSettings } = useStore();
@@ -18,11 +27,22 @@ export function Settings() {
   const file = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
 
-  const exportData = () => {
+  const exportData = async () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const name = `antonos-backup-${today()}.json`;
+    // In der iPhone-App gibt es keine Downloads: Datei über das Teilen-Menü sichern (z. B. in „Dateien“)
+    const backup = new File([blob], name, { type: 'application/json' });
+    if (isNativeApp() && navigator.canShare?.({ files: [backup] })) {
+      try {
+        await navigator.share({ files: [backup] });
+      } catch {
+        // Teilen abgebrochen
+      }
+      return;
+    }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `antonos-backup-${today()}.json`;
+    a.download = name;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -84,7 +104,7 @@ export function Settings() {
             : 'Ohne Anmeldung werden alle Daten nur lokal in diesem Browser gespeichert. Mach ab und zu ein Backup – besonders bevor du den Browser-Speicher löschst oder das Gerät wechselst.'}
         </p>
         <div className="row wrap">
-          <button className="primary" onClick={exportData}>Backup herunterladen</button>
+          <button className="primary" onClick={() => void exportData()}>Backup herunterladen</button>
           <button onClick={() => file.current?.click()}>Backup einspielen</button>
           <input
             ref={file}
@@ -99,6 +119,12 @@ export function Settings() {
           />
         </div>
         {message && <p>{message}</p>}
+      </Panel>
+      <Panel title="Über Daywerk">
+        <div className="row wrap">
+          <button onClick={() => openWebPage('datenschutz.html')}>Datenschutz</button>
+          <button onClick={() => openWebPage('support.html')}>Hilfe und Kontakt</button>
+        </div>
       </Panel>
       <Panel title="Zurücksetzen">
         <div className="row wrap">

@@ -54,6 +54,8 @@
 		A1A1A1A12F00004D00000003 /* AlarmActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004D00000002 /* AlarmActivity.swift */; };
 		A1A1A1A12F00004D00000004 /* AlarmLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004D00000005 /* AlarmLiveActivity.swift */; };
 		A1A1A1A12F00000300000028 /* AntonOSWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000010 /* AntonOSWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1A1A1A12F00004E00000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004E00000002 /* PrivacyInfo.xcprivacy */; };
+		A1A1A1A12F00004E00000003 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004E00000004 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -131,6 +133,8 @@
 		A1A1A1A12F00004D00000005 /* AlarmLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmLiveActivity.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000300000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AntonOSWidgets.entitlements; sourceTree = "<group>"; };
+		A1A1A1A12F00004E00000002 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A1A1A1A12F00004E00000004 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -196,6 +200,7 @@
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
 				504EC3131FED79650016851F /* Info.plist */,
+				A1A1A1A12F00004E00000002 /* PrivacyInfo.xcprivacy */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 			);
@@ -227,6 +232,7 @@
 				A1A1A1A12F00000500000037 /* AntonTierKrank.otf */,
 				A1A1A1A12F00000500000038 /* AntonTierTot.otf */,
 				A1A1A1A12F00000300000019 /* Info.plist */,
+				A1A1A1A12F00004E00000004 /* PrivacyInfo.xcprivacy */,
 				A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */,
 			);
 			path = AntonOSWidgets;
@@ -336,6 +342,7 @@
 				A1A1A1A12F00000200000013 /* antonos-lied-whatoncewas.wav in Resources */,
 				A1A1A1A12F00000200000015 /* antonos-lied-outthefire.wav in Resources */,
 				A1A1A1A12F00000200000017 /* antonos-lied-livewell.wav in Resources */,
+				A1A1A1A12F00004E00000001 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -353,6 +360,7 @@
 				A1A1A1A12F00000500000026 /* AntonTierHunger.otf in Resources */,
 				A1A1A1A12F00000500000027 /* AntonTierKrank.otf in Resources */,
 				A1A1A1A12F00000500000028 /* AntonTierTot.otf in Resources */,
+				A1A1A1A12F00004E00000003 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

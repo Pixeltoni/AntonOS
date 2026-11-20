@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datenschutz – Daywerk</title>
+<link rel="icon" href="icons/a-favicon.png">
+<style>
+  :root { --bg: #f3f4f1; --card: #fff; --text: #141714; --muted: #6b716a; --brand: #1f9a4b; --line: #e3e5e0; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0a0b0a; --card: #161816; --text: #f1f3f0; --muted: #9aa198; --brand: #3fd674; --line: #2a2d29; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  header img { width: 48px; height: 48px; border-radius: 12px; }
+  header a { color: inherit; text-decoration: none; font-weight: 700; font-size: 20px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 19px; margin: 32px 0 8px; }
+  .card { background: var(--card); border-radius: 22px; padding: 20px 22px; margin: 16px 0; box-shadow: 0 1px 3px rgb(0 0 0 / .05), 0 8px 24px -8px rgb(0 0 0 / .1); }
+  .muted { color: var(--muted); }
+  a { color: var(--brand); }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; }
+  footer { margin-top: 40px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<header><img src="icons/a-192.png" alt=""><a href="./">Daywerk</a></header>
+<h1>Datenschutzerklärung</h1>
+<p class="muted">Stand: 20. November 2026 · gilt für die iPhone-App Daywerk und die Web-Version unter pixeltoni.github.io/AntonOS</p>
+
+<div class="card">
+  <strong>Kurz gesagt:</strong> Daywerk speichert deine Einträge auf deinem Gerät. Es gibt keine Werbung, kein Tracking und keine
+  Nutzungsstatistik. Nur wenn du selbst ein Konto für die Synchronisierung anlegst, liegen deine Daten zusätzlich verschlüsselt
+  übertragen auf einem Server in der EU – und nur du kannst sie sehen. Dein Konto kannst du jederzeit in der App löschen.
+</div>
+
+<h2>1. Verantwortlich</h2>
+<p>__NAME__<br>E-Mail: <a href="mailto:__EMAIL__">__EMAIL__</a></p>
+
+<h2>2. Daten auf deinem Gerät</h2>
+<p>Alles, was du in Daywerk einträgst (Aufgaben, Termine, Studium, Finanzen, Tagebuch, Gewohnheiten, Training, Fotos usw.), wird
+im Speicher der App auf deinem Gerät abgelegt. Diese Daten verlassen dein Gerät nicht, solange du die Synchronisierung nicht nutzt.
+Du kannst sie in den Einstellungen jederzeit als Backup-Datei herunterladen oder vollständig löschen.</p>
+
+<h2>3. Synchronisierung mit Konto (freiwillig)</h2>
+<p>Wenn du in den Einstellungen ein Konto erstellst, werden deine E-Mail-Adresse, ein sicher gespeicherter Wert deines Passworts
+(nie das Passwort selbst) und der komplette Datenstand der App bei unserem Dienstleister <strong>Supabase</strong> gespeichert,
+damit deine Geräte denselben Stand haben. Die Server stehen in Frankfurt am Main (EU). Die Übertragung ist verschlüsselt (HTTPS),
+und die Datenbank gibt jedem Konto nur seine eigenen Daten heraus.</p>
+<p>Zum Datenstand gehören auch sensible Angaben, wenn du sie einträgst – etwa Gesundheitswerte aus Apple Health, Finanzen oder
+dein Tagebuch. Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags (Art. 6 Abs. 1 lit. b DSGVO) und für Gesundheitsdaten
+deine Einwilligung (Art. 9 Abs. 2 lit. a DSGVO), die du durch das Aktivieren von Apple Health und der Synchronisierung gibst und
+jederzeit widerrufen kannst.</p>
+<p><strong>Konto löschen:</strong> Einstellungen → Synchronisierung → „Konto löschen“. Damit werden dein Konto und alle Daten in der
+Cloud sofort und endgültig gelöscht.</p>
+
+<h2>4. Berechtigungen auf dem iPhone</h2>
+<ul>
+  <li><strong>Apple Health</strong> (nur lesen): Workouts, Schritte und Schlaf für Bewegungsring und Stimmungstagebuch. Daywerk
+  schreibt nichts in Health und gibt Gesundheitsdaten nie für Werbung oder an Dritte weiter.</li>
+  <li><strong>Standort</strong>: nur für Erinnerungen, wenn du an einem gespeicherten Ort ankommst. Die Überwachung übernimmt iOS
+  auf dem Gerät; dein Standort wird nicht übertragen. Gespeicherte Orte sind Teil deiner Daten.</li>
+  <li><strong>Kamera und Fotos</strong>: nur wenn du ein Bild hinzufügst oder einen Kassenzettel scannst. Die Texterkennung läuft
+  auf dem Gerät.</li>
+  <li><strong>Mikrofon und Spracherkennung</strong>: für die Spracheingabe. Die Umwandlung in Text übernimmt Apple; dabei kann
+  Apple die Aufnahme verarbeiten (siehe Datenschutz von Apple).</li>
+  <li><strong>Face ID</strong>: zum Sperren privater Bereiche. Die Prüfung macht iOS, die App erhält keine biometrischen Daten.</li>
+  <li><strong>Mitteilungen, Wecker, Bewegungssensor</strong>: Erinnerungen und Wecker werden auf dem Gerät geplant; der
+  Bewegungssensor zählt nur beim Wecker das Schütteln.</li>
+</ul>
+
+<h2>5. Dienste, die du selbst verbindest (freiwillig)</h2>
+<ul>
+  <li><strong>Spotify</strong>: Wenn du Spotify verbindest, meldest du dich direkt bei Spotify an. Daywerk ruft dann über die
+  Spotify-Schnittstelle deine Wiedergabe ab und steuert sie. Der Zugangsschlüssel bleibt auf deinem Gerät.
+  Es gilt die Datenschutzerklärung von Spotify.</li>
+  <li><strong>Govee-Lampen</strong>: Mit deinem Govee-Schlüssel schaltet Daywerk deine Lampen über die Govee-Schnittstelle.
+  In der Web-Version werden diese Anfragen über eine Server-Funktion bei Supabase weitergeleitet, weil der Browser sie sonst
+  nicht senden kann; dabei wird nichts gespeichert.</li>
+  <li><strong>Rezept-Import und Kalender-Abos</strong>: Daywerk lädt die Seite oder den Kalender, dessen Adresse du eingibst.
+  In der Web-Version läuft der Rezept-Import ebenfalls über eine Server-Funktion bei Supabase, ohne etwas zu speichern.</li>
+  <li><strong>Eingebettete Inhalte</strong>: Fügst du Spotify- oder YouTube-Links ein, werden Inhalte dieser Anbieter geladen;
+  dabei erhalten sie technische Daten wie deine IP-Adresse.</li>
+</ul>
+
+<h2>6. Web-Version</h2>
+<p>Die Web-Version wird über GitHub Pages (GitHub Inc.) ausgeliefert. GitHub verarbeitet dabei technisch notwendige Daten wie
+deine IP-Adresse. Daywerk selbst setzt keine Cookies und keine Analyse-Werkzeuge ein.</p>
+
+<h2>7. Keine Werbung, kein Tracking</h2>
+<p>Daywerk enthält keine Werbung, keine Analyse- oder Tracking-Werkzeuge und verkauft keine Daten.</p>
+
+<h2>8. Speicherdauer</h2>
+<p>Daten auf dem Gerät bleiben, bis du sie löschst oder die App entfernst. Daten in der Cloud bleiben, bis du dein Konto löschst.</p>
+
+<h2>9. Deine Rechte</h2>
+<p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit (Export in den
+Einstellungen) und Widerspruch sowie das Recht, eine erteilte Einwilligung zu widerrufen. Schreib dazu einfach an die oben genannte
+E-Mail-Adresse. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, etwa in dem Land, in dem du wohnst.</p>
+
+<footer><a href="support.html">Hilfe und Kontakt</a> · <a href="./">Daywerk öffnen</a></footer>
+</main>
+</body>
+</html>

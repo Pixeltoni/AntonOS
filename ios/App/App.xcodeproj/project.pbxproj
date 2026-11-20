@@ -50,6 +50,9 @@
 		A1A1A1A12F00000400000005 /* FocusActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000400000006 /* FocusActivity.swift */; };
 		A1A1A1A12F00000400000007 /* FocusActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000400000006 /* FocusActivity.swift */; };
 		A1A1A1A12F00000400000008 /* FocusLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000400000009 /* FocusLiveActivity.swift */; };
+		A1A1A1A12F00004D00000001 /* AlarmActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004D00000002 /* AlarmActivity.swift */; };
+		A1A1A1A12F00004D00000003 /* AlarmActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004D00000002 /* AlarmActivity.swift */; };
+		A1A1A1A12F00004D00000004 /* AlarmLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00004D00000005 /* AlarmLiveActivity.swift */; };
 		A1A1A1A12F00000300000028 /* AntonOSWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1A1A1A12F00000300000010 /* AntonOSWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -124,6 +127,8 @@
 		A1A1A1A12F00000400000004 /* AntonIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntonIntents.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000400000006 /* FocusActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusActivity.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000400000009 /* FocusLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusLiveActivity.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00004D00000002 /* AlarmActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmActivity.swift; sourceTree = "<group>"; };
+		A1A1A1A12F00004D00000005 /* AlarmLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmLiveActivity.swift; sourceTree = "<group>"; };
 		A1A1A1A12F00000300000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1A1A1A12F0000030000001A /* AntonOSWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AntonOSWidgets.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -176,6 +181,7 @@
 				A1A1A1A12F00000400000002 /* AntonExtras.swift */,
 				A1A1A1A12F00000400000004 /* AntonIntents.swift */,
 				A1A1A1A12F00000400000006 /* FocusActivity.swift */,
+				A1A1A1A12F00004D00000002 /* AlarmActivity.swift */,
 				A1A1A1A12F00000300000003 /* App.entitlements */,
 				A1A1A1A12F00000200000002 /* antonos-aufgang.wav */,
 				A1A1A1A12F00000200000004 /* antonos-marimba.wav */,
@@ -204,6 +210,7 @@
 				A1A1A1A12F00000300000015 /* WidgetIntents.swift */,
 				A1A1A1A12F00000300000017 /* AntonOSControls.swift */,
 				A1A1A1A12F00000400000009 /* FocusLiveActivity.swift */,
+				A1A1A1A12F00004D00000005 /* AlarmLiveActivity.swift */,
 				A1A1A1A12F00000500000002 /* LaeuferWidget.swift */,
 				A1A1A1A12F00000500000004 /* AntonLaeufer.otf */,
 				A1A1A1A12F00000500000012 /* HaustierWidget.swift */,
@@ -362,6 +369,7 @@
 				A1A1A1A12F00000400000001 /* AntonExtras.swift in Sources */,
 				A1A1A1A12F00000400000003 /* AntonIntents.swift in Sources */,
 				A1A1A1A12F00000400000005 /* FocusActivity.swift in Sources */,
+				A1A1A1A12F00004D00000001 /* AlarmActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -375,6 +383,8 @@
 				A1A1A1A12F00000300000018 /* AntonOSControls.swift in Sources */,
 				A1A1A1A12F00000400000007 /* FocusActivity.swift in Sources */,
 				A1A1A1A12F00000400000008 /* FocusLiveActivity.swift in Sources */,
+				A1A1A1A12F00004D00000003 /* AlarmActivity.swift in Sources */,
+				A1A1A1A12F00004D00000004 /* AlarmLiveActivity.swift in Sources */,
 				A1A1A1A12F00000500000001 /* LaeuferWidget.swift in Sources */,
 				A1A1A1A12F00000500000011 /* HaustierWidget.swift in Sources */,
 				A1A1A1A12F00000600000001 /* KartenWidget.swift in Sources */,

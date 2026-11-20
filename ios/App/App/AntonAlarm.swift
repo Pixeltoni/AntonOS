@@ -77,8 +77,7 @@ enum AlarmStore {
 }
 
 #if canImport(AlarmKit)
-@available(iOS 26.0, *)
-struct AntonAlarmMetadata: AlarmMetadata {}
+// AntonAlarmMetadata steht in AlarmActivity.swift (gehört auch zur Widget-Erweiterung)
 
 /// Führt alle Änderungen an den iPhone-Weckern nacheinander aus. Liefen sie gleichzeitig (Abgleich aus der App,
 /// „Stopp“ am Sperrbildschirm, Nachklingeln), überschrieben sie sich gegenseitig: Wecker wurden doppelt
@@ -104,8 +103,9 @@ enum AlarmScheduler {
     /// So lange nach „Stopp“ bleibt es still – danach klingelt der Wecker wieder, wenn die Aufgabe nicht gelöst ist.
     static let afterStopSeconds: TimeInterval = 60
 
-    /// Zweiter Knopf: „Schlummern“, wenn erlaubt – sonst „Aufgabe lösen“ (bei Weckern mit Aufgabe)
-    static func attributes(title: String, withTask: Bool, snooze: Bool) -> AlarmAttributes<AntonAlarmMetadata> {
+    /// Zweiter Knopf: „Schlummern“, wenn erlaubt – sonst „Aufgabe lösen“ (bei Weckern mit Aufgabe).
+    /// `countdownTitle`: Überschrift der Live-Aktivität, solange bis zum Klingeln heruntergezählt wird (Schlummern, Nachklingeln).
+    static func attributes(title: String, withTask: Bool, snooze: Bool, countdownTitle: String? = nil) -> AlarmAttributes<AntonAlarmMetadata> {
         let stop = AlarmButton(text: "Stopp", textColor: .white, systemImageName: "stop.fill")
         let task = AlarmButton(text: "Aufgabe lösen", textColor: .white, systemImageName: "brain.head.profile")
         let nap = AlarmButton(text: "Schlummern", textColor: .white, systemImageName: "zzz")
@@ -116,7 +116,14 @@ enum AlarmScheduler {
             secondaryButton: second,
             secondaryButtonBehavior: second == nil ? nil : .custom
         )
-        return AlarmAttributes(presentation: AlarmPresentation(alert: alert), metadata: AntonAlarmMetadata(), tintColor: .orange)
+        let presentation: AlarmPresentation
+        if let countdownTitle {
+            presentation = AlarmPresentation(alert: alert, countdown: AlarmPresentation.Countdown(title: LocalizedStringResource(stringLiteral: countdownTitle), pauseButton: nil))
+        } else {
+            presentation = AlarmPresentation(alert: alert)
+        }
+        let metadata = AntonAlarmMetadata(label: title, withTask: withTask)
+        return AlarmAttributes(presentation: presentation, metadata: metadata, tintColor: .orange)
     }
 
     /// `snooze`: Schlummer-Dauer in Sekunden (0 = kein Schlummern), `snoozeMax`: höchste Anzahl
@@ -135,7 +142,10 @@ enum AlarmScheduler {
         return nil
     }
 
-    static func schedule(id: UUID, title: String, schedule: Alarm.Schedule, withTask: Bool = true, snooze: Int = 0, snoozeMax: Int = 3, sound: String? = nil) async throws {
+    /// `schedule` nil + `countdown`: klingelt nach `countdown` Sekunden und zählt bis dahin am Sperrbildschirm herunter.
+    /// Mit Schlummern zählt iOS nach „Schlummern“ selbst herunter (`postAlert`) – das klingelt auch dann wieder,
+    /// wenn Daywerk im Hintergrund nicht rechtzeitig startet.
+    static func schedule(id: UUID, title: String, schedule: Alarm.Schedule?, countdown: TimeInterval? = nil, countdownTitle: String? = nil, withTask: Bool = true, snooze: Int = 0, snoozeMax: Int = 3, sound: String? = nil) async throws {
         let secondary: (any LiveActivityIntent)?
         if snooze > 0 {
             secondary = AntonAlarmSnoozeIntent(alarmID: id.uuidString, title: title, withTask: withTask, seconds: snooze, maxCount: snoozeMax, sound: sound ?? "")
@@ -144,10 +154,13 @@ enum AlarmScheduler {
         } else {
             secondary = nil
         }
+        let postAlert: TimeInterval? = snooze > 0 ? TimeInterval(snooze) : nil
+        let duration: Alarm.CountdownDuration? = (countdown != nil || postAlert != nil) ? Alarm.CountdownDuration(preAlert: countdown, postAlert: postAlert) : nil
+        let label = duration == nil ? nil : (countdownTitle ?? "Schlummern")
         let config = AlarmManager.AlarmConfiguration<AntonAlarmMetadata>(
-            countdownDuration: nil,
-            schedule: schedule,
-            attributes: attributes(title: title, withTask: withTask, snooze: snooze > 0),
+            countdownDuration: duration,
+            schedule: countdown == nil ? schedule : nil,
+            attributes: attributes(title: title, withTask: withTask, snooze: snooze > 0, countdownTitle: label),
             stopIntent: withTask ? AntonAlarmStopIntent(alarmID: id.uuidString, sound: sound ?? "") : AntonAlarmDoneIntent(alarmID: id.uuidString),
             secondaryIntent: secondary,
             sound: alertSound(sound)
@@ -156,14 +169,23 @@ enum AlarmScheduler {
     }
 
     /// Klingelt in `seconds` Sekunden erneut (ersetzt ein früheres Nachklingeln).
-    static func ringAgain(in seconds: TimeInterval, jsId: String, title: String, withTask: Bool = true, snooze: Int = 0, snoozeMax: Int = 3, sound: String? = nil) async throws {
+    /// `countdownTitle`: bis dahin als Live-Aktivität am Sperrbildschirm herunterzählen (sonst still im Hintergrund).
+    static func ringAgain(in seconds: TimeInterval, jsId: String, title: String, withTask: Bool = true, snooze: Int = 0, snoozeMax: Int = 3, sound: String? = nil, countdownTitle: String? = nil) async throws {
         cancelFallback()
         let id = UUID()
         var map = AlarmStore.map
         map[id.uuidString] = jsId
         AlarmStore.map = map
         AlarmStore.fallbacks = [id.uuidString]
-        try await schedule(id: id, title: title, schedule: .fixed(Date().addingTimeInterval(max(5, seconds))), withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound)
+        let wait = max(5, seconds)
+        if let countdownTitle {
+            do {
+                return try await schedule(id: id, title: title, schedule: nil, countdown: wait, countdownTitle: countdownTitle, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound)
+            } catch {
+                // Countdown ging nicht: wenigstens zur festen Zeit klingeln
+            }
+        }
+        try await schedule(id: id, title: title, schedule: .fixed(Date().addingTimeInterval(wait)), withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound)
     }
 
     /// „Schlummern“ am Sperrbildschirm: still und nach `seconds` wieder klingeln – höchstens `maxCount`-mal
@@ -177,9 +199,17 @@ enum AlarmScheduler {
             try? await ringAgain(in: 5, jsId: jsId, title: title, withTask: false, sound: sound)
             return
         }
-        silence(alarmID)
         AlarmStore.setSnoozes(jsId, count + 1)
-        try? await ringAgain(in: TimeInterval(seconds), jsId: jsId, title: title, withTask: withTask, snooze: seconds, snoozeMax: maxCount, sound: sound)
+        // Gleicher Wecker zählt bis zum nächsten Klingeln herunter – am Sperrbildschirm sichtbar wie beim iPhone-Wecker
+        if let uuid = UUID(uuidString: alarmID), (try? AlarmManager.shared.countdown(id: uuid)) != nil { return }
+        // Älterer Wecker ohne Schlummer-Countdown: still und als neuer Countdown-Wecker wieder klingeln
+        silence(alarmID)
+        do {
+            try await ringAgain(in: TimeInterval(seconds), jsId: jsId, title: title, withTask: withTask, snooze: seconds, snoozeMax: maxCount, sound: sound, countdownTitle: "Schlummern")
+        } catch {
+            // Lieber ohne Schlummern als gar nicht wieder klingeln
+            try? await ringAgain(in: TimeInterval(seconds), jsId: jsId, title: title, withTask: withTask, sound: sound)
+        }
     }
 
     /// Streicht jedes geplante Nachklingeln
@@ -230,7 +260,7 @@ enum AlarmScheduler {
         let jsId = AlarmStore.map[alarmID] ?? ""
         silence(alarmID)
         AlarmStore.markStopped(jsId: jsId)
-        try? await ringAgain(in: afterStopSeconds, jsId: jsId, title: "Wecker – Aufgabe noch offen", sound: sound)
+        try? await ringAgain(in: afterStopSeconds, jsId: jsId, title: "Wecker – Aufgabe noch offen", sound: sound, countdownTitle: "Aufgabe lösen")
         NotificationCenter.default.post(name: AlarmStore.stoppedNotification, object: nil)
         if notify {
             let content = UNMutableNotificationContent()
@@ -470,7 +500,7 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             // Auch der tatsächlich gefundene Ton zählt – ein neu gespeichertes Lied stellt den Wecker neu
             let tone = AlarmScheduler.soundName(sound) ?? "standard"
-            let signature = [jsId, when, title, withTask ? "aufgabe" : "", "\(snooze)x\(snoozeMax)", tone].joined(separator: "|")
+            let signature = ["v2", jsId, when, title, withTask ? "aufgabe" : "", "\(snooze)x\(snoozeMax)", tone].joined(separator: "|")
             wanted.append(Wanted(jsId: jsId, title: title, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound, schedule: schedule, signature: signature))
         }
 
@@ -487,7 +517,8 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             // Ein gerade klingelnder Wecker bleibt – sonst verstummt er ohne Aufgabe. Beim Ausschalten wird er gelöscht,
             // damit er nicht neben dem neu gestellten weiterläuft und doppelt klingelt.
-            if alarm.state == .alerting {
+            // Gleiches gilt beim Schlummern: Der Countdown läuft weiter und klingelt danach wieder.
+            if alarm.state == .alerting || alarm.state == .countdown || alarm.state == .paused {
                 if let jsId = oldMap[key] { map[key] = jsId }
                 stale.insert(key)
                 continue
@@ -528,10 +559,11 @@ public class AntonAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
             let snooze = call.getInt("snooze") ?? 0
             let snoozeMax = call.getInt("snoozeMax") ?? 3
             let sound = call.getString("sound")
+            let countdownTitle = call.getString("countdown")
             Task {
                 let ok = await AlarmQueue.shared.run { () async -> Bool in
                     do {
-                        try await AlarmScheduler.ringAgain(in: seconds, jsId: jsId, title: title, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound)
+                        try await AlarmScheduler.ringAgain(in: seconds, jsId: jsId, title: title, withTask: withTask, snooze: snooze, snoozeMax: snoozeMax, sound: sound, countdownTitle: countdownTitle)
                         return true
                     } catch {
                         return false

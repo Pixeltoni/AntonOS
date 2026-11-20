@@ -107,6 +107,9 @@ function HabitRow({ habit, onEdit }: { habit: Habit; onEdit: () => void }) {
           {s > 0 && <span>Serie: {s} {s === 1 ? 'Tag' : 'Tage'}</span>}
         </div>
       </button>
+      {habit.target && !done && habitSteps(habit).slice(1).map((step) => (
+        <button key={step} type="button" className="pill-btn" onClick={() => addAmount(habit, t, step)}>+ {num(step)} {habit.unit}</button>
+      ))}
       {habit.target ? (
         <Stepper
           label={habit.name}

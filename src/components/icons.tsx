@@ -6,7 +6,7 @@ import {
   Palette, Smartphone, Lock, Heart, MapPin, Mic, Cloud, CalendarDays, PiggyBank, Star, CircleCheck, Check, Banknote, Brain,
   Camera, Flame, Euro, FolderOpen, Pin, Folder, Trash2, Briefcase, Bell, Download, Share, Wrench, Hourglass, CircleDashed,
   Mountain, Puzzle, BicepsFlexed, Sprout, Coins, Ruler, Coffee, Leaf, PartyPopper, TriangleAlert, Moon, Library, Hand,
-  Calculator, SquareCheck,
+  Calculator, SquareCheck, Package,
   type LucideIcon } from 'lucide-react';
 import type { NavItem, WidgetId } from '../types';
 
@@ -35,6 +35,7 @@ export const PAGE_ICONS: Record<string, LucideIcon> = {
   menschen: Users,
   reisen: Plane,
   knubbel: PawPrint,
+  sachen: Package,
   licht: Lightbulb,
   kurse: GraduationCap,
   lernen: Layers,
@@ -101,7 +102,7 @@ export function NavIcon({ item, size = 19 }: { item: Pick<NavItem, 'path' | 'ico
 export const EMOJI_ICONS: Record<string, LucideIcon> = {
   '🎨': Palette, '📱': Smartphone, '📲': Download, '🔒': Lock, '❤️': Heart, '📍': MapPin, '🎙️': Mic, '☁️': Cloud,
   '🗓️': CalendarDays, '📅': Calendar, '🎓': GraduationCap, '⏱️': Timer, '⏱': Timer, '🐷': PiggyBank, '🔁': Repeat,
-  '💳': CreditCard, '🎵': Music, '🧾': Receipt, '⭐': Star, '🌟': Star, '💡': Lightbulb, '📝': NotebookPen, '✅': CircleCheck,
+  '💳': CreditCard, '🎵': Music, '🧾': Receipt, '📦': Package, '⭐': Star, '🌟': Star, '💡': Lightbulb, '📝': NotebookPen, '✅': CircleCheck,
   '✓': Check, '💸': Banknote, '🚀': Rocket, '🧠': Brain, '🏋️': Dumbbell, '📚': Library, '📖': BookOpen, '📸': Camera, '📷': Camera,
   '🛒': ShoppingCart, '🔥': Flame, '🎯': Target, '💶': Euro, '🗂️': FolderOpen, '📌': Pin, '☀️': Sun, '📁': Folder,
   '🗑️': Trash2, '💼': Briefcase, '🔔': Bell, '📤': Share, '🪄': WandSparkles, '📺': Tv, '🍽️': UtensilsCrossed, '🧰': Wrench,

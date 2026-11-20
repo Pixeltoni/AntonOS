@@ -37,6 +37,8 @@ export const emptyData = (): Data => ({
   recipes: [],
   meals: [],
   people: [],
+  loans: [],
+  warranties: [],
   trips: [],
   moods: [],
   media: [],

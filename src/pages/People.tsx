@@ -5,6 +5,7 @@ import { daysBetween, formatDate, parseDate, today } from '../lib/dates';
 import { birthdayIn, CONTACT_INTERVALS, contactDue, daysLabel, initials, nextBirthday, PERSON_COLORS, PERSON_GROUPS, sinceLabel, upcomingBirthdays, ageOn, birthdayFromDate } from '../lib/people';
 import { Empty, PageHeader, Panel } from '../components/ui';
 import { AddButton, Sheet } from '../components/sheet';
+import { PersonLoans } from './Belongings';
 
 type Draft = Omit<Person, 'id'>;
 const blank = (count: number): Draft => ({ name: '', birthday: '', birthYear: null, group: 'Freunde', note: '', color: PERSON_COLORS[count % PERSON_COLORS.length], gifts: [], contactEvery: 0, lastContact: null, meetings: [] });
@@ -257,6 +258,7 @@ export function PersonDetail({ id }: { id: ID }) {
               </ul>
             )}
           </Panel>
+          <PersonLoans personId={person.id} name={person.name} />
           <Panel title="Notiz">
             <textarea rows={3} value={person.note} onChange={(e) => set({ note: e.target.value })} placeholder="z. B. mag keinen Kuchen mit Nüssen" aria-label="Notiz" />
           </Panel>

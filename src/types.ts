@@ -501,6 +501,44 @@ export interface Meeting {
   note: string;
 }
 
+/** Etwas, das du verliehen oder dir geliehen hast */
+export interface Loan {
+  id: ID;
+  /** Was, z. B. „Buch: Der Report der Magd“ */
+  title: string;
+  /** verliehen = du hast es weggegeben, geliehen = du hast es dir ausgeliehen */
+  direction: LoanDirection;
+  /** Verknüpfter Mensch (oder null, dann zählt `who`) */
+  personId: ID | null;
+  /** Name, falls die Person nicht unter Menschen steht */
+  who: string;
+  date: DateStr;
+  /** Zurück bis (leer = ohne Frist) */
+  due: DateStr | null;
+  /** Wann es zurückkam (leer = noch offen) */
+  returned: DateStr | null;
+  note: string;
+}
+
+export type LoanDirection = 'verliehen' | 'geliehen';
+
+/** Ein Kauf mit Garantie und Beleg */
+export interface Warranty {
+  id: ID;
+  title: string;
+  store: string;
+  bought: DateStr;
+  /** Garantie in Monaten ab Kauf (z. B. 24) */
+  months: number;
+  /** Garantie endet am (aus Kauf + Monate, änderbar) */
+  until: DateStr;
+  /** Kaufpreis in € (0 = unbekannt) */
+  price: number;
+  /** Foto vom Beleg (verkleinert, data:-URL) oder Link */
+  photo: string;
+  note: string;
+}
+
 export type TripLegKind = 'flug' | 'zug' | 'bus' | 'auto' | 'unterkunft' | 'sonstiges';
 
 /** Etappe einer Reise: Flug, Zug, Unterkunft … */
@@ -999,6 +1037,10 @@ export interface Data {
   recipes: Recipe[];
   meals: Meal[];
   people: Person[];
+  /** Verliehen und geliehen */
+  loans: Loan[];
+  /** Garantien mit Beleg */
+  warranties: Warranty[];
   trips: Trip[];
   moods: MoodEntry[];
   media: Media[];

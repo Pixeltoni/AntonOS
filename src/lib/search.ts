@@ -71,6 +71,11 @@ export function searchAll(data: Data, query: string, pages: NavItem[], limitPerG
   }
   for (const r of data.recipes ?? []) push({ key: `recipe-${r.id}`, group: 'Rezepte', icon: '🍽️', title: r.title, subtitle: [r.minutes ? `${r.minutes} Min.` : '', r.tags].filter(Boolean).join(' · ') || 'Rezept', href: `#/essen/${r.id}` }, r.title, `${r.tags} ${r.ingredients}`);
   for (const t of data.trips ?? []) push({ key: `trip-${t.id}`, group: 'Reisen', icon: '✈️', title: t.title, subtitle: `${new Date(`${t.start}T12:00`).toLocaleDateString('de-DE')} – ${new Date(`${t.end}T12:00`).toLocaleDateString('de-DE')}`, href: `#/reisen/${t.id}` }, t.title, t.note);
+  for (const l of data.loans ?? []) {
+    const who = (l.personId && data.people.find((p) => p.id === l.personId)?.name) || l.who;
+    push({ key: `loan-${l.id}`, group: 'Verliehen & Garantien', icon: '📦', title: l.title, subtitle: [l.direction === 'verliehen' ? `verliehen an ${who}` : `geliehen von ${who}`, l.returned ? 'zurück' : ''].filter(Boolean).join(' · '), href: '#/sachen' }, l.title, `${who} ${l.note}`, l.returned ? -3 : 0);
+  }
+  for (const w of data.warranties ?? []) push({ key: `warranty-${w.id}`, group: 'Verliehen & Garantien', icon: '🧾', title: w.title, subtitle: `Garantie bis ${new Date(`${w.until}T12:00`).toLocaleDateString('de-DE')}${w.store ? ` · ${w.store}` : ''}`, href: '#/sachen' }, w.title, `${w.store} ${w.note}`);
   for (const r of data.recurring) if (r.type === 'Ausgabe') push({ key: `abo-${r.id}`, group: 'Abos', icon: '🔁', title: r.description || r.category, subtitle: `${r.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} · ${r.category}`, href: '#/abos' }, r.description || r.category, r.category);
   for (const s of data.shopping) push({ key: `shop-${s.id}`, group: 'Einkaufsliste', icon: s.done ? '☑️' : '🛒', title: s.name, subtitle: s.amount || 'Einkaufsliste', href: '#/einkauf' }, s.name);
   for (const m of data.media) {

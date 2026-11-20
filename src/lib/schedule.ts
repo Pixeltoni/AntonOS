@@ -19,7 +19,7 @@ export const MAX_PLANNED = 60;
 /** So viele Tage im Voraus wird geplant */
 export const PLAN_DAYS = 14;
 
-/** Uhrzeiten, zu denen Geburtstage, Kündigungsfristen und Reisen gemeldet werden. */
+/** Uhrzeiten, zu denen Geburtstage, Kündigungsfristen, Reisen, Leihen und Garantien gemeldet werden. */
 const LIFE_HOURS = [9, 18];
 
 /**
@@ -29,7 +29,7 @@ const LIFE_HOURS = [9, 18];
  */
 export function plannedNotices(
   entries: (CalendarEntry & { remind?: number | null })[],
-  data: Pick<Data, 'tasks' | 'people' | 'recurring' | 'trips'>,
+  data: Pick<Data, 'tasks' | 'people' | 'recurring' | 'trips'> & Partial<Pick<Data, 'loans' | 'warranties'>>,
   now: Date,
   days = PLAN_DAYS,
 ): PlannedNotice[] {
@@ -54,7 +54,7 @@ export function plannedNotices(
     out.push({ tag: `task-${task.id}`, at: startAt(task.due, task.dueTime), title: `🔔 ${task.title}`, body: `Erinnerung · ${task.dueTime} Uhr`, href: '#/aufgaben' });
   }
 
-  // Geburtstage, Kündigungsfristen, Reisen: jeweils beim ersten Zeitpunkt, an dem der Hinweis fällig wird
+  // Geburtstage, Kündigungsfristen, Reisen, Leihen, Garantien: jeweils beim ersten Zeitpunkt, an dem der Hinweis fällig wird
   const seen = new Set<string>();
   for (let i = 0; i <= days; i++) {
     for (const hour of LIFE_HOURS) {

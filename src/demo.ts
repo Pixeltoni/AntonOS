@@ -1,5 +1,5 @@
 import type { Appearance, Data, FinanceSettings, SemesterSettings, Settings } from './types';
-import { addDays, today } from './lib/dates';
+import { addDays, addMonths, today } from './lib/dates';
 import { START_EASE } from './lib/srs';
 import { defaultRingGoals } from './lib/rings';
 import { PUSH_PULL_TEMPLATE, SEPARATE_TEMPLATE } from './lib/training';
@@ -175,6 +175,13 @@ export function demoData(): Data {
     people: [
       { id: 'demo-pe1', name: 'Lea Meier', birthday: addDays(t, 5).slice(5), birthYear: Number(addDays(t, 5).slice(0, 4)) - 22, group: 'Freunde', note: 'Mag keinen Kuchen mit Nüssen', color: '#FF2D55', gifts: [{ id: 'demo-gi1', title: 'Kletterkurs-Gutschein', done: false, added: addDays(t, -90) }], contactEvery: 28, lastContact: addDays(t, -16), meetings: [{ id: 'demo-mt1', date: addDays(t, -16), note: 'Kaffee in der Mensa' }] },
       { id: 'demo-pe2', name: 'Max Huber', birthday: addDays(t, 60).slice(5), birthYear: null, group: 'Uni', note: '', color: '#AF52DE', gifts: [], contactEvery: 28, lastContact: addDays(t, -42), meetings: [] },
+    ],
+    loans: [
+      { id: 'demo-ln1', title: 'Buch: Die 1%-Methode', direction: 'verliehen', personId: 'demo-pe1', who: '', date: addDays(t, -20), due: addDays(t, 10), returned: null, note: '' },
+      { id: 'demo-ln2', title: 'Taschenrechner TI-30', direction: 'geliehen', personId: 'demo-pe2', who: '', date: addDays(t, -5), due: null, returned: null, note: 'Für die Analysis-Klausur' },
+    ],
+    warranties: [
+      { id: 'demo-wa1', title: 'Kopfhörer', store: 'MediaMarkt', bought: addDays(t, -300), months: 24, until: addMonths(addDays(t, -300), 24), price: 129, photo: '', note: '' },
     ],
     trips: [
       {

@@ -972,7 +972,7 @@ export function AlarmRinger() {
       const snoozing = r.phase === 'schlummert';
       const s = snoozeOf(r.alarm);
       const opts = snoozing
-        ? { task: hasTask(r.alarm), snooze: canSnooze(r.alarm, r.snoozes) ? s.minutes * 60 : 0, snoozeMax: s.max }
+        ? { task: hasTask(r.alarm), snooze: canSnooze(r.alarm, r.snoozes) ? s.minutes * 60 : 0, snoozeMax: s.max, countdown: 'Schlummern' }
         : {};
       void AntonAlarm.ringIn({ seconds, id: r.alarm.id, title: alarmTitle(r.alarm), sound: alarmSoundFile(r.alarm), ...opts }).catch(() => (planned = 0));
     };

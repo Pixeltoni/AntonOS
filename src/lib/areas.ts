@@ -14,6 +14,7 @@ import { budgetStatus } from './finance';
 import { formatGrade, summary } from './grades';
 import { weekPrompt } from './weekplan';
 import type { PetMood } from './pet';
+import { belongingsHint, loanStatus } from './belongings';
 
 /** Feste Farbe je Bereich (wie die Kategorien in Apple Health) */
 export const AREA_COLORS: Record<string, string> = {
@@ -116,6 +117,9 @@ export function areaHints(data: Data, t: DateStr, now: Date, extras: HintExtras 
     hints.reisen = p.phase === 'unterwegs' ? `${trip.title}: Tag ${p.days}` : `${trip.title} ${daysLabel(p.days)}`;
   }
 
+  const belongings = belongingsHint(data.loans ?? [], data.warranties ?? [], t);
+  if (belongings) hints.sachen = belongings;
+
   const shopping = data.shopping.filter((s) => !s.done).length;
   if (shopping) hints.einkauf = `${shopping} auf der Liste`;
 
@@ -205,6 +209,7 @@ export function areaUrgent(data: Data, t: DateStr, now: Date): string[] {
   if (alarm && alarm.at.getTime() - now.getTime() <= 12 * 3600_000) urgent.push('wecker');
   if (upcomingBirthdays(data.people, t, 1).length) urgent.push('menschen');
   if (data.trips.some((x) => x.end >= t && x.start <= addDays(t, 2))) urgent.push('reisen');
+  if ((data.loans ?? []).some((l) => loanStatus(l, t).state === 'ueberfaellig')) urgent.push('sachen');
   return urgent;
 }
 

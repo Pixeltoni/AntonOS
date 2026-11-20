@@ -142,7 +142,8 @@ interface AntonAlarmPlugin {
   requestPermission(): Promise<{ state: AlarmPermission }>;
   sync(opts: { alarms: NativeAlarm[] }): Promise<{ state: AlarmPermission; failed: number }>;
   /** `task: false` – Wecker ohne Aufgabe, „Stopp“ schaltet ihn ganz aus */
-  ringIn(opts: { seconds: number; id: string; title: string; task?: boolean; snooze?: number; snoozeMax?: number; sound?: string }): Promise<void>;
+  /** `countdown`: bis zum Klingeln als Live-Aktivität mit dieser Überschrift herunterzählen (z. B. „Schlummern“) */
+  ringIn(opts: { seconds: number; id: string; title: string; task?: boolean; snooze?: number; snoozeMax?: number; sound?: string; countdown?: string }): Promise<void>;
   solved(): Promise<void>;
   takeStopped(): Promise<{ id?: string; at?: number; snoozes?: number }>;
   /** Eigenes Lied als Weckton (WAV als Base64) in der App speichern bzw. löschen */

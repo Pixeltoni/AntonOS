@@ -3528,3 +3528,11 @@ input.switch:checked { background: var(--brand); }
 
 /* Aufgaben: aktive Liste ohne blauen Rahmen */
 .rem-tile.active { background: var(--card) !important; box-shadow: 0 0 0 2px var(--brand), var(--card-shadow); }
+
+/* Verliehen & Garantien */
+.belong-icon { background: var(--accent); }
+.belong-thumb { width: 38px; height: 38px; flex: none; border-radius: var(--r-m); object-fit: cover; background: var(--fill); }
+.belong-receipt { display: block; max-width: 100%; max-height: 320px; margin-top: 8px; border-radius: var(--r-m); object-fit: contain; background: var(--fill); }
+.belong-expired { opacity: 0.6; }
+.belong-done { margin-top: 0.5rem; }
+.belong-done summary { color: var(--muted); font-size: var(--fs-small); padding: 0.4rem 0.25rem; }

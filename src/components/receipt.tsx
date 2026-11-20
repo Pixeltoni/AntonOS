@@ -6,6 +6,8 @@ import { today } from '../lib/dates';
 import { useToast } from './toast';
 import { Sheet } from './sheet';
 import { Sym } from './icons';
+import { resizeImage } from './widgets';
+import { warrantyEnd } from '../lib/belongings';
 
 /** Bild verkleinern (lange Seite höchstens 2000 px) und als Base64-JPEG liefern */
 async function toBase64(file: File): Promise<string> {
@@ -34,7 +36,9 @@ export function ReceiptButton() {
   const { show } = useToast();
   const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const [draft, setDraft] = useState<(Receipt & { amount: string; category: string; check: string[] }) | null>(null);
+  const [draft, setDraft] = useState<(Receipt & { amount: string; category: string; check: string[]; warranty: boolean; product: string }) | null>(null);
+  // Das Foto bleibt hier, falls der Beleg als Garantie gespeichert wird
+  const photo = useRef<File | null>(null);
   if (!isNativeApp()) return null;
 
   const read = async (f: File) => {
@@ -44,7 +48,8 @@ export function ReceiptButton() {
       const { lines } = await extras((p) => p.recognizeText({ image }), { lines: [] as string[] });
       if (lines.length === 0) return show('Auf dem Foto war kein Text zu erkennen – probier es mit mehr Licht.');
       const r = parseReceipt(lines);
-      setDraft({ ...r, amount: r.total ? r.total.toFixed(2).replace('.', ',') : '', category: receiptCategory(r.store), check: boughtItems(r, data.shopping).map((s) => s.id) });
+      photo.current = f;
+      setDraft({ ...r, amount: r.total ? r.total.toFixed(2).replace('.', ',') : '', category: receiptCategory(r.store), check: boughtItems(r, data.shopping).map((s) => s.id), warranty: false, product: '' });
     } catch {
       show('Das Foto ließ sich nicht lesen.');
     } finally {
@@ -52,13 +57,20 @@ export function ReceiptButton() {
     }
   };
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return;
     const amount = Number(draft.amount.replace(/\./g, '').replace(',', '.'));
     if (!(amount > 0)) return;
-    add('transactions', { type: 'Ausgabe', description: draft.store || 'Einkauf', amount, category: draft.category, account: 'Girokonto', date: draft.date ?? today() });
+    const date = draft.date ?? today();
+    add('transactions', { type: 'Ausgabe', description: draft.store || 'Einkauf', amount, category: draft.category, account: 'Girokonto', date });
     draft.check.forEach((id) => update('shopping', id, { done: true }));
-    show(`−${amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} gebucht${draft.check.length ? ` · ${draft.check.length} abgehakt` : ''}`);
+    const keep = draft.warranty && draft.product.trim();
+    if (keep) {
+      const image = photo.current ? await resizeImage(photo.current, 1400).catch(() => '') : '';
+      add('warranties', { title: draft.product.trim(), store: draft.store, bought: date, months: 24, until: warrantyEnd(date, 24), price: amount, photo: image, note: '' });
+    }
+    show(`−${amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} gebucht${draft.check.length ? ` · ${draft.check.length} abgehakt` : ''}${keep ? ' · Garantie gemerkt' : ''}`);
+    photo.current = null;
     setDraft(null);
   };
 
@@ -78,7 +90,7 @@ export function ReceiptButton() {
         }}
       />
       {draft && (
-        <Sheet title="Kassenzettel" submitLabel="Ausgabe speichern" onClose={() => setDraft(null)} onSubmit={save} submitDisabled={!(Number(draft.amount.replace(',', '.')) > 0)}>
+        <Sheet title="Kassenzettel" submitLabel="Ausgabe speichern" onClose={() => setDraft(null)} onSubmit={() => void save()} submitDisabled={!(Number(draft.amount.replace(',', '.')) > 0) || (draft.warranty && !draft.product.trim())}>
           <label>Geschäft<input value={draft.store} onChange={(e) => setDraft({ ...draft, store: e.target.value })} /></label>
           <div className="modal-grid">
             <label>Betrag (€)<input inputMode="decimal" value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: e.target.value })} /></label>
@@ -86,6 +98,8 @@ export function ReceiptButton() {
           </div>
           <label>Kategorie<input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} /></label>
           {draft.items.length > 0 && <p className="muted small">Erkannt: {draft.items.slice(0, 8).join(', ')}{draft.items.length > 8 ? ' …' : ''}</p>}
+          <label className="check"><input type="checkbox" checked={draft.warranty} onChange={(e) => setDraft({ ...draft, warranty: e.target.checked })} /> Garantie merken (2 Jahre, mit Foto)</label>
+          {draft.warranty && <label>Was hast du gekauft?<input value={draft.product} onChange={(e) => setDraft({ ...draft, product: e.target.value })} placeholder="z. B. Kopfhörer" autoFocus /></label>}
           {data.shopping.some((s) => !s.done) && (
             <fieldset className="receipt-check">
               <legend>Auf der Einkaufsliste abhaken</legend>

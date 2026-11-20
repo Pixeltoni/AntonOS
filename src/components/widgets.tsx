@@ -7,7 +7,7 @@ import { periodProgress, safeImageSrc } from '../lib/life';
 import { Progress } from './ui';
 
 /** Liest ein Bild ein und verkleinert es, damit der Browser-Speicher nicht überläuft. */
-function resizeImage(file: File, maxSize = 900): Promise<string> {
+export function resizeImage(file: File, maxSize = 900): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);

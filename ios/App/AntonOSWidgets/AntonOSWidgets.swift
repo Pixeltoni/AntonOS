@@ -1088,5 +1088,10 @@ struct AntonOSWidgetBundle: WidgetBundle {
             FocusControl()
             LichtControl()
         }
+        #if canImport(AlarmKit)
+        if #available(iOS 26.0, *) {
+            AlarmLiveActivity()
+        }
+        #endif
     }
 }

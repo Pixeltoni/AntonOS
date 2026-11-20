@@ -30,15 +30,14 @@ struct AntonAlarmEndCountdownIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         guard let uuid = UUID(uuidString: alarmID) else { return .result() }
         let defaults = UserDefaults.standard
-        // Gleiche Schlüssel wie AlarmStore.staleKey / fallbackKey in AntonAlarm.swift
-        var stale = Set(defaults.stringArray(forKey: "antonAlarm.stale") ?? [])
+        // Gleiche Schlüssel wie AlarmStore.staleKey / fallbackKey in AntonAlarm.swift. Nur lesen: Die Listen schreibt
+        // allein AlarmQueue (sonst ginge ein gleichzeitig gestelltes Nachklingeln verloren). Gelöschte IDs darin
+        // stören nicht – cancelFallback und der Abgleich räumen sie auf.
+        let stale = defaults.stringArray(forKey: "antonAlarm.stale") ?? []
         let fallbacks = defaults.stringArray(forKey: "antonAlarm.fallback") ?? []
         if stale.contains(alarmID) || fallbacks.contains(alarmID) {
             // Veraltet oder nur zum Nachklingeln gestellt: ganz löschen
             try? AlarmManager.shared.cancel(id: uuid)
-            stale.remove(alarmID)
-            defaults.set(Array(stale), forKey: "antonAlarm.stale")
-            defaults.set(fallbacks.filter { $0 != alarmID }, forKey: "antonAlarm.fallback")
         } else {
             // Wiederholender Wecker: nur diesen Durchlauf beenden
             try? AlarmManager.shared.stop(id: uuid)
